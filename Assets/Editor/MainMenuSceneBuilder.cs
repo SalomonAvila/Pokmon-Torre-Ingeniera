@@ -24,6 +24,7 @@ namespace TorreIngenieria.EditorTools
         const string ControlsPath = "Assets/Input/ControlesJuego.inputactions";
         const string TitleImagePath = "Assets/Art/UI/PantallaTitulo.png";
         const string MontoyaPath = "Assets/Art/Characters/AurelioMontoya.png";
+        const string PedroPath = "Assets/Art/Characters/PedroPerez.png";
         const string DialogBoxPath = "Assets/Art/UI/CuadroDialogo.png";
         const string ContinueArrowPath = "Assets/Art/UI/FlechaContinuar.png";
         const string OptionCursorPath = "Assets/Art/UI/CursorOpcion.png";
@@ -58,7 +59,7 @@ namespace TorreIngenieria.EditorTools
                 return;
             }
 
-            var missing = new[] { ControlsPath, TitleImagePath, MontoyaPath, DialogBoxPath, ContinueArrowPath, OptionCursorPath, PixelFontPath }
+            var missing = new[] { ControlsPath, TitleImagePath, MontoyaPath, PedroPath, DialogBoxPath, ContinueArrowPath, OptionCursorPath, PixelFontPath }
                 .Where(path => AssetDatabase.LoadMainAssetAtPath(path) == null).ToArray();
             if (missing.Length > 0)
             {
@@ -102,13 +103,16 @@ namespace TorreIngenieria.EditorTools
             pressStart.characterSpacing = 8;
             Stretch(pressStart.rectTransform);
 
-            // Pantalla de partida: Aurelio Montoya, cuadro de texto y cuadro de opciones.
+            // Pantalla de partida: Aurelio Montoya (y Pedro, que aparece en una partida nueva),
+            // cuadro de texto y cuadro de opciones.
             CanvasGroup saveScreen = CreateOverlay(canvas, "PantallaPartida", ScreenWhite, 0f);
-            CreateCharacter(saveScreen.transform, "AurelioMontoya", AssetDatabase.LoadAssetAtPath<Sprite>(MontoyaPath));
+            CanvasGroup montoya = CreateCharacter(saveScreen.transform, "AurelioMontoya", LoadSprite(MontoyaPath), 1f);
+            CanvasGroup pedro = CreateCharacter(saveScreen.transform, "PedroPerez", LoadSprite(PedroPath), 0f);
             DialogueBox dialogue = CreateDialogueBox(saveScreen.transform, controls, dialogBoxSprite, arrowSprite, pixelFont);
             ChoiceBox choices = CreateChoiceBox(saveScreen.transform, controls, dialogBoxSprite, cursorSprite, pixelFont);
             var saveCheck = saveScreen.gameObject.AddComponent<SaveCheckController>();
-            Assign(saveCheck, ("dialogue", dialogue), ("choices", choices));
+            Assign(saveCheck, ("dialogue", dialogue), ("choices", choices),
+                ("hostPortrait", montoya), ("playerPortrait", pedro));
 
             CanvasGroup fader = CreateOverlay(canvas, "Fundido", Color.black, 1f);
 
@@ -225,18 +229,44 @@ namespace TorreIngenieria.EditorTools
             fitter.aspectRatio = ImageAspect;
         }
 
-        static void CreateCharacter(Transform parent, string name, Sprite sprite)
+        /// <summary>
+        /// Personaje centrado por encima del cuadro de texto: la parte visible del sprite (sin los márgenes
+        /// transparentes) ocupa del 33 % al 98 % del alto de la pantalla, sea cual sea el tamaño de la imagen.
+        /// </summary>
+        static CanvasGroup CreateCharacter(Transform parent, string name, Sprite sprite, float alpha)
         {
-            // Centrado por encima del cuadro de texto, conservando sus proporciones.
+            const float screenBottom = 0.33f;
+            const float screenTop = 0.98f;
+
+            // Límites de la parte visible, en fracción del sprite, a partir de su malla ajustada.
+            Vector2 min = new Vector2(sprite.vertices.Min(v => v.x), sprite.vertices.Min(v => v.y)) * sprite.pixelsPerUnit + sprite.pivot;
+            Vector2 max = new Vector2(sprite.vertices.Max(v => v.x), sprite.vertices.Max(v => v.y)) * sprite.pixelsPerUnit + sprite.pivot;
+            Vector2 visibleMin = min / sprite.rect.size;
+            Vector2 visibleMax = max / sprite.rect.size;
+
+            float height = (screenTop - screenBottom) / (visibleMax.y - visibleMin.y); // fracción de la pantalla
+            float bottom = screenBottom - visibleMin.y * height;
+            float width = sprite.rect.width / sprite.rect.height * ReferenceResolution.y * height;
+
             RectTransform rect = CreateImage(parent, name, Color.white);
-            rect.anchorMin = new Vector2(0.5f, 0.33f);
-            rect.anchorMax = new Vector2(0.5f, 0.98f);
-            rect.sizeDelta = new Vector2(sprite.rect.width / sprite.rect.height * ReferenceResolution.y * 0.65f, 0);
+            rect.anchorMin = new Vector2(0.5f, bottom);
+            rect.anchorMax = new Vector2(0.5f, bottom + height);
+            rect.sizeDelta = new Vector2(width, 0);
+            rect.anchoredPosition = new Vector2((0.5f - (visibleMin.x + visibleMax.x) / 2f) * width, 0);
+
             var image = rect.GetComponent<Image>();
             image.sprite = sprite;
             image.preserveAspect = true;
             image.raycastTarget = false;
+
+            var group = rect.gameObject.AddComponent<CanvasGroup>();
+            group.alpha = alpha;
+            return group;
         }
+
+        /// <summary>Primer sprite de la imagen (sirve tanto en modo Single como Multiple).</summary>
+        static Sprite LoadSprite(string path) =>
+            AssetDatabase.LoadAllAssetsAtPath(path).OfType<Sprite>().FirstOrDefault();
 
         static DialogueBox CreateDialogueBox(Transform parent, InputActionAsset controls, Sprite boxSprite, Sprite arrowSprite, TMP_FontAsset font)
         {

@@ -7,12 +7,20 @@ namespace TorreIngenieria.UI
 {
     /// <summary>
     /// Después de PRESS START: revisa si hay una partida guardada.
-    /// Si la hay, ofrece continuarla o empezar de nuevo; si no, crea una partida nueva.
+    /// Si la hay, ofrece continuarla o empezar de nuevo; si no, crea una partida nueva
+    /// y presenta al protagonista, Pedro Pérez (documento de diseño, sección 3).
     /// </summary>
     public class SaveCheckController : MonoBehaviour
     {
         [SerializeField] DialogueBox dialogue;
         [SerializeField] ChoiceBox choices;
+
+        [Header("Retratos")]
+        [SerializeField] CanvasGroup hostPortrait;
+        [SerializeField] CanvasGroup playerPortrait;
+        [SerializeField] float portraitFade = 0.5f;
+
+        void Awake() => playerPortrait.alpha = 0f;
 
         public IEnumerator Run()
         {
@@ -51,12 +59,42 @@ namespace TorreIngenieria.UI
 
             yield return dialogue.Say("Creando una nueva partida...");
             SaveData data = SaveSystem.CreateNew();
+
+            yield return IntroducePlayer(data);
             yield return dialogue.Say($"¡Listo, {data.playerName}! Tu aventura en la Torre de Ingeniería está por comenzar.");
 
             if (Application.CanStreamedLevelBeLoaded(SceneNames.Intro))
                 SceneManager.LoadScene(SceneNames.Intro);
             else
                 Debug.Log($"Partida nueva creada en {SaveSystem.SavePath}. Falta la escena '{SceneNames.Intro}'.");
+        }
+
+        /// <summary>Presentación del protagonista según su biografía en el documento de diseño.</summary>
+        IEnumerator IntroducePlayer(SaveData data)
+        {
+            dialogue.Clear();
+            yield return Fade(hostPortrait, 1f, 0f);
+            yield return Fade(playerPortrait, 0f, 1f);
+
+            yield return dialogue.Say($"Este es {data.playerName} Pérez.");
+            yield return dialogue.Say("Tiene 18 años y acaba de empezar primer semestre de Ingeniería.");
+            yield return dialogue.Say("Es el primero de su familia en llegar a la universidad, y estudia con beca.");
+            yield return dialogue.Say("Su papá es técnico electricista y su mamá vende tintos.");
+            yield return dialogue.Say("Creció arreglando radios y ventiladores. Sabe que todo sistema tiene una falla que se puede encontrar.");
+            yield return dialogue.Say("Es curioso y algo desorganizado. Siempre llega unos minutos tarde... pero siempre llega.");
+            yield return dialogue.Say("Nunca dice \"no puedo\". Dice \"déjame intentar otra vez\".");
+            yield return dialogue.Say("Hoy, a las 4:00 p. m., debe sustentar su proyecto integrador en el piso 14.");
+            yield return dialogue.Say("Pero una tormenta dejó el edificio sin ascensores... y lleno de criaturas.");
+        }
+
+        IEnumerator Fade(CanvasGroup group, float from, float to)
+        {
+            for (float t = 0f; t < portraitFade; t += Time.unscaledDeltaTime)
+            {
+                group.alpha = Mathf.Lerp(from, to, t / portraitFade);
+                yield return null;
+            }
+            group.alpha = to;
         }
     }
 }

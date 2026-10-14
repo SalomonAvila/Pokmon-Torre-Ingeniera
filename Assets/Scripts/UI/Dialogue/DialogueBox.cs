@@ -41,28 +41,49 @@ namespace TorreIngenieria.UI
             yield return WaitForAdvance();
         }
 
-        /// <summary>Escribe el mensaje sin esperar (por ejemplo, antes de mostrar opciones).</summary>
+        /// <summary>
+        /// Escribe el mensaje sin esperar al final (por ejemplo, antes de mostrar opciones).
+        /// Si no cabe en el cuadro se divide en páginas, y entre página y página se espera a que el jugador acepte.
+        /// </summary>
         public IEnumerator Type(string message)
         {
             continueArrow.gameObject.SetActive(false);
+            text.overflowMode = TextOverflowModes.Page;
             text.text = message;
+            text.pageToDisplay = 1;
             text.maxVisibleCharacters = 0;
             text.ForceMeshUpdate();
-            int total = text.textInfo.characterCount;
 
             yield return null; // evita que la misma pulsación que abrió el cuadro lo salte
-            float delay = 1f / charactersPerSecond;
-            for (int shown = 1; shown <= total; shown++)
+
+            TMP_TextInfo info = text.textInfo;
+            int pageCount = Mathf.Max(1, info.pageCount);
+            for (int page = 0; page < pageCount; page++)
             {
-                text.maxVisibleCharacters = shown;
-                char current = text.textInfo.characterInfo[shown - 1].character;
+                if (page > 0)
+                    yield return WaitForAdvance();
+
+                text.pageToDisplay = page + 1;
+                int first = info.pageInfo[page].firstCharacterIndex;
+                int last = pageCount == 1 ? info.characterCount - 1 : info.pageInfo[page].lastCharacterIndex;
+                yield return TypePage(first, last);
+            }
+        }
+
+        IEnumerator TypePage(int first, int last)
+        {
+            float delay = 1f / charactersPerSecond;
+            for (int index = first; index <= last; index++)
+            {
+                text.maxVisibleCharacters = index + 1;
+                char current = text.textInfo.characterInfo[index].character;
                 float wait = delay + (".,!?".IndexOf(current) >= 0 ? punctuationPause : 0f);
 
                 for (float t = 0f; t < wait; t += Time.unscaledDeltaTime)
                 {
                     if (submitAction.WasPressedThisFrame())
                     {
-                        text.maxVisibleCharacters = total;
+                        text.maxVisibleCharacters = last + 1;
                         yield return null;
                         yield break;
                     }
