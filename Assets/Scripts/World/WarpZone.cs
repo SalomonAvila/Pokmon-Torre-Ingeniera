@@ -31,7 +31,18 @@ namespace TorreIngenieria.World
             return new RectInt(origin, size).Contains(cell);
         }
 
-        public void Trigger() => SceneTransition.Go(targetScene, targetSpawn);
+        /// <summary>Cambia el destino en tiempo de juego (por ejemplo, la escalera según el piso).</summary>
+        public void SetTarget(string scene, string spawn)
+        {
+            targetScene = scene;
+            targetSpawn = spawn;
+        }
+
+        public void Trigger()
+        {
+            if (!SceneTransition.Go(targetScene, targetSpawn))
+                WorldMessage.Show("Esta zona del edificio todavía está en construcción.");
+        }
 
         void OnDrawGizmos()
         {

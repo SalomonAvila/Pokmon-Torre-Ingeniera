@@ -26,20 +26,22 @@ namespace TorreIngenieria.World
             IsTransitioning = false;
         }
 
-        public static void Go(string sceneName, string spawnId)
+        /// <summary>Va a otra escena con fundido. Devuelve false si la escena no existe (todavía).</summary>
+        public static bool Go(string sceneName, string spawnId)
         {
             if (IsTransitioning)
-                return;
+                return true;
 
-            if (!Application.CanStreamedLevelBeLoaded(sceneName))
+            if (string.IsNullOrEmpty(sceneName) || !Application.CanStreamedLevelBeLoaded(sceneName))
             {
                 Debug.LogWarning($"La escena '{sceneName}' no existe o no está en Build Profiles.");
-                return;
+                return false;
             }
 
             var runner = new GameObject("SceneTransition").AddComponent<SceneTransition>();
             DontDestroyOnLoad(runner.gameObject);
             runner.StartCoroutine(runner.Run(sceneName, spawnId));
+            return true;
         }
 
         /// <summary>El jugador llama esto al aparecer para no volver a usar el mismo destino.</summary>

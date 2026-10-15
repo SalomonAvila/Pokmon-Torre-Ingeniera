@@ -138,6 +138,9 @@ namespace TorreIngenieria.EditorTools
                 (symbol, col, row) => symbol == '.' ? ((col / 2 + row / 2) % 2 == 0 ? TileA : TileB) : FloorIndex[symbol],
                 ObjectIndex, BlockingFloors, BlockingObjects);
 
+            ProvisionalMap.AddFloorInfo("1");
+            ProvisionalMap.AddMessageBox();
+
             // Último escalón de las gradas superiores (entre las barandas) → pasillo de los ascensores.
             ProvisionalMap.AddWarp("SubidaAscensores", 2, 16, 1, 1, height, SceneNames.Ascensores, AscensoresBuilder.SpawnFromAtrium);
             ProvisionalMap.AddSpawn(SpawnFromElevators, 9, 2, height, PlayerController.Direction.Down);

@@ -125,6 +125,23 @@ namespace TorreIngenieria.EditorTools
             Debug.Log($"Escena creada en {ScenePath} y agregada como primera escena del build.");
         }
 
+        // ---------- Cuadro de texto para los mapas ----------
+
+        /// <summary>Prepara el marco, la flecha y la fuente del cuadro de texto. Llamar antes de crear la escena.</summary>
+        public static void PrepareDialogueAssets()
+        {
+            ConfigurePixelSprite(DialogBoxPath, DialogBoxBorder);
+            ConfigurePixelSprite(ContinueArrowPath, 0);
+            EnsurePixelFont();
+        }
+
+        /// <summary>El mismo cuadro de texto de la pantalla de partida, para usarlo en los mapas (WorldMessage).</summary>
+        public static DialogueBox CreateMapDialogueBox(Transform parent, InputActionAsset controls) =>
+            CreateDialogueBox(parent, controls,
+                AssetDatabase.LoadAssetAtPath<Sprite>(DialogBoxPath),
+                AssetDatabase.LoadAssetAtPath<Sprite>(ContinueArrowPath),
+                AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(PixelFontAssetPath));
+
         // ---------- Importación de recursos ----------
 
         /// <summary>

@@ -14,6 +14,8 @@ namespace TorreIngenieria.EditorTools
         [MenuItem("Torre Ingeniería/Mapas/Construir todos los mapas", priority = 0)]
         static void Build()
         {
+            StairwellBuilder.Build();
+            LabFloorBuilder.BuildAll();
             AscensoresBuilder.Build();
             AtrioBuilder.Build();
             EditorSceneManager.OpenScene(MapSceneBuilder.MapPath(SceneNames.Atrio));

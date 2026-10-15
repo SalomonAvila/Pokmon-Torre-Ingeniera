@@ -9,5 +9,6 @@ namespace TorreIngenieria.Core
         public const string Intro = "Intro";
         public const string Atrio = "Atrio";
         public const string Ascensores = "Ascensores";
+        public const string Escalera = "Escalera";
     }
 }

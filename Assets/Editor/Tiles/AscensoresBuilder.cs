@@ -12,6 +12,7 @@ namespace TorreIngenieria.EditorTools
     /// Construye el pasillo de los ascensores del lobby principal (Figura 23 del documento de diseño):
     /// escalera de madera a la izquierda, nicho con los tres ascensores (fuera de servicio), torniquetes
     /// y la escalera que baja al atrio. Al bajar por esa escalera se vuelve a las gradas del atrio.
+    /// Es el piso 2: la escalera de la izquierda sube al piso 3 (escena Escalera).
     /// Menú: Torre Ingeniería > Mapas > Construir pasillo de ascensores provisional.
     /// </summary>
     public static class AscensoresBuilder
@@ -87,6 +88,13 @@ namespace TorreIngenieria.EditorTools
             ProvisionalMap.Paint(Floor, Objects, ProvisionalMap.LoadTiles(TilesetName, 16),
                 (symbol, col, row) => symbol == '.' ? ((col / 2 + row / 2) % 2 == 0 ? TileA : TileB) : FloorIndex[symbol],
                 ObjectIndex, BlockingFloors, BlockingObjects);
+
+            ProvisionalMap.AddFloorInfo("2");
+            ProvisionalMap.AddMessageBox();
+
+            // Escalera de la izquierda → escalera en zigzag hacia el piso 3. Al volver, se llega a su lado.
+            ProvisionalMap.AddWarp("SubidaPiso3", 0, 0, 2, 5, height, SceneNames.Escalera, StairwellController.SpawnFromBelow);
+            ProvisionalMap.AddSpawn(Building.SpawnFromStairsAbove, 2, 3, height, PlayerController.Direction.Right);
 
             // Llegada desde el atrio: arriba de la escalera, mirando hacia el pasillo.
             ProvisionalMap.AddSpawn(SpawnFromAtrium, 20, 6, height, PlayerController.Direction.Up);

@@ -28,6 +28,7 @@ namespace TorreIngenieria.UI
 
             if (SaveSystem.TryLoad(out SaveData save))
             {
+                GameState.Save = save;
                 yield return dialogue.Say($"Se encontró la partida de {save.playerName} en {save.location}.");
                 yield return dialogue.Type("¿Qué quieres hacer?");
 
@@ -59,6 +60,7 @@ namespace TorreIngenieria.UI
 
             yield return dialogue.Say("Creando una nueva partida...");
             SaveData data = SaveSystem.CreateNew();
+            GameState.Save = data;
 
             yield return IntroducePlayer(data);
             yield return dialogue.Say($"¡Listo, {data.playerName}! Tu aventura en la Torre de Ingeniería está por comenzar.");

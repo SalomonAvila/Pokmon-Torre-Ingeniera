@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 
@@ -15,6 +16,8 @@ namespace TorreIngenieria.Core
         public string location = "Atrio";
         public int credits;
         public int seals;
+        /// <summary>Pisos completados (ids de Building.Floors); habilitan la escalera hacia el piso siguiente.</summary>
+        public List<string> completedFloors = new List<string>();
         public string createdAt;
         public string savedAt;
     }

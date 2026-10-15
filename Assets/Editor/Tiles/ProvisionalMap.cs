@@ -9,6 +9,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
+using UnityEngine.UI;
 using Object = UnityEngine.Object;
 
 namespace TorreIngenieria.EditorTools
@@ -33,6 +34,36 @@ namespace TorreIngenieria.EditorTools
                 TilesetTools.Prepare(path);
             TilesetTools.Prepare(UtilitiesPath);
             CharacterSpriteSlicer.SliceWalkSheet(PedroSheetPath, "Pedro");
+            MainMenuSceneBuilder.PrepareDialogueAssets();
+        }
+
+        /// <summary>Indica a qué piso del edificio pertenece la escena (ver Building.Floors).</summary>
+        public static void AddFloorInfo(string floor)
+        {
+            var info = new GameObject($"Piso_{floor}").AddComponent<FloorInfo>();
+            var serialized = new SerializedObject(info);
+            serialized.FindProperty("floor").stringValue = floor;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>Cuadro de texto estilo Pokémon para avisos y letreros en el mapa (WorldMessage).</summary>
+        public static void AddMessageBox()
+        {
+            var canvasObject = new GameObject("CanvasMensajes", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            canvasObject.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+            var scaler = canvasObject.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1024, 576);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = 1f;
+
+            var controls = AssetDatabase.LoadAssetAtPath<InputActionAsset>(ControlsPath);
+            var dialogue = MainMenuSceneBuilder.CreateMapDialogueBox(canvasObject.transform, controls);
+            var message = canvasObject.AddComponent<WorldMessage>();
+            var serialized = new SerializedObject(message);
+            serialized.FindProperty("controls").objectReferenceValue = controls;
+            serialized.FindProperty("dialogue").objectReferenceValue = dialogue;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
         public static TileBase[] LoadTiles(string sheet, int count) =>
@@ -53,7 +84,8 @@ namespace TorreIngenieria.EditorTools
         public static Vector3 CellCenter(int col, int row, int height) => Cell(col, row, height) + new Vector3(0.5f, 0.5f);
 
         /// <summary>
-        /// Pinta Suelo, Decoracion y Colisiones. floorTile recibe (símbolo, columna, fila) y devuelve el índice del tile.
+        /// Pinta Suelo, Decoracion y Colisiones. floorTile recibe (símbolo, columna, fila) y devuelve el índice del tile
+        /// (o -1 para no pintar esa casilla en Suelo, por ejemplo si va en otra capa).
         /// Además pone un borde de colisión alrededor del mapa.
         /// </summary>
         public static void Paint(string[] floor, string[] objects, TileBase[] tiles,
@@ -75,7 +107,9 @@ namespace TorreIngenieria.EditorTools
                     char floorSymbol = floor[row][col];
                     char item = objects[row][col];
 
-                    ground.SetTile(cell, tiles[floorTile(floorSymbol, col, row)]);
+                    int floorIndex = floorTile(floorSymbol, col, row);
+                    if (floorIndex >= 0)
+                        ground.SetTile(cell, tiles[floorIndex]);
                     if (item != '.')
                         decoration.SetTile(cell, tiles[objectTile[item]]);
                     if (blockingFloors.IndexOf(floorSymbol) >= 0 || blockingObjects.IndexOf(item) >= 0)
@@ -138,7 +172,7 @@ namespace TorreIngenieria.EditorTools
         }
 
         /// <summary>Zona que lleva a otra escena. Columnas y filas del texto, ambas inclusive.</summary>
-        public static void AddWarp(string name, int colMin, int colMax, int rowMin, int rowMax, int height,
+        public static WarpZone AddWarp(string name, int colMin, int colMax, int rowMin, int rowMax, int height,
             string targetScene, string targetSpawn)
         {
             var warp = new GameObject(name).AddComponent<WarpZone>();
@@ -148,6 +182,7 @@ namespace TorreIngenieria.EditorTools
             serialized.FindProperty("targetScene").stringValue = targetScene;
             serialized.FindProperty("targetSpawn").stringValue = targetSpawn;
             serialized.ApplyModifiedPropertiesWithoutUndo();
+            return warp;
         }
 
         /// <summary>Punto de llegada desde otra escena.</summary>

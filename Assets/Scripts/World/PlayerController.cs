@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -31,7 +32,7 @@ namespace TorreIngenieria.World
         [SerializeField, Tooltip("Casillas por segundo al correr.")] float runSpeed = 8f;
         [SerializeField, Tooltip("Tiempo que hay que mantener la tecla tras girar para empezar a caminar.")] float turnDelay = 0.1f;
         [SerializeField, Tooltip("Capas del mapa que bloquean el paso.")]
-        string[] blockingLayerNames = { "Paredes", "Colisiones" };
+        string[] blockingLayerNames = { "Paredes", "Colisiones", "Bloqueo" };
 
         // NonSerialized: si Unity recarga los scripts durante el Play, se vuelven a buscar en Awake/OnEnable
         // en lugar de quedar como acciones vacías.
@@ -42,6 +43,12 @@ namespace TorreIngenieria.World
         bool moving;
         bool nextStepIsA = true;
         float turnTimer;
+
+        /// <summary>Se invoca al chocar con una casilla bloqueada (posición del centro de esa casilla).</summary>
+        public static event Action<Vector3> Bumped;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => Bumped = null;
 
         public Direction Facing => facing;
         public bool IsMoving => moving;
@@ -67,9 +74,10 @@ namespace TorreIngenieria.World
         {
             // Las casillas bloqueadas se consultan directamente en las capas del mapa (como en FireRed),
             // sin depender de la física: es exacto y no cambia según cómo se cargue la escena.
-            blockingTilemaps = System.Array.FindAll(
-                FindObjectsByType<Tilemap>(),
-                tilemap => System.Array.IndexOf(blockingLayerNames, tilemap.name) >= 0);
+            // Se incluyen las capas inactivas (como Bloqueo) porque pueden activarse durante el juego.
+            blockingTilemaps = Array.FindAll(
+                FindObjectsByType<Tilemap>(FindObjectsInactive.Include),
+                tilemap => Array.IndexOf(blockingLayerNames, tilemap.name) >= 0);
 
             // Si se llegó desde otra escena (escalera, puerta), aparece en el SpawnPoint indicado.
             string spawnId = SceneTransition.ConsumePendingSpawn();
@@ -88,7 +96,7 @@ namespace TorreIngenieria.World
 
         void Update()
         {
-            if (moving || SceneTransition.IsTransitioning)
+            if (moving || SceneTransition.IsTransitioning || WorldMessage.IsOpen)
                 return;
 
             Direction? input = ReadDirection();
@@ -135,7 +143,10 @@ namespace TorreIngenieria.World
             Vector3 target = start + (Vector3)ToVector(facing);
             bool blocked = IsBlocked(target);
             if (blocked)
+            {
+                Bumped?.Invoke(target);
                 target = start; // camina en el sitio, como al chocar en los juegos originales
+            }
 
             float duration = 1f / (runAction.IsPressed() ? runSpeed : walkSpeed);
             int stepFrame = nextStepIsA ? 1 : 2;
@@ -159,7 +170,7 @@ namespace TorreIngenieria.World
         bool IsBlocked(Vector3 cellCenter)
         {
             foreach (Tilemap tilemap in blockingTilemaps)
-                if (tilemap.HasTile(tilemap.WorldToCell(cellCenter)))
+                if (tilemap.gameObject.activeInHierarchy && tilemap.HasTile(tilemap.WorldToCell(cellCenter)))
                     return true;
             return false;
         }
