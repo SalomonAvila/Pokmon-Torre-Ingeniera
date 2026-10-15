@@ -12,7 +12,7 @@ namespace TorreIngenieria.Core
     {
         public int version = 1;
         public string playerName = "Pedro";
-        public string location = "Plazoleta";
+        public string location = "Atrio";
         public int credits;
         public int seals;
         public string createdAt;

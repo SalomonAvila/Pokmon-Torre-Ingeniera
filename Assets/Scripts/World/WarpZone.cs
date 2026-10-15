@@ -1,0 +1,43 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace TorreIngenieria.World
+{
+    /// <summary>
+    /// Casillas que llevan a otra escena al pisarlas (escaleras, puertas), como en Pokémon FireRed.
+    /// El área va desde la casilla de este objeto hacia la derecha y hacia arriba.
+    /// </summary>
+    public class WarpZone : MonoBehaviour
+    {
+        static readonly List<WarpZone> All = new List<WarpZone>();
+
+        [SerializeField, Tooltip("Ancho y alto del área, en casillas.")] Vector2Int size = Vector2Int.one;
+        [SerializeField] string targetScene;
+        [SerializeField, Tooltip("Id del SpawnPoint de la escena destino.")] string targetSpawn;
+
+        void OnEnable() => All.Add(this);
+
+        void OnDisable() => All.Remove(this);
+
+        public static WarpZone At(Vector3 position)
+        {
+            var cell = new Vector2Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y));
+            return All.Find(warp => warp.Contains(cell));
+        }
+
+        bool Contains(Vector2Int cell)
+        {
+            var origin = new Vector2Int(Mathf.FloorToInt(transform.position.x), Mathf.FloorToInt(transform.position.y));
+            return new RectInt(origin, size).Contains(cell);
+        }
+
+        public void Trigger() => SceneTransition.Go(targetScene, targetSpawn);
+
+        void OnDrawGizmos()
+        {
+            Gizmos.color = new Color(1f, 0.6f, 0f, 0.35f);
+            var origin = new Vector3(Mathf.Floor(transform.position.x), Mathf.Floor(transform.position.y), 0);
+            Gizmos.DrawCube(origin + new Vector3(size.x, size.y) / 2f, new Vector3(size.x, size.y, 0.1f));
+        }
+    }
+}

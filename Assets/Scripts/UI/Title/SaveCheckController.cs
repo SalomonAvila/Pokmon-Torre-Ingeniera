@@ -37,8 +37,8 @@ namespace TorreIngenieria.UI
                 if (choice == 0)
                 {
                     yield return dialogue.Say("Cargando partida...");
-                    // TODO: cargar la escena guardada cuando exista.
-                    Debug.Log($"Continuar partida: {SaveSystem.SavePath}");
+                    // TODO: cargar la ubicación guardada; por ahora siempre el atrio.
+                    LoadWorld();
                     yield break;
                 }
 
@@ -63,10 +63,15 @@ namespace TorreIngenieria.UI
             yield return IntroducePlayer(data);
             yield return dialogue.Say($"¡Listo, {data.playerName}! Tu aventura en la Torre de Ingeniería está por comenzar.");
 
-            if (Application.CanStreamedLevelBeLoaded(SceneNames.Intro))
-                SceneManager.LoadScene(SceneNames.Intro);
+            LoadWorld();
+        }
+
+        static void LoadWorld()
+        {
+            if (Application.CanStreamedLevelBeLoaded(SceneNames.Atrio))
+                SceneManager.LoadScene(SceneNames.Atrio);
             else
-                Debug.Log($"Partida nueva creada en {SaveSystem.SavePath}. Falta la escena '{SceneNames.Intro}'.");
+                Debug.Log($"Falta la escena '{SceneNames.Atrio}': usa Torre Ingeniería > Mapas > Construir atrio provisional.");
         }
 
         /// <summary>Presentación del protagonista según su biografía en el documento de diseño.</summary>
