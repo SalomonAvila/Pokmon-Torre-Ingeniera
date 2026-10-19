@@ -182,36 +182,36 @@ namespace TorreIngenieria.Core
 
         public static bool HasCaught(string speciesId) => Save.pokedex.Contains(speciesId);
 
-        /// <summary>Especies registradas en un piso (cada especie cuenta solo en el piso de su primera captura).</summary>
+        /// <summary>Especies que aparecen en el piso y el jugador ya capturó (las listas salen de SpeciesCatalog).</summary>
         public static IReadOnlyList<string> CaughtSpeciesOnFloor(string floor)
         {
-            FloorSpecies entry = FindFloorSpecies(floor);
-            return entry != null ? entry.species : Array.Empty<string>();
+            var caught = new List<string>();
+            foreach (string species in SpeciesCatalog.OnFloor(floor))
+                if (HasCaught(species))
+                    caught.Add(species);
+            return caught;
         }
 
-        /// <summary>Registra una captura: la especie se suma al total y a su piso de primera captura.</summary>
-        public static void RegisterCapture(string speciesId, string floor)
+        /// <summary>Capturadas y total de especies del piso; (0, 0) si el piso no tiene encuentros.</summary>
+        public static (int caught, int total) FloorPokedexProgress(string floor) =>
+            (CaughtSpeciesOnFloor(floor).Count, SpeciesCatalog.OnFloor(floor).Count);
+
+        /// <summary>Porcentaje del Pokédex del piso (0 a 100); 0 si el piso no tiene especies.</summary>
+        public static int FloorPokedexPercent(string floor)
+        {
+            (int caught, int total) = FloorPokedexProgress(floor);
+            return total == 0 ? 0 : Mathf.RoundToInt(100f * caught / total);
+        }
+
+        /// <summary>Registra una captura en el Pokédex total; el reparto por piso se deriva de SpeciesCatalog.</summary>
+        public static void RegisterCapture(string speciesId)
         {
             if (string.IsNullOrEmpty(speciesId) || HasCaught(speciesId))
                 return;
 
             Save.pokedex.Add(speciesId);
-
-            if (!string.IsNullOrEmpty(floor))
-            {
-                FloorSpecies entry = FindFloorSpecies(floor);
-                if (entry == null)
-                {
-                    entry = new FloorSpecies { floor = floor };
-                    Save.pokedexByFloor.Add(entry);
-                }
-                entry.species.Add(speciesId);
-            }
-
             Commit();
         }
-
-        static FloorSpecies FindFloorSpecies(string floor) => Save.pokedexByFloor.Find(f => f.floor == floor);
 
         // ---------- Banderas de historia ----------
 
@@ -227,7 +227,7 @@ namespace TorreIngenieria.Core
             Commit();
         }
 
-        /// <summary>El tutorial ya se superó: la puerta Atrio ↔ Ascensores deja pasar.</summary>
+        /// <summary>Marca el combate tutorial con Gabriel como superado (no abre la puerta del edificio).</summary>
         public static void CompleteTutorial()
         {
             if (Save.tutorialDone)
@@ -235,6 +235,16 @@ namespace TorreIngenieria.Core
             Save.tutorialDone = true;
             Commit();
         }
+
+        /// <summary>Tutorial superado (combate con Gabriel en el lobby); todavía no lo consume nadie.</summary>
+        public static bool TutorialDone => Save.tutorialDone;
+
+        /// <summary>
+        /// El Vigilante Gómez deja entrar al edificio con el inicial elegido y al menos un Pokémon capturado
+        /// (Doc §8). La puerta Atrio ↔ Ascensores consulta esta condición.
+        /// </summary>
+        public static bool PassesBuildingDoor =>
+            !string.IsNullOrEmpty(Save.starterId) && Save.pokedex.Count > 0;
 
         /// <summary>La Ing. Cantera entrega el Carné de acceso que activa los ascensores del sur.</summary>
         public static void GrantAccessCard()

@@ -6,7 +6,8 @@ namespace TorreIngenieria.EditorTools
 {
     /// <summary>
     /// Atajos para probar el progreso mientras no existen los jefes de piso:
-    /// completar pisos (desbloquea la escalera hacia el siguiente) o reiniciar el progreso.
+    /// completar pisos (desbloquea la escalera hacia el siguiente), abrir la puerta del edificio con un inicial
+    /// y una captura de prueba (mientras no exista el Vigilante Gómez) o reiniciar el progreso.
     /// Los pisos 1 y 2 no tienen reto: su escalera de subida siempre está abierta.
     /// Funcionan en Play (efecto inmediato) y fuera de Play (modifican la partida guardada).
     /// </summary>
@@ -38,6 +39,16 @@ namespace TorreIngenieria.EditorTools
             foreach (string floor in Building.Floors)
                 GameState.CompleteFloor(floor);
             Report("Todos los pisos completados.");
+        }
+
+        [MenuItem("Torre Ingeniería/Progreso/Abrir puerta del edificio (prueba)")]
+        static void OpenBuildingDoor()
+        {
+            PrepareState();
+            if (string.IsNullOrEmpty(GameState.Save.starterId))
+                GameState.SetStarter("bulbasaur");
+            GameState.RegisterCapture("pidgey");
+            Report("Puerta del edificio abierta: inicial elegido y captura de prueba (pidgey).");
         }
 
         [MenuItem("Torre Ingeniería/Progreso/Reiniciar progreso")]

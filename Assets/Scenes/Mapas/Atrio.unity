@@ -397,6 +397,8 @@ MonoBehaviour:
   size: {x: 15, y: 1}
   targetScene: Ascensores
   targetSpawn: DesdeAtrio
+  needsBuildingAccess: 1
+  lockedMessage: "—Alto. El edificio está en emergencia.\nEl vigilante Gómez deja entrar solo con inicial elegido y un Pokémon capturado."
 --- !u!4 &512100664
 Transform:
   m_ObjectHideFlags: 0

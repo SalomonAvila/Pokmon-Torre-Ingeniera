@@ -32,14 +32,6 @@ namespace TorreIngenieria.Core
         public int amount;
     }
 
-    /// <summary>Especies capturadas en un piso: cada especie cuenta solo en el piso de su primera captura.</summary>
-    [Serializable]
-    public class FloorSpecies
-    {
-        public string floor;
-        public List<string> species = new List<string>();
-    }
-
     /// <summary>
     /// Progreso del jugador: equipo, inventario, sellos, notas de jefes, Pokédex, pisos visitados y banderas.
     /// JsonUtility no soporta Dictionary ni HashSet, así que el inventario y los conjuntos son listas.
@@ -49,7 +41,7 @@ namespace TorreIngenieria.Core
     public class SaveData
     {
         /// <summary>Versión actual del archivo. Al añadir campos se sube; los ausentes arrancan con su valor inicial.</summary>
-        public const int CurrentVersion = 2;
+        public const int CurrentVersion = 3;
 
         /// <summary>
         /// El 1 es el valor antiguo: si el JSON no trae 'version' (formato anterior al campo) se trata como v1
@@ -71,11 +63,8 @@ namespace TorreIngenieria.Core
 
         public List<InventoryItem> inventory = new List<InventoryItem>();
 
-        /// <summary>Especies capturadas, sin repetir (Pokédex total).</summary>
+        /// <summary>Especies capturadas, sin repetir (Pokédex total). El reparto por piso se deriva de SpeciesCatalog.</summary>
         public List<string> pokedex = new List<string>();
-
-        /// <summary>Pokédex por piso: la especie queda en el piso de su primera captura.</summary>
-        public List<FloorSpecies> pokedexByFloor = new List<FloorSpecies>();
 
         /// <summary>Pisos a los que el jugador ya llegó (distinto de completedFloors, que son los vencidos).</summary>
         public List<string> visitedFloors = new List<string>();
@@ -88,7 +77,7 @@ namespace TorreIngenieria.Core
 
         public GabrielChoice gabrielChoice = GabrielChoice.Undecided;
 
-        /// <summary>Tutorial superado: habilita la puerta Atrio ↔ Ascensores.</summary>
+        /// <summary>Tutorial con Gabriel superado (lobby); no abre la puerta del edificio.</summary>
         public bool tutorialDone;
 
         public List<string> defeatedTrainers = new List<string>();
@@ -151,7 +140,9 @@ namespace TorreIngenieria.Core
         /// <summary>
         /// Adapta una partida guardada a la versión actual del formato.
         /// v1 → v2: se añadieron equipo, inventario, sellos por id, notas de jefes, Pokédex, pisos visitados
-        /// y banderas. No hay nada que recalcular: JsonUtility deja los campos nuevos con su valor inicial.
+        /// y banderas. v2 → v3: se retiró pokedexByFloor (el Pokédex por piso se deriva de SpeciesCatalog).
+        /// No hay nada que recalcular: JsonUtility deja los campos nuevos con su valor inicial e ignora las
+        /// claves viejas que ya no existen.
         /// </summary>
         static void Migrate(SaveData data)
         {

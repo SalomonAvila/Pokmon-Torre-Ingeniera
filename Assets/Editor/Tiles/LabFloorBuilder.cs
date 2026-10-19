@@ -14,8 +14,8 @@ namespace TorreIngenieria.EditorTools
     /// pasillo central norte-sur; al oeste el ascensor de servicio, la escalera NO, las salas O1-O3 y los tres
     /// ascensores del sur; al este las salas E1-E6 y la escalera SE.
     /// La distribución de las salas cambia en cada piso (ver LabFloorLayout); el piso 3 sigue la Figura 38.
-    /// Cada piso usa el color de acento de su tipo en las salas, y la escalera de subida alterna entre NO y SE
-    /// (piso 3: se llega por la SE y se sube por la NO; piso 4: al revés; y así sucesivamente).
+    /// Cada piso usa el color de acento de su tipo en las salas. Las esquinas de la entrada y de la escalera de
+    /// subida (el jefe) las fija Building (EntryCorner y GuardedCorner): no se recalculan aquí.
     /// Menú: Torre Ingeniería > Mapas > Construir pisos de laboratorio.
     /// </summary>
     public static class LabFloorBuilder
@@ -62,9 +62,6 @@ namespace TorreIngenieria.EditorTools
             Debug.Log($"Pisos de laboratorio creados: {LabFloors.Length} escenas en Assets/Scenes/Mapas.");
         }
 
-        /// <summary>La escalera de subida está al NO en los pisos de índice par (3, 5, 7, 8, ...) y al SE en los impares.</summary>
-        public static bool UpStairsAtNorthwest(string floor) => System.Array.IndexOf(Building.Floors, floor) % 2 == 0;
-
         static void BuildFloor(string floor, string type, string accent)
         {
             Scene scene = MapSceneBuilder.CreateScene();
@@ -85,7 +82,8 @@ namespace TorreIngenieria.EditorTools
                 ObjectIndex, BlockingFloors, BlockingObjects);
             PaintRooms(floorRows, tiles, accent, height);
 
-            bool upAtNorthwest = UpStairsAtNorthwest(floor);
+            // La escalera de subida es la que custodia el jefe: la fija Building, no este builder.
+            bool upAtNorthwest = Building.GuardedCorner(floor) == Corner.NorthWest;
             AddStairs(upAtNorthwest, height);
 
             ProvisionalMap.AddFloorInfo(floor);

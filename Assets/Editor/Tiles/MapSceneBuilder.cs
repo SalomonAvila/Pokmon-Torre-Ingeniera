@@ -11,7 +11,7 @@ namespace TorreIngenieria.EditorTools
 {
     /// <summary>
     /// Crea una escena de mapa lista para pintar con el Tile Palette: cámara Pixel Perfect estilo GBA (240x160)
-    /// y las capas de Tilemap del juego (ver Docs/Lista de tiles.md).
+    /// y las capas de Tilemap del juego (Suelo, Paredes, Decoracion, SobreJugador, Colisiones y Encuentros).
     /// Menú: Torre Ingeniería > Mapas > Crear escena de mapa.
     /// </summary>
     public static class MapSceneBuilder

@@ -142,7 +142,11 @@ namespace TorreIngenieria.EditorTools
             ProvisionalMap.AddMessageBox();
 
             // Último escalón de las gradas superiores (entre las barandas) → pasillo de los ascensores.
-            ProvisionalMap.AddWarp("SubidaAscensores", 2, 16, 1, 1, height, SceneNames.Ascensores, AscensoresBuilder.SpawnFromAtrium);
+            // Es la puerta del edificio: el Vigilante Gómez solo deja pasar con inicial y un Pokémon capturado.
+            ProvisionalMap.AddWarp("SubidaAscensores", 2, 16, 1, 1, height, SceneNames.Ascensores, AscensoresBuilder.SpawnFromAtrium,
+                needsBuildingAccess: true,
+                lockedMessage: "—Alto. El edificio está en emergencia.\n" +
+                               "El vigilante Gómez deja entrar solo con inicial elegido y un Pokémon capturado.");
             ProvisionalMap.AddSpawn(SpawnFromElevators, 9, 2, height, PlayerController.Direction.Down);
 
             GameObject pedro = ProvisionalMap.CreatePlayer(ProvisionalMap.CellCenter(PlayerStart.x, PlayerStart.y, height));

@@ -71,8 +71,10 @@ namespace TorreIngenieria.Core
             ChallengeIndex(floor) % 2 == 0 ? Corner.SouthEast : Corner.NorthWest;
 
         /// <summary>
-        /// Esquina que custodia el jefe: la opuesta a la entrada. La cinta de precaución bloquea la subida
-        /// de esa misma escalera hasta completar el piso (protocolo "Evaluación Total").
+        /// Esquina que custodia el jefe: la opuesta a la de entrada (Doc §2). El documento pone la cinta de
+        /// precaución en la otra escalera (la de entrada), cerrada de forma permanente; el prototipo sirve todos
+        /// los tramos con una sola escena <c>Escalera</c> y reutiliza la cinta para cerrar la subida hasta
+        /// completar el piso (ver <c>StairwellController</c>).
         /// </summary>
         public static Corner GuardedCorner(string floor) => Opposite(EntryCorner(floor));
 

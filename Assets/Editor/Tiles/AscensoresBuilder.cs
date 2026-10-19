@@ -99,6 +99,7 @@ namespace TorreIngenieria.EditorTools
             // Llegada desde el atrio: arriba de la escalera, mirando hacia el pasillo.
             ProvisionalMap.AddSpawn(SpawnFromAtrium, 20, 6, height, PlayerController.Direction.Up);
             // Último escalón de la escalera (entre las barandas) → gradas superiores del atrio.
+            // Bajar siempre está permitido: esta salida no lleva la guarda de la puerta del edificio.
             ProvisionalMap.AddWarp("BajadaAtrio", 17, 23, 9, 9, height, SceneNames.Atrio, AtrioBuilder.SpawnFromElevators);
 
             // Si se prueba esta escena directamente, Pedro empieza donde llega desde el atrio.

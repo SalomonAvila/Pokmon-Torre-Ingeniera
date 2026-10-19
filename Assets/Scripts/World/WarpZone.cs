@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TorreIngenieria.Core;
 using UnityEngine;
 
 namespace TorreIngenieria.World
@@ -14,6 +15,10 @@ namespace TorreIngenieria.World
         [SerializeField, Tooltip("Ancho y alto del área, en casillas.")] Vector2Int size = Vector2Int.one;
         [SerializeField] string targetScene;
         [SerializeField, Tooltip("Id del SpawnPoint de la escena destino.")] string targetSpawn;
+        [SerializeField, Tooltip("Solo pasa con inicial elegido y un Pokémon capturado (puerta del edificio).")]
+        bool needsBuildingAccess;
+        [SerializeField, TextArea, Tooltip("Mensaje al chocar con la puerta cerrada; cada línea va en un renglón.")]
+        string lockedMessage;
 
         void OnEnable() => All.Add(this);
 
@@ -38,8 +43,26 @@ namespace TorreIngenieria.World
             targetSpawn = spawn;
         }
 
+        /// <summary>
+        /// Convierte la zona en la puerta del edificio: sin inicial elegido y una captura no deja pasar
+        /// (Vigilante Gómez, Doc §8). Las líneas del mensaje se separan con saltos de línea.
+        /// </summary>
+        public void SetBuildingAccess(bool required, string message)
+        {
+            needsBuildingAccess = required;
+            lockedMessage = message;
+        }
+
         public void Trigger()
         {
+            if (needsBuildingAccess && !GameState.PassesBuildingDoor)
+            {
+                WorldMessage.Show(string.IsNullOrEmpty(lockedMessage)
+                    ? new[] { "El vigilante no te deja pasar todavía." }
+                    : lockedMessage.Split('\n'));
+                return;
+            }
+
             if (!SceneTransition.Go(targetScene, targetSpawn))
                 WorldMessage.Show("Esta zona del edificio todavía está en construcción.");
         }

@@ -55,7 +55,7 @@ namespace TorreIngenieria.EditorTools
                     "Se perdió la lista de pisos completados.");
                 Check(data.sealIds.Count == 0, "Los sellos deben arrancar vacíos (el 'seals' numérico viejo se ignora).");
                 Check(data.team.Count == 0 && data.inventory.Count == 0 && data.pokedex.Count == 0 &&
-                      data.pokedexByFloor.Count == 0 && data.visitedFloors.Count == 0 && data.bossNotes.Count == 0,
+                      data.visitedFloors.Count == 0 && data.bossNotes.Count == 0,
                     "Las listas nuevas (equipo, mochila, Pokédex, visitados, notas) deben arrancar vacías.");
                 Check(data.starterId == "" && !data.accessCard && !data.tutorialDone &&
                       data.gabrielChoice == GabrielChoice.Undecided &&

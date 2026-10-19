@@ -173,7 +173,7 @@ namespace TorreIngenieria.EditorTools
 
         /// <summary>Zona que lleva a otra escena. Columnas y filas del texto, ambas inclusive.</summary>
         public static WarpZone AddWarp(string name, int colMin, int colMax, int rowMin, int rowMax, int height,
-            string targetScene, string targetSpawn)
+            string targetScene, string targetSpawn, bool needsBuildingAccess = false, string lockedMessage = null)
         {
             var warp = new GameObject(name).AddComponent<WarpZone>();
             warp.transform.position = Cell(colMin, rowMax, height); // esquina inferior izquierda
@@ -182,6 +182,8 @@ namespace TorreIngenieria.EditorTools
             serialized.FindProperty("targetScene").stringValue = targetScene;
             serialized.FindProperty("targetSpawn").stringValue = targetSpawn;
             serialized.ApplyModifiedPropertiesWithoutUndo();
+            if (needsBuildingAccess)
+                warp.SetBuildingAccess(true, lockedMessage);
             return warp;
         }
 

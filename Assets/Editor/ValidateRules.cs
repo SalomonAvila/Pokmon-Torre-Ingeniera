@@ -8,7 +8,8 @@ namespace TorreIngenieria.EditorTools
     /// <summary>
     /// Comprueba, piso por piso, que Building y GameRules reproduzcan las tablas del documento
     /// (Doc §2, §7 y §8): posición en la secuencia, esquina de entrada, esquina que custodia el jefe,
-    /// rango de niveles salvajes y tamaño del equipo del jefe. Como el proyecto no tiene suite de tests,
+    /// rango de niveles salvajes y tamaño del equipo del jefe; además, que SpeciesCatalog tenga especies
+    /// declaradas en los pisos con encuentros y con ids en minúscula. Como el proyecto no tiene suite de tests,
     /// esta es la verificación ejecutable de esas reglas.
     /// Menú: Torre Ingeniería > Validar reglas del documento.
     /// </summary>
@@ -67,6 +68,16 @@ namespace TorreIngenieria.EditorTools
                 $"Montoya debería llevar {Building.BossTeamSize("14")} Pokémon y la tabla tiene {GameRules.MontoyaLevels.Length}.");
             Check(GameRules.MontoyaLevels[0] == Building.BossLevel("14"),
                 $"El primer Pokémon de Montoya debería estar en el nivel del jefe del piso 14 ({Building.BossLevel("14")}).");
+
+            // Pokédex por piso: cada piso con encuentros debe declarar sus especies y con ids en minúscula.
+            foreach (string floor in SpeciesCatalog.FloorsWithEncounters)
+            {
+                var species = SpeciesCatalog.OnFloor(floor);
+                Check(Building.IsValid(floor), $"SpeciesCatalog usa el piso '{floor}', que no existe en Building.");
+                Check(species.Count > 0, $"{floor}: SpeciesCatalog no declara especies.");
+                foreach (string id in species)
+                    Check(id == id.ToLowerInvariant(), $"{floor}: el id '{id}' debe ir en minúscula.");
+            }
 
             if (checksFailed == 0)
                 Debug.Log($"Reglas del documento: todo coincide ({ChallengeFloors.Length} pisos con reto + plazoleta).");
