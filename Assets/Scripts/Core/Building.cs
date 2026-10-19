@@ -3,6 +3,12 @@ using System;
 namespace TorreIngenieria.Core
 {
     /// <summary>
+    /// Esquina de un mapa. En los pisos con reto, la escalera de subida y la entrada por la que se llega
+    /// están en SE o NO según la posición en la secuencia (Doc §2).
+    /// </summary>
+    public enum Corner { NorthWest, NorthEast, SouthWest, SouthEast }
+
+    /// <summary>
     /// Estructura del edificio, de abajo hacia arriba: 1 (atrio), 2 (ascensores), 3 a 7, PT (piso técnico), 8 a 14.
     /// Las escaleras siempre conectan un piso con el siguiente de esta lista.
     /// </summary>
@@ -45,6 +51,63 @@ namespace TorreIngenieria.Core
             "1" => SceneNames.Atrio,
             "2" => SceneNames.Ascensores,
             _ => $"Piso{floor}",
+        };
+
+        // ---------- Secuencia de retos (Doc §2) ----------
+
+        /// <summary>
+        /// Posición en la secuencia de retos (k): piso 3 = 0, 4 = 1, 5 = 2, 6 = 3, 7 = 4, PT = 5,
+        /// 8 = 6, 9 = 7, 10 = 8, 11 = 9, 12 = 10, 13 = 11 y 14 = 12.
+        /// Los pisos sin reto (1 y 2) y cualquier piso desconocido devuelven -1.
+        /// </summary>
+        public static int SequenceIndex(string floor)
+        {
+            int index = Array.IndexOf(Floors, floor);
+            return index < 0 || !HasChallenge(floor) ? -1 : index - FloorsWithoutChallenge.Length;
+        }
+
+        /// <summary>Esquina por la que se entra al piso: SE si k es par y NO si es impar.</summary>
+        public static Corner EntryCorner(string floor) =>
+            ChallengeIndex(floor) % 2 == 0 ? Corner.SouthEast : Corner.NorthWest;
+
+        /// <summary>
+        /// Esquina que custodia el jefe: la opuesta a la entrada. La cinta de precaución bloquea la subida
+        /// de esa misma escalera hasta completar el piso (protocolo "Evaluación Total").
+        /// </summary>
+        public static Corner GuardedCorner(string floor) => Opposite(EntryCorner(floor));
+
+        // ---------- Dificultad por piso (los números viven en GameRules) ----------
+
+        /// <summary>Rango de niveles salvajes del piso; los pisos sin reto usan el de la plazoleta.</summary>
+        public static (int min, int max) WildLevelRange(string floor)
+        {
+            int k = SequenceIndex(floor);
+            return k < 0
+                ? (GameRules.PlazaWildMinLevel, GameRules.PlazaWildMaxLevel)
+                : (GameRules.WildMinLevel(k), GameRules.WildMaxLevel(k));
+        }
+
+        /// <summary>Pokémon del equipo del jefe del piso.</summary>
+        public static int BossTeamSize(string floor) => GameRules.BossTeamSize(ChallengeIndex(floor));
+
+        /// <summary>Nivel del jefe del piso (el salvaje máximo del piso + 4).</summary>
+        public static int BossLevel(string floor) => GameRules.BossLevel(ChallengeIndex(floor));
+
+        /// <summary>k del piso, exigiendo que tenga reto; en los demás pisa fuerte para no inventarse reglas.</summary>
+        static int ChallengeIndex(string floor)
+        {
+            int k = SequenceIndex(floor);
+            if (k < 0)
+                throw new InvalidOperationException($"El piso '{floor}' no tiene reto, así que no tiene entrada por escalera ni jefe.");
+            return k;
+        }
+
+        static Corner Opposite(Corner corner) => corner switch
+        {
+            Corner.NorthWest => Corner.SouthEast,
+            Corner.SouthEast => Corner.NorthWest,
+            Corner.NorthEast => Corner.SouthWest,
+            _ => Corner.NorthEast,
         };
     }
 }
