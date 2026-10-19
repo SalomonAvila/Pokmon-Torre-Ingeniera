@@ -8,24 +8,31 @@ namespace TorreIngenieria.Core
     /// por piso (Doc §8). Aquí solo está "qué se puede encontrar allí"; cuántos encuentros y a qué nivel se
     /// resuelven con GameRules y Building. Los ids van en minúscula, como el resto del contenido.
     ///
-    /// El documento fija las 10 a 12 especies del prototipo y su reparto por piso; se reúnen aquí en un solo
-    /// sitio. Los pisos sin encuentros (pasillos, lobby y terraza del piso 14) no aparecen en la tabla.
+    /// El documento fija las especies del prototipo y su reparto por piso; se reúnen aquí en un solo sitio.
+    /// Los pisos sin encuentros (pasillos, lobby y terraza del piso 14) no aparecen en la tabla. Los iniciales
+    /// se listan aparte en <see cref="Starters"/>: se eligen, no se encuentran salvajes.
     /// </summary>
     public static class SpeciesCatalog
     {
         /// <summary>
-        /// Especies por piso, con los ids de Building.Floors. Falta completar las listas con el documento:
-        /// por ahora solo están los pisos del prototipo (plazoleta y piso 3).
+        /// Especies por piso, con los ids de Building.Floors (Doc §3).
         /// </summary>
         static readonly Dictionary<string, string[]> ByFloor = new Dictionary<string, string[]>
         {
-            // Plazoleta (jardineras, niveles 2 a 5).
-            // TODO(Doc §3): reemplazar por la lista real de especies de la plazoleta.
-            ["1"] = new[] { "caterpie", "pidgey", "rattata", "spearow" },
-            // Piso 3 (Roca): Geodude y Onix son también del equipo de la Ing. Cantera, pero también salvajes.
-            // TODO(Doc §3, §8): reemplazar por la lista real de las salas-laboratorio del piso 3.
-            ["3"] = new[] { "geodude", "onix", "sandshrew", "zubat" },
+            // Plazoleta (jardineras, niveles 2 a 5). Eevee es raro (Doc §3).
+            ["1"] = new[] { "rattata", "pidgey", "meowth", "eevee" },
+            // Piso 3 (Roca). Geodude y Onix son también del equipo de la Ing. Cantera (Doc §8, §10).
+            ["3"] = new[] { "geodude", "rhyhorn", "onix", "kabuto", "omanyte" },
         };
+
+        /// <summary>
+        /// Iniciales que el jugador elige en la plazoleta (Doc §3). No son encuentros salvajes: no cuentan
+        /// para el porcentaje del Pokédex por piso, pero sí como especies conocidas.
+        /// </summary>
+        public static readonly string[] Starters = { "bulbasaur", "charmander", "squirtle" };
+
+        /// <summary>¿La especie es uno de los iniciales?</summary>
+        public static bool IsStarter(string speciesId) => Array.IndexOf(Starters, speciesId) >= 0;
 
         /// <summary>Especies que pueden aparecer en el piso; lista vacía si el piso no tiene encuentros.</summary>
         public static IReadOnlyList<string> OnFloor(string floor)
