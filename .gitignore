@@ -112,3 +112,15 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# --- Reglas del proyecto ---
+# Documento de diseño: local, no se sube al repositorio.
+/Docs/
+
+# Archivos de sistema operativo
+[Tt]humbs.db
+Desktop.ini
+.DS_Store
+
+# Ajustes locales de JetBrains Rider / IntelliJ
+.idea/
