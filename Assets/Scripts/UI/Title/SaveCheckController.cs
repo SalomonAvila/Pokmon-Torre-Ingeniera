@@ -29,7 +29,7 @@ namespace TorreIngenieria.UI
             if (SaveSystem.TryLoad(out SaveData save))
             {
                 GameState.Save = save;
-                yield return dialogue.Say($"Se encontró la partida de {save.playerName} en {save.location}.");
+                yield return dialogue.Say($"Se encontró la partida de {save.playerName} en {Building.DisplayName(save.location)}.");
                 yield return dialogue.Type("¿Qué quieres hacer?");
 
                 int choice = 0;
