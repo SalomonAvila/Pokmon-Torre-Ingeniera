@@ -1,5 +1,6 @@
 using System.Collections;
 using TMPro;
+using TorreIngenieria.World;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -46,6 +47,8 @@ namespace TorreIngenieria.UI
             pressStartText.UpdateMeshPadding();
 
             saveScreen.alpha = 0f;
+            // El negro de entrada lo maneja el fundido global (FadeManager), no este CanvasGroup.
+            fader.alpha = 0f;
         }
 
         void OnEnable()
@@ -60,7 +63,13 @@ namespace TorreIngenieria.UI
             startAction.actionMap.Disable();
         }
 
-        void Start() => StartCoroutine(Fade(fader, 1f, 0f));
+        void Start()
+        {
+            FadeManager fade = FadeManager.Ensure();
+            fade.SetBlack(true);
+            // El coroutine vive en el fundido persistente, no en la escena del título.
+            fade.StartCoroutine(fade.FadeFromBlack(fadeDuration));
+        }
 
         void Update()
         {
@@ -80,7 +89,7 @@ namespace TorreIngenieria.UI
 
         void OnStart(InputAction.CallbackContext context)
         {
-            if (started)
+            if (started || FadeManager.IsFading)
                 return;
 
             started = true;

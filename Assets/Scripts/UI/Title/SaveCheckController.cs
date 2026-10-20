@@ -1,7 +1,7 @@
 using System.Collections;
 using TorreIngenieria.Core;
+using TorreIngenieria.World;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace TorreIngenieria.UI
 {
@@ -70,9 +70,7 @@ namespace TorreIngenieria.UI
 
         static void LoadWorld()
         {
-            if (Application.CanStreamedLevelBeLoaded(SceneNames.Atrio))
-                SceneManager.LoadScene(SceneNames.Atrio);
-            else
+            if (!SceneTransition.Go(SceneNames.Atrio, null))
                 Debug.Log($"Falta la escena '{SceneNames.Atrio}': usa Torre Ingeniería > Mapas > Construir atrio provisional.");
         }
 

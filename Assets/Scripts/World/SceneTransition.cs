@@ -1,30 +1,21 @@
-using System.Collections;
 using UnityEngine;
-using UnityEngine.SceneManagement;
-using UnityEngine.UI;
 
 namespace TorreIngenieria.World
 {
     /// <summary>
-    /// Cambio de escena con fundido a negro. Guarda el SpawnPoint donde debe aparecer el jugador
-    /// en la escena nueva (PlayerController lo lee al iniciar).
+    /// Cambio de escena con fundido a negro (delegado en <see cref="FadeManager"/>).
+    /// Guarda el SpawnPoint donde debe aparecer el jugador en la escena nueva (PlayerController lo lee al iniciar).
     /// </summary>
-    public class SceneTransition : MonoBehaviour
+    public static class SceneTransition
     {
-        const float FadeDuration = 0.25f;
-
         public static string PendingSpawn { get; private set; }
-        public static bool IsTransitioning { get; private set; }
 
-        CanvasGroup fader;
+        /// <summary>Hay un fundido o cambio de escena en curso: el jugador no debe moverse.</summary>
+        public static bool IsTransitioning => FadeManager.IsFading;
 
         // El proyecto entra a Play sin recargar el dominio: los valores estáticos se reinician a mano.
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        static void ResetStatics()
-        {
-            PendingSpawn = null;
-            IsTransitioning = false;
-        }
+        static void ResetStatics() => PendingSpawn = null;
 
         /// <summary>Va a otra escena con fundido. Devuelve false si la escena no existe (todavía).</summary>
         public static bool Go(string sceneName, string spawnId)
@@ -38,9 +29,7 @@ namespace TorreIngenieria.World
                 return false;
             }
 
-            var runner = new GameObject("SceneTransition").AddComponent<SceneTransition>();
-            DontDestroyOnLoad(runner.gameObject);
-            runner.StartCoroutine(runner.Run(sceneName, spawnId));
+            FadeManager.Ensure().FadeAndLoad(sceneName, spawnId);
             return true;
         }
 
@@ -52,44 +41,7 @@ namespace TorreIngenieria.World
             return spawn;
         }
 
-        IEnumerator Run(string sceneName, string spawnId)
-        {
-            IsTransitioning = true;
-            CreateFader();
-
-            yield return Fade(0f, 1f);
-            PendingSpawn = spawnId;
-            yield return SceneManager.LoadSceneAsync(sceneName);
-            yield return null; // deja que el jugador se ubique en su SpawnPoint
-            yield return Fade(1f, 0f);
-
-            IsTransitioning = false;
-            Destroy(gameObject);
-        }
-
-        void CreateFader()
-        {
-            var canvas = gameObject.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 1000;
-            var image = new GameObject("Negro", typeof(RectTransform)).AddComponent<Image>();
-            image.transform.SetParent(transform, false);
-            image.color = Color.black;
-            image.rectTransform.anchorMin = Vector2.zero;
-            image.rectTransform.anchorMax = Vector2.one;
-            image.rectTransform.offsetMin = image.rectTransform.offsetMax = Vector2.zero;
-            fader = gameObject.AddComponent<CanvasGroup>();
-            fader.alpha = 0f;
-        }
-
-        IEnumerator Fade(float from, float to)
-        {
-            for (float t = 0f; t < FadeDuration; t += Time.unscaledDeltaTime)
-            {
-                fader.alpha = Mathf.Lerp(from, to, t / FadeDuration);
-                yield return null;
-            }
-            fader.alpha = to;
-        }
+        /// <summary>Solo lo usa el fundido, justo antes de cargar la escena.</summary>
+        internal static void SetPendingSpawn(string spawnId) => PendingSpawn = spawnId;
     }
 }
