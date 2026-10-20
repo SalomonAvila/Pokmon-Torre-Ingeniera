@@ -73,9 +73,19 @@ namespace TorreIngenieria.Core
             StateChanged?.Invoke();
         }
 
+        /// <summary>
+        /// Borra el progreso del edificio para probar desde cero: pisos completados, sellos, notas de jefes,
+        /// Carné de acceso y racha de derrotas contra jefes (para que Gabriel no ofrezca ayuda por un jefe
+        /// que ya no existe). No toca equipo, Pokédex, inventario, inicial elegido ni banderas de historia:
+        /// es una herramienta de pruebas, no un "empezar partida nueva".
+        /// </summary>
         public static void ResetProgress()
         {
             Save.completedFloors.Clear();
+            Save.sealIds.Clear();
+            Save.bossNotes.Clear();
+            Save.accessCard = false;
+            ResetBossLossStreak();
             SaveSystem.Save(Save);
             ProgressChanged?.Invoke();
             StateChanged?.Invoke();
@@ -215,9 +225,18 @@ namespace TorreIngenieria.Core
 
         // ---------- Banderas de historia ----------
 
+        /// <summary>
+        /// Fija el inicial elegido y lo registra como especie conocida del Pokédex (los iniciales se eligen,
+        /// no se capturan, pero cuentan para el Pokédex total). La puerta del edificio no lo cuenta como captura.
+        /// </summary>
         public static void SetStarter(string speciesId)
         {
+            if (string.IsNullOrEmpty(speciesId))
+                return;
+
             Save.starterId = speciesId;
+            if (!Save.pokedex.Contains(speciesId))
+                Save.pokedex.Add(speciesId);
             Commit();
         }
 
@@ -241,10 +260,22 @@ namespace TorreIngenieria.Core
 
         /// <summary>
         /// El Vigilante Gómez deja entrar al edificio con el inicial elegido y al menos un Pokémon capturado
-        /// (Doc §8). La puerta Atrio ↔ Ascensores consulta esta condición.
+        /// (Doc §8). La puerta Atrio ↔ Ascensores consulta esta condición. El inicial consta en el Pokédex
+        /// desde que se elige, pero no cuenta como captura: la puerta exige una especie distinta de él.
         /// </summary>
-        public static bool PassesBuildingDoor =>
-            !string.IsNullOrEmpty(Save.starterId) && Save.pokedex.Count > 0;
+        public static bool PassesBuildingDoor
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(Save.starterId))
+                    return false;
+
+                foreach (string species in Save.pokedex)
+                    if (species != Save.starterId)
+                        return true;
+                return false;
+            }
+        }
 
         /// <summary>La Ing. Cantera entrega el Carné de acceso que activa los ascensores del sur.</summary>
         public static void GrantAccessCard()

@@ -56,7 +56,7 @@ namespace TorreIngenieria.EditorTools
         {
             PrepareState();
             GameState.ResetProgress();
-            Report("Progreso reiniciado: desde el piso 3, las escaleras de subida quedan bloqueadas.");
+            Report("Progreso reiniciado (pisos, sellos, notas y Carné): desde el piso 3, las escaleras de subida quedan bloqueadas.");
         }
 
         /// <summary>Fuera de Play se relee la partida desde el archivo para no usar datos viejos.</summary>
