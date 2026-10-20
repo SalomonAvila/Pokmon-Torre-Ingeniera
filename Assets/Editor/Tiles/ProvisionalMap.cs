@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using TorreIngenieria.World;
+using Unity.Cinemachine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -159,16 +160,47 @@ namespace TorreIngenieria.EditorTools
             return pedro;
         }
 
+        /// <summary>
+        /// Cámara virtual de Cinemachine que sigue al jugador, confinada al rectángulo del piso
+        /// (de (0,0) a (width,height)). La Main Camera lleva el CinemachineBrain (lo crea MapSceneBuilder).
+        /// </summary>
         public static void SetupCamera(Transform target, int width, int height)
         {
             Camera camera = Camera.main;
             camera.transform.position = new Vector3(target.position.x, target.position.y, -10);
-            var follow = camera.gameObject.AddComponent<CameraFollow>();
-            var serialized = new SerializedObject(follow);
-            serialized.FindProperty("target").objectReferenceValue = target;
-            serialized.FindProperty("mapMin").vector2Value = Vector2.zero;
-            serialized.FindProperty("mapMax").vector2Value = new Vector2(width, height);
-            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            // Límite del piso para el Confiner 2D. El confiner usa el tamaño del BoxCollider2D
+            // y la posición del objeto (ignora el offset), así que el objeto va centrado en el mapa.
+            var bounds = new GameObject("LimitePiso");
+            bounds.transform.position = new Vector3(width / 2f, height / 2f, 0f);
+            var box = bounds.AddComponent<BoxCollider2D>();
+            box.size = new Vector2(width, height);
+            box.offset = Vector2.zero;
+            box.isTrigger = true;
+
+            var virtualCamera = new GameObject("CamaraVirtual");
+            virtualCamera.transform.position = new Vector3(target.position.x, target.position.y, -10f);
+            var vcam = virtualCamera.AddComponent<CinemachineCamera>();
+            vcam.Follow = target;
+            vcam.Lens = new LensSettings
+            {
+                ModeOverride = LensSettings.OverrideModes.Orthographic,
+                OrthographicSize = camera.orthographicSize,
+                NearClipPlane = camera.nearClipPlane,
+                FarClipPlane = camera.farClipPlane,
+            };
+
+            // Sin amortiguación: el movimiento por casillas debe verse firme, como en GBA.
+            var follow = virtualCamera.AddComponent<CinemachineFollow>();
+            follow.FollowOffset = new Vector3(0f, 0f, -10f);
+            follow.TrackerSettings.PositionDamping = Vector3.zero;
+
+            // Ajusta el tamaño ortográfico al Pixel Perfect Camera de URP (debe ir antes del Confiner).
+            virtualCamera.AddComponent<CinemachinePixelPerfect>();
+
+            var confiner = virtualCamera.AddComponent<CinemachineConfiner2D>();
+            confiner.BoundingShape2D = box;
+            confiner.Damping = 0f;
         }
 
         /// <summary>Zona que lleva a otra escena. Columnas y filas del texto, ambas inclusive.</summary>

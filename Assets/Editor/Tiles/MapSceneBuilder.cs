@@ -1,5 +1,6 @@
 using System.IO;
 using TorreIngenieria.World;
+using Unity.Cinemachine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -11,7 +12,8 @@ namespace TorreIngenieria.EditorTools
 {
     /// <summary>
     /// Crea una escena de mapa lista para pintar con el Tile Palette: cámara Pixel Perfect estilo GBA (240x160)
-    /// y las capas de Tilemap del juego (Suelo, Paredes, Decoracion, SobreJugador, Colisiones y Encuentros).
+    /// con Cinemachine y las capas de Tilemap del juego (Suelo, Paredes, Decoracion, SobreJugador, Colisiones
+    /// y Encuentros). La cámara virtual que sigue al jugador la crea <see cref="ProvisionalMap.SetupCamera"/>.
     /// Menú: Torre Ingeniería > Mapas > Crear escena de mapa.
     /// </summary>
     public static class MapSceneBuilder
@@ -65,6 +67,11 @@ namespace TorreIngenieria.EditorTools
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = Color.black;
             go.AddComponent<AudioListener>();
+
+            // Cinemachine mueve la cámara según la virtual (la crea ProvisionalMap.SetupCamera).
+            // Sin mezcla: al cargar una escena el fundido ya tapa el cambio de posición.
+            var brain = go.AddComponent<CinemachineBrain>();
+            brain.DefaultBlend = new CinemachineBlendDefinition(CinemachineBlendDefinition.Styles.Cut, 0f);
 
             // Resolución de GBA (240x160) escalada sin perder nitidez.
             var pixelPerfect = go.AddComponent<PixelPerfectCamera>();
