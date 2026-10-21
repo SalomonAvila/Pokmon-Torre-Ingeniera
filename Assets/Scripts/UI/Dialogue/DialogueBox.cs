@@ -21,6 +21,13 @@ namespace TorreIngenieria.UI
         InputAction submitAction;
         Vector2 arrowRestPosition;
 
+        /// <summary>True mientras se está escribiendo o esperando a que el jugador avance (Say/Type/WaitForAdvance).</summary>
+        public static bool IsOpen { get; private set; }
+
+        // El proyecto entra a Play sin recargar el dominio: el estático se reinicia a mano.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => IsOpen = false;
+
         void Awake()
         {
             submitAction = controls.FindAction("UI/Submit", true);
@@ -32,13 +39,16 @@ namespace TorreIngenieria.UI
         {
             text.text = string.Empty;
             continueArrow.gameObject.SetActive(false);
+            IsOpen = false;
         }
 
         /// <summary>Escribe el mensaje y espera a que el jugador presione aceptar.</summary>
         public IEnumerator Say(string message)
         {
+            IsOpen = true;
             yield return Type(message);
             yield return WaitForAdvance();
+            IsOpen = false;
         }
 
         /// <summary>
@@ -47,6 +57,7 @@ namespace TorreIngenieria.UI
         /// </summary>
         public IEnumerator Type(string message)
         {
+            IsOpen = true;
             continueArrow.gameObject.SetActive(false);
             text.overflowMode = TextOverflowModes.Page;
             text.text = message;

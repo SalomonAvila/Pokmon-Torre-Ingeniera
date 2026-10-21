@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using TorreIngenieria.UI;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Tilemaps;
@@ -38,6 +39,10 @@ namespace TorreIngenieria.World
         // en lugar de quedar como acciones vacías.
         [System.NonSerialized] InputAction moveAction;
         [System.NonSerialized] InputAction runAction;
+        [System.NonSerialized] InputAction interactAction;
+        [System.NonSerialized] InputAction cancelAction;
+        [System.NonSerialized] InputAction menuAction;
+        [System.NonSerialized] InputAction mapAction;
         Tilemap[] blockingTilemaps;
         Direction facing = Direction.Down;
         bool moving;
@@ -57,6 +62,10 @@ namespace TorreIngenieria.World
         {
             moveAction = controls.FindAction("Juego/Move", true);
             runAction = controls.FindAction("Juego/Run", true);
+            interactAction = controls.FindAction("Juego/Interact", true);
+            cancelAction = controls.FindAction("Juego/Cancel", true);
+            menuAction = controls.FindAction("Juego/Menu", true);
+            mapAction = controls.FindAction("Juego/Map", true);
             transform.position = CellCenter(transform.position);
             ShowFrame(0);
         }
@@ -67,6 +76,10 @@ namespace TorreIngenieria.World
         {
             moveAction ??= controls.FindAction("Juego/Move", true);
             runAction ??= controls.FindAction("Juego/Run", true);
+            interactAction ??= controls.FindAction("Juego/Interact", true);
+            cancelAction ??= controls.FindAction("Juego/Cancel", true);
+            menuAction ??= controls.FindAction("Juego/Menu", true);
+            mapAction ??= controls.FindAction("Juego/Map", true);
             moveAction.actionMap.Enable();
         }
 
@@ -96,8 +109,30 @@ namespace TorreIngenieria.World
 
         void Update()
         {
-            if (moving || SceneTransition.IsTransitioning || WorldMessage.IsOpen)
+            // Mientras hay texto, opciones, un fundido o un paso en curso, el jugador no se mueve ni interactúa.
+            if (moving || SceneTransition.IsTransitioning ||
+                WorldMessage.IsOpen || DialogueBox.IsOpen || ChoiceBox.IsChoosing)
                 return;
+
+            if (interactAction.WasPressedThisFrame())
+            {
+                Interact();
+                return;
+            }
+
+            // Etapa 7: el menú de pausa y el mapa del edificio abrirán sus pantallas.
+            if (menuAction.WasPressedThisFrame())
+            {
+                WorldMessage.Show("El menú de pausa todavía está en construcción.");
+                return;
+            }
+            if (mapAction.WasPressedThisFrame())
+            {
+                WorldMessage.Show("El mapa del edificio todavía está en construcción.");
+                return;
+            }
+            if (cancelAction.WasPressedThisFrame())
+                return; // en el mundo no hay nada que cancelar; lo usan la UI y los menús
 
             Direction? input = ReadDirection();
             if (input == null)
@@ -123,6 +158,13 @@ namespace TorreIngenieria.World
             }
 
             StartCoroutine(Step());
+        }
+
+        /// <summary>Habla con el objeto de la casilla que tiene delante (NPC, letrero, ítem o entrenador).</summary>
+        void Interact()
+        {
+            Vector3 target = transform.position + (Vector3)ToVector(facing);
+            Interactable.At(target)?.Interact();
         }
 
         /// <summary>Dirección pulsada; sin diagonales (gana el eje con más fuerza).</summary>
@@ -172,7 +214,10 @@ namespace TorreIngenieria.World
             foreach (Tilemap tilemap in blockingTilemaps)
                 if (tilemap.gameObject.activeInHierarchy && tilemap.HasTile(tilemap.WorldToCell(cellCenter)))
                     return true;
-            return false;
+
+            // NPC, letreros, objetos y entrenadores también ocupan su casilla. Los objetos recogidos
+            // se desactivan, así que la casilla vuelve a quedar libre sin tocar el tilemap.
+            return Interactable.At(cellCenter) != null;
         }
 
         void ShowFrame(int index)

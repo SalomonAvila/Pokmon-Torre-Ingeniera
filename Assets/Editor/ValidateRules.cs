@@ -25,7 +25,7 @@ namespace TorreIngenieria.EditorTools
         static int checksFailed;
 
         [MenuItem("Torre Ingeniería/Validar reglas del documento")]
-        static void Validate()
+        public static void Validate()
         {
             checksFailed = 0;
             Debug.Log("--- Reglas del documento (Doc §2, §7 y §8) ---");

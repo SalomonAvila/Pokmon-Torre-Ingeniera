@@ -91,6 +91,7 @@ namespace TorreIngenieria.EditorTools
 
             ProvisionalMap.AddFloorInfo("2");
             ProvisionalMap.AddMessageBox();
+            ProvisionalMap.AddHud();
 
             // Escalera de la izquierda → escalera en zigzag hacia el piso 3. Al volver, se llega a su lado.
             ProvisionalMap.AddWarp("SubidaPiso3", 0, 0, 2, 5, height, SceneNames.Escalera, StairwellController.SpawnFromBelow);

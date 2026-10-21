@@ -21,7 +21,7 @@ namespace TorreIngenieria.EditorTools
         static int checksFailed;
 
         [MenuItem("Torre Ingeniería/Validar datos y fórmulas")]
-        static void Validate()
+        public static void Validate()
         {
             checksFailed = 0;
             Debug.Log("--- Datos, fórmulas y equipo (Etapa 1) ---");

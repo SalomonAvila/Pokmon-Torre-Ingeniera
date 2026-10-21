@@ -93,6 +93,7 @@ namespace TorreIngenieria.EditorTools
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             ProvisionalMap.AddMessageBox();
+            ProvisionalMap.AddHud();
             GameObject pedro = ProvisionalMap.CreatePlayer(ProvisionalMap.CellCenter(2, 20, height));
             ProvisionalMap.SetupCamera(pedro.transform, width, height);
 
