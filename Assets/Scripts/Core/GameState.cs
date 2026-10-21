@@ -164,6 +164,25 @@ namespace TorreIngenieria.Core
             return true;
         }
 
+        /// <summary>
+        /// Crea el Pokémon capturado con sus PS, EXP, movimientos y PP, y lo suma al equipo si hay sitio.
+        /// La captura siempre cuenta para el Pokédex, aunque el equipo esté lleno (el prototipo no tiene PC).
+        /// Devuelve el miembro creado para que el combate pueda mostrar su ficha.
+        /// </summary>
+        public static TeamMember AddCapturedPokemon(string speciesId, int level)
+        {
+            TeamMember member = TeamMembers.Create(speciesId, level);
+
+            if (!Save.pokedex.Contains(speciesId))
+                Save.pokedex.Add(speciesId);
+
+            if (CanAddToTeam)
+                Save.team.Add(member);
+
+            Commit();
+            return member;
+        }
+
         public static int CountItem(string id)
         {
             InventoryItem item = Save.inventory.Find(i => i.id == id);

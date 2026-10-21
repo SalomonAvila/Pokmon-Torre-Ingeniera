@@ -65,6 +65,16 @@ namespace TorreIngenieria.Core
         public const float DamageRollMin = 0.85f;
         public const float DamageRollMax = 1.0f;
 
+        /// <summary>Mismo tipo que el atacante: ×1,5 (STAB).</summary>
+        public const float StabMultiplier = 1.5f;
+
+        /// <summary>
+        /// (propuesta) Golpe crítico: ×2 y 1 de cada 16 ataques (Gen 3). El Doc §7 no lo menciona;
+        /// se deja apagado por defecto y el combate decide si lo tira (ver <see cref="Damage"/>).
+        /// </summary>
+        public const float CriticalMultiplier = 2f;
+        public const int CriticalDenominator = 16;
+
         /// <summary>La probabilidad de captura nunca sale de este rango.</summary>
         public const float CaptureChanceMin = 0.05f;
         public const float CaptureChanceMax = 0.95f;
@@ -152,5 +162,45 @@ namespace TorreIngenieria.Core
         /// <summary>Probabilidad de captura recortada al rango del documento (5 %–95 %).</summary>
         public static float ClampCaptureChance(float chance) =>
             Math.Clamp(chance, CaptureChanceMin, CaptureChanceMax);
+
+        /// <summary>
+        /// Daño de un golpe (fórmula Gen 3). El poder 0 devuelve 0. El daño nunca baja de 1.
+        /// La efectividad, el STAB, el crítico y la variación aleatoria se aplican después de la base.
+        /// El crítico es (propuesta) y se inyecta desde fuera: por defecto está apagado, así las pruebas
+        /// pueden fijar valores sin depender del azar.
+        /// </summary>
+        public static int Damage(int level, int power, int attack, int defense, float effectiveness,
+            bool stab, float roll, bool critical = false)
+        {
+            if (power <= 0 || defense <= 0)
+                return 0;
+
+            int baseDamage = (2 * level / 5 + 2) * power * attack / defense / 50 + 2;
+            float damage = baseDamage
+                * effectiveness
+                * (stab ? StabMultiplier : 1f)
+                * (critical ? CriticalMultiplier : 1f)
+                * roll;
+
+            return Math.Max(1, (int)damage);
+        }
+
+        /// <summary>
+        /// Probabilidad de captura con la fórmula de la franquicia: ratio, PS restantes y bonus de bola,
+        /// recortada al rango del documento. <paramref name="catchRate"/> viene en la escala oficial
+        /// 1–255 de <see cref="PokemonData.catchRate"/>; la división entre 255 es <b>(propuesta)</b>,
+        /// porque el Doc §7 no detalla la normalización. El bonus por estado también es (propuesta)
+        /// —el Doc §7 no lo menciona— y viene en 1 por defecto (sin estado); el combate lo sube a 1,5
+        /// con parálisis/quemadura/envenenamiento o a 2 con sueño/congelación si se decide usarlo.
+        /// </summary>
+        public static float CaptureChance(int maxHp, int hp, int catchRate, float ballBonus = 1f, float statusBonus = 1f)
+        {
+            if (maxHp <= 0)
+                return CaptureChanceMin;
+
+            float hpFactor = (3f * maxHp - 2f * hp) / (3f * maxHp);
+            float chance = hpFactor * catchRate * ballBonus * statusBonus / 255f;
+            return ClampCaptureChance(chance);
+        }
     }
 }

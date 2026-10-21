@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6e1d59957dfd8e1468baed189392c8cd, type: 3}
+  m_Name: pokeball
+  m_EditorClassIdentifier: Assembly-CSharp::TorreIngenieria.Core.ItemData
+  itemId: pokeball
+  displayName: "Pok\xE9bola"
+  category: 1
+  healAmount: 0
+  catchBonus: 1
+  price: 200
+  description: "Dispositivo para capturar Pok\xE9mon salvajes."

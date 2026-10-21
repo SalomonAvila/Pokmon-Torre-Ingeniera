@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd904df37b7ef344d8c16d2f613648d8, type: 3}
+  m_Name: body_slam
+  m_EditorClassIdentifier: Assembly-CSharp::TorreIngenieria.Core.MoveData
+  moveId: body_slam
+  displayName: Golpe Cuerpo
+  type: 0
+  category: 0
+  power: 85
+  accuracy: 100
+  maxPp: 15
+  priority: 0
+  effect: 10
+  effectChance: 30
+  description: Golpea con todo el cuerpo; puede paralizar.

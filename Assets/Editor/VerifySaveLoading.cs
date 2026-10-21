@@ -9,7 +9,8 @@ namespace TorreIngenieria.EditorTools
     /// <summary>
     /// Comprueba el guardado de punta a punta, sin tocar el archivo del jugador:
     /// 1) una partida v1 antigua migra conservando lo viejo y con lo nuevo por defecto;
-    /// 2) una partida v2 con 'pokedexByFloor' (clave retirada en la v3) se carga sin fallar;
+    /// 2) una partida v2 con 'pokedexByFloor' (clave retirada en la v3) se carga sin fallar y el equipo
+    ///    se completa con PS, EXP, movimientos y PP;
     /// 3) una partida actual pasa por ToJson + ParseJson y vuelve igual campo por campo;
     /// 4) la puerta del edificio exige inicial y una captura distinta de él.
     /// La ida y vuelta es en memoria y el menú está deshabilitado en Play, así que no puede corromper
@@ -151,12 +152,14 @@ namespace TorreIngenieria.EditorTools
             if (data.team.Count == 1)
             {
                 TeamMember member = data.team[0];
-                Check(member.hp == TeamMember.FullHp,
-                    $"Un Pokémon de la v2 debe migrar con PS completos ({TeamMember.FullHp}) y quedó en {member.hp}.");
-                Check(member.maxHp == 0, "Los PS máximos deben quedar pendientes (0) hasta tener la ficha de la especie.");
-                Check(member.exp == 0, "La EXP de un Pokémon migrado debe arrancar en 0.");
-                Check(member.moves != null && member.moves.Count == 0,
-                    "Los movimientos de un Pokémon migrado deben arrancar vacíos, no null.");
+                Check(member.hp == member.maxHp && member.maxHp == PokemonStats.MaxHp(45, 8),
+                    $"Un Pokémon de la v2 debe migrar con PS completos ({PokemonStats.MaxHp(45, 8)}) y quedó en {member.hp}/{member.maxHp}.");
+                Check(member.exp == PokemonStats.ExperienceForLevel(8),
+                    $"La EXP de un Pokémon migrado debe ser la de su nivel ({PokemonStats.ExperienceForLevel(8)}) y quedó en {member.exp}.");
+                Check(member.moves != null && member.moves.Count == 3 &&
+                      member.moves[0].moveId == "vine_whip" &&
+                      member.moves.TrueForAll(slot => slot.pp == slot.maxPp && slot.maxPp > 0),
+                    "El learnset de un Pokémon migrado debe completarse con sus PP.");
             }
         }
 
@@ -186,22 +189,22 @@ namespace TorreIngenieria.EditorTools
                 Check(loaded.team.Count == 5, $"El equipo debería conservar 5 miembros y quedaron {loaded.team.Count}.");
 
                 Check(loaded.team[0].speciesId == "bulbasaur" && loaded.team[0].hp == 21 &&
-                      loaded.team[0].moves.Count == 1 && loaded.team[0].moves[0].pp == 35,
+                      loaded.team[0].maxHp == 27 && loaded.team[0].exp == 512 &&
+                      loaded.team[0].moves.Count == 3 && loaded.team[0].moves[0].pp == 10,
                     "Se perdió el primer miembro con sus PS, EXP o movimientos.");
-                Check(loaded.team[1].speciesId == "pidgey" && loaded.team[1].hp == 18 && loaded.team[1].maxHp == 18,
+                Check(loaded.team[1].speciesId == "pidgey" && loaded.team[1].hp == 18 && loaded.team[1].maxHp == 20,
                     "Se perdió el segundo miembro con sus PS.");
-
                 // PS 0 = debilitado; debe distinguirse del centinela -1.
-                Check(loaded.team[2].speciesId == "rattata" && loaded.team[2].hp == 0 && loaded.team[2].maxHp == 18,
+                Check(loaded.team[2].speciesId == "rattata" && loaded.team[2].hp == 0 && loaded.team[2].maxHp == 15,
                     "Un Pokémon debilitado (PS = 0) debe conservar el 0 y no confundirse con el centinela.");
-                // Centinela de "PS completos" (partida anterior a la v4): -1 y máximo pendiente (0).
-                Check(loaded.team[3].speciesId == "meowth" && loaded.team[3].hp == TeamMember.FullHp &&
-                      loaded.team[3].maxHp == 0,
-                    $"El centinela de PS completos ({TeamMember.FullHp}) debe conservarse.");
-                // Lista de movimientos vacía, no null.
+                // El centinela de "PS completos" se resuelve al cargar.
+                Check(loaded.team[3].speciesId == "meowth" && loaded.team[3].hp == 18 &&
+                      loaded.team[3].maxHp == 18 && loaded.team[3].moves.Count == 2,
+                    "La carga debe resolver el centinela de PS completos y completar el learnset.");
+                // Lista de movimientos vacía: se completa con el learnset.
                 Check(loaded.team[4].speciesId == "eevee" && loaded.team[4].moves != null &&
-                      loaded.team[4].moves.Count == 0,
-                    "Un Pokémon sin movimientos debe conservar la lista vacía (no null).");
+                      loaded.team[4].moves.Count == 2,
+                    "Un Pokémon sin movimientos debe recibir los del learnset al cargar.");
 
                 Check(loaded.pokedex.Count == 2 && loaded.sealIds.Count == 1 && loaded.bossNotes.Count == 1,
                     "Se perdieron Pokédex, sellos o notas de jefes.");
@@ -284,11 +287,13 @@ namespace TorreIngenieria.EditorTools
                 speciesId = "bulbasaur",
                 level = 8,
                 hp = 21,
-                maxHp = 30,
-                exp = 120,
+                maxHp = 27,
+                exp = 512,
                 moves =
                 {
-                    new MoveSlot { moveId = "placaje", pp = 35, maxPp = 35 },
+                    new MoveSlot { moveId = "vine_whip", pp = 10, maxPp = 10 },
+                    new MoveSlot { moveId = "tackle", pp = 35, maxPp = 35 },
+                    new MoveSlot { moveId = "growl", pp = 40, maxPp = 40 },
                 },
             });
             data.team.Add(new TeamMember
@@ -296,11 +301,12 @@ namespace TorreIngenieria.EditorTools
                 speciesId = "pidgey",
                 level = 5,
                 hp = 18,
-                maxHp = 18,
-                exp = 40,
+                maxHp = 20,
+                exp = 125,
                 moves =
                 {
-                    new MoveSlot { moveId = "picotazo", pp = 30, maxPp = 35 },
+                    new MoveSlot { moveId = "sand_attack", pp = 15, maxPp = 15 },
+                    new MoveSlot { moveId = "tackle", pp = 35, maxPp = 35 },
                 },
             });
             data.team.Add(new TeamMember
@@ -308,23 +314,25 @@ namespace TorreIngenieria.EditorTools
                 speciesId = "rattata",
                 level = 3,
                 hp = 0,
-                maxHp = 18,
-                exp = 10,
+                maxHp = 15,
+                exp = 27,
                 moves =
                 {
-                    new MoveSlot { moveId = "ataque-rapido", pp = 0, maxPp = 30 },
+                    new MoveSlot { moveId = "tackle", pp = 35, maxPp = 35 },
+                    new MoveSlot { moveId = "tail_whip", pp = 30, maxPp = 30 },
                 },
             });
             data.team.Add(new TeamMember
             {
                 speciesId = "meowth",
                 level = 4,
-                hp = TeamMember.FullHp,
-                maxHp = 0,
-                exp = 0,
+                hp = 18,
+                maxHp = 18,
+                exp = 64,
                 moves =
                 {
-                    new MoveSlot { moveId = "aranazo", pp = 35, maxPp = 35 },
+                    new MoveSlot { moveId = "scratch", pp = 35, maxPp = 35 },
+                    new MoveSlot { moveId = "growl", pp = 40, maxPp = 40 },
                 },
             });
             data.team.Add(new TeamMember
@@ -333,8 +341,12 @@ namespace TorreIngenieria.EditorTools
                 level = 6,
                 hp = 20,
                 maxHp = 24,
-                exp = 60,
-                moves = new List<MoveSlot>(),
+                exp = 216,
+                moves =
+                {
+                    new MoveSlot { moveId = "tackle", pp = 35, maxPp = 35 },
+                    new MoveSlot { moveId = "tail_whip", pp = 30, maxPp = 30 },
+                },
             });
             data.inventory.Add(new InventoryItem { id = "tinto", amount = 3 });
             data.pokedex.Add("bulbasaur");

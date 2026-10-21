@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 144ce662de18a09418ad67e6f31556e6, type: 3}
+  m_Name: pidgey
+  m_EditorClassIdentifier: Assembly-CSharp::TorreIngenieria.Core.PokemonData
+  speciesId: pidgey
+  displayName: Pidgey
+  primaryType: 0
+  hasSecondaryType: 1
+  secondaryType: 2
+  baseHp: 40
+  baseAttack: 45
+  baseDefense: 40
+  baseSpAttack: 35
+  baseSpDefense: 35
+  baseSpeed: 56
+  baseExp: 55
+  catchRate: 255
+  learnset:
+  - level: 1
+    moveId: tackle
+  - level: 5
+    moveId: sand_attack
+  - level: 9
+    moveId: gust
+  - level: 15
+    moveId: wing_attack
+  evolvesTo: 
+  evolveLevel: 0
+  frontSprite: {fileID: 0}
+  backSprite: {fileID: 0}
+  icon: {fileID: 0}
+  description: "Ave peque\xF1a que levanta arena al batir las alas."

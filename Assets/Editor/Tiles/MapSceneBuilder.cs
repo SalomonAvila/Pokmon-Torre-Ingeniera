@@ -30,7 +30,7 @@ namespace TorreIngenieria.EditorTools
                 AssetDatabase.CreateFolder(Path.GetDirectoryName(MapsFolder), Path.GetFileName(MapsFolder));
 
             string path = EditorUtility.SaveFilePanelInProject("Nueva escena de mapa", "Piso3", "unity",
-                "Nombre de la escena (por ejemplo Atrio, Lobby, Piso3, PisoTecnico).", MapsFolder);
+                "Nombre de la escena (por ejemplo Atrio, Ascensores, Piso3, PisoPT).", MapsFolder);
             if (string.IsNullOrEmpty(path) || !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
                 return;
 

@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 144ce662de18a09418ad67e6f31556e6, type: 3}
+  m_Name: charmander
+  m_EditorClassIdentifier: Assembly-CSharp::TorreIngenieria.Core.PokemonData
+  speciesId: charmander
+  displayName: Charmander
+  primaryType: 9
+  hasSecondaryType: 0
+  secondaryType: 9
+  baseHp: 39
+  baseAttack: 52
+  baseDefense: 43
+  baseSpAttack: 60
+  baseSpDefense: 50
+  baseSpeed: 65
+  baseExp: 65
+  catchRate: 45
+  learnset:
+  - level: 1
+    moveId: scratch
+  - level: 1
+    moveId: growl
+  - level: 7
+    moveId: ember
+  - level: 15
+    moveId: flamethrower
+  evolvesTo: 
+  evolveLevel: 0
+  frontSprite: {fileID: 0}
+  backSprite: {fileID: 0}
+  icon: {fileID: 0}
+  description: "La llama de su cola indica su estado de \xE1nimo."

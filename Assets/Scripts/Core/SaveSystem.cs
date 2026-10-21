@@ -24,15 +24,16 @@ namespace TorreIngenieria.Core
         public int pp;
 
         /// <summary>
-        /// Caché de los PP máximos. En la Etapa 1, cuando existan los datos de movimientos, se recalculará
-        /// desde MoveData al cargar y al subir de nivel (o se retirará del JSON con [NonSerialized]).
+        /// Caché de los PP máximos. Se recalcula desde <see cref="MoveData"/> al cargar
+        /// (<c>TeamMembers.RecalculateOnLoad</c>) y al subir de nivel.
         /// </summary>
         public int maxPp;
     }
 
     /// <summary>
-    /// Pokémon del equipo. La v4 añadió PS, EXP y movimientos; cuando exista la ficha de la especie
-    /// (BattleSystem/PokemonData) se calcularán los PS máximos y los movimientos iniciales.
+    /// Pokémon del equipo. La v4 añadió PS, EXP y movimientos. Los valores derivados (PS máximos,
+    /// movimientos iniciales y PP) los calcula <c>TeamMembers.Create</c> y los repara
+    /// <c>TeamMembers.RecalculateOnLoad</c> al cargar una partida.
     /// </summary>
     [Serializable]
     public class TeamMember
@@ -46,13 +47,13 @@ namespace TorreIngenieria.Core
         public string speciesId;
         public int level;
 
-        /// <summary>PS actuales; <see cref="FullHp"/> = sin daño (pendiente de calcular el máximo).</summary>
+        /// <summary>
+        /// PS actuales. <see cref="FullHp"/> solo aparece en la migración de partidas anteriores a la v4;
+        /// al cargar, <c>TeamMembers.RecalculateOnLoad</c> lo resuelve al máximo.
+        /// </summary>
         public int hp = FullHp;
 
-        /// <summary>
-        /// Caché de los PS máximos. En la Etapa 1, cuando exista PokemonData, se recalculará desde
-        /// la especie y el nivel al cargar y al subir de nivel (o se retirará del JSON con [NonSerialized]).
-        /// </summary>
+        /// <summary>Caché de los PS máximos; se recalcula desde la especie y el nivel al cargar.</summary>
         public int maxHp;
 
         /// <summary>Experiencia acumulada.</summary>
@@ -186,6 +187,8 @@ namespace TorreIngenieria.Core
         /// v3 → v4: el equipo guarda PS, EXP y movimientos con PP.
         /// JsonUtility deja los campos nuevos con su valor inicial e ignora las claves viejas que ya no existen;
         /// la v4 necesita además el centinela de PS para no dejar debilitados a los Pokémon de partidas viejas.
+        /// Al final, <see cref="TeamMembers.RecalculateOnLoad"/> completa PS, EXP, movimientos y PP con los
+        /// datos de la especie, tanto en partidas viejas como en v4 con cachés incompletas.
         /// </summary>
         static void Migrate(SaveData data)
         {
@@ -209,6 +212,9 @@ namespace TorreIngenieria.Core
                 MigrateTeamToV4(data);
             else
                 NormalizeTeam(data);
+
+            foreach (TeamMember member in data.team)
+                TeamMembers.RecalculateOnLoad(member);
 
             data.version = SaveData.CurrentVersion;
         }
@@ -241,8 +247,8 @@ namespace TorreIngenieria.Core
         }
 
         /// <summary>
-        /// Equipo anterior a la v4: no había PS, EXP ni movimientos. Los PS quedan en el centinela
-        /// <see cref="TeamMember.FullHp"/> (sin daño) y el máximo en 0 a la espera de la ficha de la especie.
+        /// Equipo anterior a la v4: no había PS, EXP ni movimientos. Se marcan como pendientes y
+        /// <see cref="TeamMembers.RecalculateOnLoad"/> los completa justo después, ya con los datos de la especie.
         /// </summary>
         static void MigrateTeamToV4(SaveData data)
         {
