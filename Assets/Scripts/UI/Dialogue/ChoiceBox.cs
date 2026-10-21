@@ -19,6 +19,13 @@ namespace TorreIngenieria.UI
         InputAction submitAction;
         InputAction navigateAction;
 
+        /// <summary>True mientras el jugador está eligiendo una opción (el coroutine Choose está corriendo).</summary>
+        public static bool IsChoosing { get; private set; }
+
+        // El proyecto entra a Play sin recargar el dominio: el estático se reinicia a mano.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => IsChoosing = false;
+
         /// <summary>
         /// Muestra las opciones y llama a onChosen con el índice elegido.
         /// El objeto empieza desactivado en la escena y solo se activa mientras se elige.
@@ -39,6 +46,7 @@ namespace TorreIngenieria.UI
             int index = 0;
             bool axisHeld = false;
             gameObject.SetActive(true);
+            IsChoosing = true;
             Highlight(index);
             yield return null;
 
@@ -62,6 +70,7 @@ namespace TorreIngenieria.UI
             }
 
             gameObject.SetActive(false);
+            IsChoosing = false;
             yield return null;
             onChosen(index);
         }

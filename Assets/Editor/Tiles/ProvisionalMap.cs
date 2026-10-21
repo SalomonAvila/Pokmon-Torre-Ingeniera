@@ -60,11 +60,28 @@ namespace TorreIngenieria.EditorTools
 
             var controls = AssetDatabase.LoadAssetAtPath<InputActionAsset>(ControlsPath);
             var dialogue = MainMenuSceneBuilder.CreateMapDialogueBox(canvasObject.transform, controls);
+            var choices = MainMenuSceneBuilder.CreateMapChoiceBox(canvasObject.transform, controls);
             var message = canvasObject.AddComponent<WorldMessage>();
             var serialized = new SerializedObject(message);
             serialized.FindProperty("controls").objectReferenceValue = controls;
             serialized.FindProperty("dialogue").objectReferenceValue = dialogue;
+            serialized.FindProperty("choices").objectReferenceValue = choices;
             serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>Barra superior con piso, sellos y créditos (HUD).</summary>
+        public static void AddHud()
+        {
+            var canvasObject = new GameObject("CanvasHUD", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            var canvas = canvasObject.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 10; // encima del cuadro de texto y debajo del fundido (FadeManager)
+            var scaler = canvasObject.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1024, 576);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = 1f;
+            MainMenuSceneBuilder.CreateMapHud(canvasObject.transform);
         }
 
         public static TileBase[] LoadTiles(string sheet, int count) =>
@@ -128,6 +145,79 @@ namespace TorreIngenieria.EditorTools
                 collisions.SetTile(new Vector3Int(-1, y, 0), collisionTile);
                 collisions.SetTile(new Vector3Int(width, y, 0), collisionTile);
             }
+        }
+
+        const string PickupTilePath = "Assets/Tiles/AtrioProvisional/AtrioProvisional_8.asset";
+
+        /// <summary>
+        /// NPC de prueba centrado en la casilla; habla con el jugador (Interactable).
+        /// Usa un cuadro de la hoja de caminata de Pedro teñido de verde: el retrato de Gabriel
+        /// es una ilustración de 1024 px y no encaja a escala del mapa.
+        /// </summary>
+        public static Interactable CreateNpc(string name, int col, int row, int height, string[] lines,
+            string[] options = null, string[] acceptedLines = null, string[] rejectedLines = null)
+        {
+            var go = new GameObject(name);
+            go.transform.position = CellCenter(col, row, height);
+
+            var spriteObject = new GameObject("Sprite");
+            spriteObject.transform.SetParent(go.transform, false);
+            spriteObject.transform.localPosition = new Vector3(0, -0.45f, 0);
+
+            var sprite = spriteObject.AddComponent<SpriteRenderer>();
+            sprite.sortingOrder = MapSceneBuilder.CharacterSortingOrder;
+            sprite.color = new Color(0.72f, 1f, 0.78f); // tinte para distinguirlo de Pedro
+            sprite.sprite = AssetDatabase.LoadAllAssetsAtPath(PedroSheetPath).OfType<Sprite>()
+                .FirstOrDefault(s => s.name == "Pedro_Abajo_Quieto");
+
+            var interactable = go.AddComponent<Interactable>();
+            ConfigureInteractable(interactable, Interactable.Kind.Npc, lines, options, 0,
+                acceptedLines, rejectedLines, null, 0, null, null);
+            return interactable;
+        }
+
+        /// <summary>Objeto recogible en el suelo; usa el sprite de un tile provisional.</summary>
+        public static Interactable CreatePickup(string name, int col, int row, int height,
+            string pickupId, string itemId, int amount, string[] lines)
+        {
+            var go = new GameObject(name);
+            go.transform.position = CellCenter(col, row, height);
+
+            var sprite = go.AddComponent<SpriteRenderer>();
+            sprite.sortingOrder = MapSceneBuilder.CharacterSortingOrder - 1;
+            if (AssetDatabase.LoadAssetAtPath<TileBase>(PickupTilePath) is Tile tile)
+                sprite.sprite = tile.sprite;
+            go.transform.localScale = Vector3.one * 0.7f;
+
+            var interactable = go.AddComponent<Interactable>();
+            ConfigureInteractable(interactable, Interactable.Kind.Item, lines, null, 0,
+                null, null, itemId, amount, pickupId, null);
+            return interactable;
+        }
+
+        static void ConfigureInteractable(Interactable target, Interactable.Kind kind, string[] lines,
+            string[] options, int acceptedOption, string[] acceptedLines, string[] rejectedLines,
+            string itemId, int itemAmount, string pickupId, string trainerId)
+        {
+            var serialized = new SerializedObject(target);
+            serialized.FindProperty("kind").enumValueIndex = (int)kind;
+            SetStringArray(serialized.FindProperty("lines"), lines);
+            SetStringArray(serialized.FindProperty("options"), options);
+            serialized.FindProperty("acceptedOption").intValue = acceptedOption;
+            SetStringArray(serialized.FindProperty("acceptedLines"), acceptedLines);
+            SetStringArray(serialized.FindProperty("rejectedLines"), rejectedLines);
+            serialized.FindProperty("itemId").stringValue = itemId ?? "";
+            serialized.FindProperty("itemAmount").intValue = itemAmount;
+            serialized.FindProperty("pickupId").stringValue = pickupId ?? "";
+            serialized.FindProperty("trainerId").stringValue = trainerId ?? "";
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        static void SetStringArray(SerializedProperty property, string[] values)
+        {
+            property.arraySize = values?.Length ?? 0;
+            for (int i = 0; i < property.arraySize; i++)
+                property.GetArrayElementAtIndex(i).stringValue = values[i];
         }
 
         public static GameObject CreatePlayer(Vector3 position)

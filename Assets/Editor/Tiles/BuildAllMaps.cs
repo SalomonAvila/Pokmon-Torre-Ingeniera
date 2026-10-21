@@ -12,7 +12,7 @@ namespace TorreIngenieria.EditorTools
     public static class BuildAllMaps
     {
         [MenuItem("Torre Ingeniería/Mapas/Construir todos los mapas", priority = 0)]
-        static void Build()
+        public static void Build()
         {
             StairwellBuilder.Build();
             LabFloorBuilder.BuildAll();

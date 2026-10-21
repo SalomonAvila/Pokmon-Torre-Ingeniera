@@ -45,6 +45,39 @@ namespace TorreIngenieria.Core
 
         public static string DisplayName(string floor) => floor == "PT" ? "PISO TÉCNICO" : $"PISO {floor}";
 
+        /// <summary>
+        /// Nombre corto del área de cada piso, tomado del Doc §2 ("Piso 3 – Civil y Geología", etc.).
+        /// El documento aclara que las disciplinas son una propuesta y se ajustarán a las áreas reales.
+        /// </summary>
+        public static string ShortName(string floor) => floor switch
+        {
+            "1" => "PLAZOLETA",
+            "2" => "LOBBY",
+            "3" => "CIVIL",
+            "4" => "MECÁNICA",
+            "5" => "ELECTRÓNICA",
+            "6" => "SISTEMAS",
+            "7" => "INDUSTRIAL",
+            "PT" => "PISO TÉCNICO",
+            "8" => "AMBIENTAL",
+            "9" => "QUÍMICA",
+            "10" => "HIDRÁULICA",
+            "11" => "ENERGÍA",
+            "12" => "TELECOM",
+            "13" => "BIOMÉDICA",
+            "14" => "WORKSPACE",
+            _ => "",
+        };
+
+        /// <summary>Título del HUD, como en el Doc §8: "PISO 3 – CIVIL". El PT no se repite.</summary>
+        public static string HudTitle(string floor)
+        {
+            string shortName = ShortName(floor);
+            if (string.IsNullOrEmpty(shortName) || floor == "PT")
+                return DisplayName(floor);
+            return $"{DisplayName(floor)} – {shortName}";
+        }
+
         /// <summary>Escena de cada piso (los pisos 3 en adelante se llamarán Piso3, Piso4, ..., PisoPT).</summary>
         public static string SceneFor(string floor) => floor switch
         {

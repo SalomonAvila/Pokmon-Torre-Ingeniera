@@ -140,6 +140,7 @@ namespace TorreIngenieria.EditorTools
 
             ProvisionalMap.AddFloorInfo("1");
             ProvisionalMap.AddMessageBox();
+            ProvisionalMap.AddHud();
 
             // Último escalón de las gradas superiores (entre las barandas) → pasillo de los ascensores.
             // Es la puerta del edificio: el Vigilante Gómez solo deja pasar con inicial y un Pokémon capturado.
@@ -148,6 +149,15 @@ namespace TorreIngenieria.EditorTools
                 lockedMessage: "—Alto. El edificio está en emergencia.\n" +
                                "El vigilante Gómez deja entrar solo con inicial elegido y un Pokémon capturado.");
             ProvisionalMap.AddSpawn(SpawnFromElevators, 9, 2, height, PlayerController.Direction.Down);
+
+            // Contenido de prueba de la Etapa 2: un NPC con elección y un Tinto en el suelo.
+            ProvisionalMap.CreateNpc("NpcPrueba", 7, 21, height,
+                new[] { "¡Cuidado, mijo! El edificio está lleno de criaturas.", "¿Vas a subir?" },
+                new[] { "SÍ", "NO" },
+                new[] { "¡Ánimo! El vigilante Gómez te deja pasar con un Pokémon capturado." },
+                new[] { "Entonces descansa un rato en el atrio." });
+            ProvisionalMap.CreatePickup("TintoPrueba", 9, 21, height, "atrio_tinto_prueba", "tinto", 1,
+                new[] { "Encontraste un Tinto.", "Restaura 20 PS de un Pokémon." });
 
             GameObject pedro = ProvisionalMap.CreatePlayer(ProvisionalMap.CellCenter(PlayerStart.x, PlayerStart.y, height));
             ProvisionalMap.SetupCamera(pedro.transform, width, height);

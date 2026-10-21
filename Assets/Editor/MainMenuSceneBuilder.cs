@@ -47,6 +47,11 @@ namespace TorreIngenieria.EditorTools
         static readonly Color TextBlack = new Color32(0x10, 0x10, 0x10, 0xFF);
         static readonly Color ScreenWhite = new Color32(0xF8, 0xF8, 0xF8, 0xFF); // mismo blanco del cuadro de texto
 
+        // HUD de los mapas: azul ingeniería y amarillo de seguridad (Doc §5).
+        const float HudBarHeight = 40f;
+        static readonly Color HudBarColor = new Color32(0x0A, 0x1F, 0x3A, 0xE6);
+        static readonly Color HudTextColor = new Color32(0xF8, 0xD0, 0x30, 0xFF);
+
         [MenuItem("Torre Ingeniería/Construir escena Menú Principal")]
         public static void Build()
         {
@@ -97,7 +102,7 @@ namespace TorreIngenieria.EditorTools
             band.offsetMin = new Vector2(0, BandBottom);
             band.offsetMax = new Vector2(0, BandBottom + BandHeight);
 
-            TextMeshProUGUI pressStart = CreateText(band, "PressStart", "PRESS START", 32, Beige);
+            TextMeshProUGUI pressStart = CreateText(band, "PressStart", "PULSA ENTER", 32, Beige);
             pressStart.fontStyle = FontStyles.Bold;
             pressStart.alignment = TextAlignmentOptions.Center;
             pressStart.characterSpacing = 8;
@@ -141,6 +146,61 @@ namespace TorreIngenieria.EditorTools
                 AssetDatabase.LoadAssetAtPath<Sprite>(DialogBoxPath),
                 AssetDatabase.LoadAssetAtPath<Sprite>(ContinueArrowPath),
                 AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(PixelFontAssetPath));
+
+        /// <summary>Cuadro de opciones (SÍ / NO…) para los NPC de los mapas (WorldMessage).</summary>
+        public static ChoiceBox CreateMapChoiceBox(Transform parent, InputActionAsset controls) =>
+            CreateChoiceBox(parent, controls,
+                AssetDatabase.LoadAssetAtPath<Sprite>(DialogBoxPath),
+                AssetDatabase.LoadAssetAtPath<Sprite>(OptionCursorPath),
+                AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(PixelFontAssetPath));
+
+        /// <summary>
+        /// Barra superior de los mapas (piso, sellos y créditos). Vive en su propio Canvas
+        /// para que el fundido la tape y el cuadro de texto no la mueva.
+        /// </summary>
+        public static HUD CreateMapHud(Transform parent)
+        {
+            TMP_FontAsset font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(PixelFontAssetPath);
+
+            RectTransform bar = CreateImage(parent, "BarraHUD", HudBarColor);
+            bar.anchorMin = new Vector2(0, 1);
+            bar.anchorMax = Vector2.one;
+            bar.offsetMin = new Vector2(0, -HudBarHeight);
+            bar.offsetMax = Vector2.zero;
+            bar.GetComponent<Image>().raycastTarget = false;
+
+            TextMeshProUGUI floor = CreateHudText(bar, "Piso", "PISO 1", font, TextAlignmentOptions.MidlineLeft);
+            floor.rectTransform.anchorMin = floor.rectTransform.anchorMax = new Vector2(0, 0.5f);
+            floor.rectTransform.pivot = new Vector2(0, 0.5f);
+            floor.rectTransform.anchoredPosition = new Vector2(24, 0);
+            floor.rectTransform.sizeDelta = new Vector2(480, HudBarHeight);
+
+            TextMeshProUGUI seals = CreateHudText(bar, "Sellos", "SELLOS 0", font, TextAlignmentOptions.MidlineRight);
+            seals.rectTransform.anchorMin = seals.rectTransform.anchorMax = new Vector2(1, 0.5f);
+            seals.rectTransform.pivot = new Vector2(1, 0.5f);
+            seals.rectTransform.anchoredPosition = new Vector2(-256, 0);
+            seals.rectTransform.sizeDelta = new Vector2(220, HudBarHeight);
+
+            TextMeshProUGUI credits = CreateHudText(bar, "Creditos", "CRÉDITOS 0", font, TextAlignmentOptions.MidlineRight);
+            credits.rectTransform.anchorMin = credits.rectTransform.anchorMax = new Vector2(1, 0.5f);
+            credits.rectTransform.pivot = new Vector2(1, 0.5f);
+            credits.rectTransform.anchoredPosition = new Vector2(-24, 0);
+            credits.rectTransform.sizeDelta = new Vector2(220, HudBarHeight);
+
+            var hud = bar.gameObject.AddComponent<HUD>();
+            Assign(hud, ("floorText", floor), ("sealsText", seals), ("creditsText", credits));
+            return hud;
+        }
+
+        static TextMeshProUGUI CreateHudText(Transform parent, string name, string text, TMP_FontAsset font,
+            TextAlignmentOptions alignment)
+        {
+            TextMeshProUGUI label = CreateText(parent, name, text, 20, HudTextColor);
+            label.font = font;
+            label.fontStyle = FontStyles.Bold;
+            label.alignment = alignment;
+            return label;
+        }
 
         // ---------- Importación de recursos ----------
 

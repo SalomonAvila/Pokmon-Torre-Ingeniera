@@ -1,9 +1,9 @@
 # Plan de fases: Pokémon Torre Ingeniería
 
 Plan de desarrollo del prototipo (vertical slice, Doc §6): plazoleta (`Atrio`), lobby (`Ascensores`) y piso 3.
-Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partida de prueba y un commit "Avance etapa N: ...".
+Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partida de prueba y un commit "Avance: ...".
 
-Última revisión: 20 de octubre de 2026. Etapa 0 cerrada; Etapa 1 **cerrada** (datos, fórmulas, equipo y assets validados; ambos validadores y la compilación pasan sin errores); fórmulas revisadas contra el Doc §7 (crítico y estado quedan como propuesta, apagados por defecto; tasa de captura normalizada /255 como propuesta). Siguiente: Etapa 2.
+Última revisión: 21 de octubre de 2026. Etapa 0 cerrada; Etapa 1 **cerrada** (datos, fórmulas, equipo y assets validados); Etapa 2 **cerrada** (Interactable, HUD, acciones de input y bloqueo de diálogo; escenas regeneradas, validadores y prueba manual en Play superados). Rama de trabajo: `interaccion-dialogo`. Siguiente: Etapa 3.
 
 ---
 
@@ -77,21 +77,28 @@ Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partid
 
 ---
 
-## Etapa 2: Interacción y diálogo (2 a 3 días)
+## Etapa 2: Interacción y diálogo (2 a 3 días) — ✅ CERRADA
 
-**Ya existe:**
+**Ya existía:**
 - `DialogueBox` (texto letra a letra, páginas, flecha ▼ y salto con Submit).
 - `ChoiceBox` (opciones, navegación con ejes y callback por índice).
 - `WorldMessage` (mensajes modales de varias líneas, cooldown y bloqueo de input).
 - `PlayerController` ya respeta `WorldMessage.IsOpen` y `SceneTransition.IsTransitioning`.
 
-**Por hacer:**
-- Componente `Interactable` (NPC, objeto, letrero): usa `DialogueBox`/`ChoiceBox` y registra en `GameState.CollectItem`/`DefeatTrainer`.
-- HUD superior con el piso actual ("PISO 3 – CIVIL"), sellos y créditos.
-- Conectar las acciones `Interact`, `Cancel`, `Menu` y `Map` en `PlayerController` (hoy solo usa `Move` y `Run`).
-- Bloquear el movimiento del jugador mientras `DialogueBox`/`ChoiceBox` están activos (hoy solo bloquea con `WorldMessage`).
+**Hecho en esta sesión (21 oct 2026, rama `interaccion-dialogo`):**
+- `Interactable` (`Assets/Scripts/World/Interactable.cs`): tipos `Npc`, `Sign`, `Item` y `Trainer`. El jugador interactúa con la casilla de enfrente (`Interact`). Los NPC/letreros muestran diálogo y opciones SÍ/NO (`WorldMessage.Show(lines, options, onChosen)`); los objetos usan `GameState.AddItem` + `GameState.CollectItem` (con `itemId` y `pickupId` separados para varios objetos iguales en un piso) y se ocultan al recargar (`Awake`); los entrenadores registran `GameState.DefeatTrainer` (provisional hasta la Etapa 6).
+- `HUD` (`Assets/Scripts/UI/HUD/HUD.cs`): barra superior con piso, sellos y créditos. `Building.HudTitle` arma el texto con el nombre corto del área del Doc §2 (`PISO 3 – CIVIL`, `PISO 4 – MECÁNICA`, …; el PT se muestra solo como `PISO TÉCNICO`). Se actualiza con `GameState.StateChanged`/`ProgressChanged` y se crea por escena con `ProvisionalMap.AddHud`.
+- `PlayerController`: se conectaron las acciones `Interact`, `Cancel`, `Menu` y `Map`. `Interact` habla con la casilla de enfrente; `Menu` y `Map` muestran un aviso provisional (Etapa 7) y `Cancel` queda reservado a menús. El movimiento se bloquea con `WorldMessage.IsOpen`, `DialogueBox.IsOpen` y `ChoiceBox.IsChoosing`.
+- `WorldMessage` ahora acepta opciones (`ChoiceBox`) y `ProvisionalMap.AddMessageBox` crea el `CuadroOpciones` en `CanvasMensajes`.
+- Contenido de prueba en `Atrio` (temporal): `NpcPrueba` (diálogo + SÍ/NO) y `TintoPrueba` (recogible, `pickupId = atrio_tinto_prueba`), creados desde `AtrioBuilder` con `ProvisionalMap.CreateNpc`/`CreatePickup`.
 
-**Hecho cuando:** hablas con un NPC de prueba, eliges una opción, recoges un Tinto que no reaparece tras recargar y el HUD muestra el piso actual.
+**Verificación (21 oct 2026):**
+- ✅ Compilación en Unity sin errores.
+- ✅ **Validar reglas del documento**, **Validar datos y fórmulas** y **Verificar guardado y carga** pasan.
+- ✅ **Mapas/Construir todos los mapas**: las escenas se regeneraron con `CanvasHUD`, `CuadroOpciones` y el contenido de prueba serializado.
+- ✅ Prueba manual en Play (hablar con el NPC, elegir opción, recoger el Tinto y recargar la escena).
+
+**Hecho cuando:** hablas con un NPC de prueba, eliges una opción, recoges un Tinto que no reaparece tras recargar y el HUD muestra el piso actual. **Superado en Play el 21 oct 2026.**
 
 ---
 
@@ -213,7 +220,8 @@ Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partid
 - [x] Corregir la ruta de los builders: `Assets/Editor/Tiles/`.
 - [x] Reescribir la laguna de la puerta con la condición derivada (`PassesBuildingDoor`).
 - [x] Anotar la decisión de escaleras (una escena, la cinta bloquea la subida) y la del Pokédex por piso (derivado de `SpeciesCatalog`).
-- [ ] Añadir `Interactable`, `EncounterZone`, `TrainerController` y `BattleSystem` cuando existan.
+- [x] Documentar `Interactable` y `HUD` en `AGENTS.md` (World y UI).
+- [ ] Añadir `EncounterZone`, `TrainerController` y `BattleSystem` cuando existan.
 - [x] Documentar `Assets/Scripts/Core/Data/` y el menú de datos del Editor.
 
 ---
@@ -224,7 +232,7 @@ Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partid
 |---|---|
 | 0 | `FadeManager.cs`, `GameRules.cs`, `SpeciesCatalog.cs`, `SaveSystem.cs` (v4), `ValidateRules.cs`, `VerifySaveLoading.cs`, `StairwellBuilder.cs`, `MapSceneBuilder.cs`, `LEEME.txt` (tilesets), `AGENTS.md` |
 | 1 | `PokemonType.cs`, `TypeChart.cs`, `MoveData.cs`, `PokemonData.cs`, `ItemData.cs`, `TrainerData.cs`, `PokemonStats.cs`, `GameRules.cs`, `Databases.cs`, `Assets/Editor/Data/PrototypeDataBuilder.cs`, `ValidateData.cs` y los assets generados en `Assets/Resources/Data/` |
-| 2 | `Interactable.cs`, `HUD.cs`, `PlayerController.cs` (acciones Interact/Cancel/Menu/Map) |
+| 2 | `Interactable.cs`, `HUD.cs`, `WorldMessage.cs`, `DialogueBox.cs`, `ChoiceBox.cs`, `PlayerController.cs`, `ProvisionalMap.cs`, `MainMenuSceneBuilder.cs`, `AtrioBuilder.cs`, `Building.cs` (`HudTitle`) y escenas regeneradas |
 | 3 | `BattleSystem/` (estado, UI, IA, daño, captura y EXP), escena `Battle.unity` y registro de retorno |
 | 4 | `EncounterZone.cs`, tablas de zonas y menús de Equipo/Mochila |
 | 5 | Escena `Intro.unity`, selector de inicial, diálogos del Vigilante y Gabriel, spawn de desmayo |
@@ -237,11 +245,11 @@ Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partid
 
 ## Estado real vs Plan (resumen)
 
-| Etapa | Plan original | Estado real (20 oct 2026) |
+| Etapa | Plan original | Estado real (21 oct 2026) |
 |---|---|---|
 | 0 | Casi cerrada | ✅ **Cerrada** (v4, FadeManager, validación, mapas y herramientas) |
 | 1 | Datos y fórmulas | ✅ **Cerrada** (datos, fórmulas, equipo y assets validados; compilación sin errores) |
-| 2 | Interacción y diálogo | 🟡 **30 %** (UI base hecha; faltan Interactable, HUD y acciones de input) |
+| 2 | Interacción y diálogo | ✅ **Cerrada** (Interactable, HUD, acciones de input, bloqueo y prueba en Play superados) |
 | 3 | Combate núcleo | ❌ **0 %** |
 | 4 | Encuentros y plazoleta | ❌ **0 %** (tiles `z` puestos, sin trigger) |
 | 5 | Flujo de inicio y tutorial | 🟡 **20 %** (título y puerta hechos; faltan Intro, inicial, Gabriel y spawn de desmayo) |
@@ -251,12 +259,13 @@ Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partid
 | 9 | Pulido y cierre | ❌ **0 %** |
 | 10 | Futuro | — |
 
-**Próximo commit sugerido:** "Avance etapa 2: interaccion y dialogo"
+**Próximo commit sugerido:** "Avance: interaccion y dialogo"
 
 ---
 
 ## Registro de avance
 
+- **21 oct 2026 — Etapa 2 cerrada:** rama `interaccion-dialogo`; `Interactable` (NPC/letrero/objeto/entrenador), opciones en `WorldMessage`, bloqueo de movimiento con `DialogueBox.IsOpen`/`ChoiceBox.IsChoosing`, acciones `Interact`/`Cancel`/`Menu`/`Map` en `PlayerController`, `HUD` con piso/sellos/créditos (`Building.HudTitle`) y contenido de prueba en `Atrio` (`NpcPrueba`, `TintoPrueba`). Escenas regeneradas; compilación y los tres validadores pasan. **Prueba en Play superada:** diálogo con opción, recogida del Tinto, persistencia al recargar y HUD con el piso actual. Repositorio de ramas anotado en `AGENTS.md`. Siguiente: Etapa 3.
 - **20 oct 2026 — Equipo normalizado en la Etapa 1:** `TeamMembers.Create` (PS, EXP, learnset y PP), `Create(TrainerPokemon)`/`CreateTeam` con movimientos fijos y `RecalculateOnLoad` al cargar; `GameState.AddCapturedPokemon` para la captura. Validado en `ValidateData` (Bulbasaur nv 5, Geodude nv 8, Cantera y catálogo con ataque) y en `VerifySaveLoading`; tasa de captura /255 anotada como (propuesta).
 - **20 oct 2026 — Etapa 1 cerrada:** **Validar datos y fórmulas**, **Verificar guardado y carga** y la compilación en Unity pasan sin errores; assets generados en `Assets/Resources/Data/`. Siguiente: Etapa 2.
 - **20 oct 2026 — Revisión de fórmulas y alcance:** crítico y bonus por estado marcados como (propuesta) y apagados por defecto; niveles de Montoya unificados a 46, 48, 49 y 50; iniciales en el Pokédex marcados como resueltos; retirado "género" del combate; tienda y ascensor alineados con el Doc; nombres de constantes verificados contra el código.

@@ -7,7 +7,7 @@ using UnityEngine.InputSystem;
 namespace TorreIngenieria.UI
 {
     /// <summary>
-    /// Pantalla de título (pantalla 1). "PRESS START" brilla suavemente invitando a presionar Enter;
+    /// Pantalla de título (pantalla 1). "PULSA ENTER" brilla suavemente invitando a presionar Enter;
     /// al presionarlo destella y pasa a la pantalla que revisa si hay una partida guardada.
     /// </summary>
     public class TitleScreenController : MonoBehaviour

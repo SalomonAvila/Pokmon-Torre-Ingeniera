@@ -88,6 +88,7 @@ namespace TorreIngenieria.EditorTools
 
             ProvisionalMap.AddFloorInfo(floor);
             ProvisionalMap.AddMessageBox();
+            ProvisionalMap.AddHud();
 
             // Si se prueba el piso directamente, Pedro empieza donde se llega subiendo.
             var start = upAtNorthwest ? SoutheastArrival : NorthwestArrival;
