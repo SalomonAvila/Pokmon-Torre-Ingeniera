@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using TorreIngenieria.Battle;
 using TorreIngenieria.Core;
 using UnityEditor;
 using UnityEngine;
@@ -33,6 +34,7 @@ namespace TorreIngenieria.EditorTools
             ValidateItemAssets();
             ValidateTrainerAssets();
             ValidateTeamMembers();
+            ValidateBattleEngine();
 
             if (checksFailed == 0)
                 Debug.Log("Datos y fórmulas: todo coincide.");
@@ -360,6 +362,49 @@ namespace TorreIngenieria.EditorTools
                     $"'{speciesId}' en su nivel mínimo ({level}) no tiene ningún movimiento con poder; " +
                     "la IA salvaje se quedaría sin atacar.");
             }
+        }
+
+        // ---------- Motor de combate (Etapa 3) ----------
+
+        static void ValidateBattleEngine()
+        {
+            // Estado de un salvaje: PS, tipos y learnset.
+            BattlePokemon wild = BattlePokemon.CreateWild("bulbasaur", 5);
+            CheckEqual(wild.maxHp, 21, "El salvaje Bulbasaur nv 5 debería tener 21 PS.");
+            CheckEqual(wild.currentHp, 21, "El salvaje Bulbasaur nv 5 debería empezar con los PS llenos.");
+            Check(wild.HasType(PokemonType.Grass) && wild.HasType(PokemonType.Poison),
+                "El salvaje Bulbasaur debería ser Planta/Veneno.");
+            CheckEqual(wild.moves.Count, 2, "El salvaje Bulbasaur nv 5 debería conocer 2 movimientos.");
+
+            // Cambios de estadística de combate (Gen 3).
+            CheckEqual(BattlePokemon.ModifiedStat(100, 0), 100, "Sin cambios, la estadística debería ser igual.");
+            CheckEqual(BattlePokemon.ModifiedStat(100, 2), 200, "+2 debería doblar la estadística.");
+            CheckEqual(BattlePokemon.ModifiedStat(100, -2), 50, "−2 debería dejar la mitad de la estadística.");
+
+            // Huida y precisión (propuestas en GameRules).
+            CheckNear(GameRules.FleeChance(50, 50), 0.5f, "Con la misma Velocidad se debería huir el 50 %.");
+            CheckNear(GameRules.FleeChance(200, 50), GameRules.FleeMaxChance, "Huir rápido debería topar en el máximo.");
+            CheckNear(GameRules.FleeChance(10, 200), GameRules.FleeMinChance, "Huir lento debería topar en el mínimo.");
+            CheckNear(GameRules.AccuracyStageMultiplier(0), 1f, "Sin cambios, la precisión debería ser la base.");
+            CheckNear(GameRules.AccuracyStageMultiplier(-1), 0.75f, "−1 de precisión debería ser 0,75.");
+
+            // Un combate con ventaja clara termina y lo gana el jugador (la variación aleatoria no cambia el final).
+            var playerTeam = new List<BattlePokemon> { BattlePokemon.CreateWild("charmander", 20) };
+            var enemyTeam = new List<BattlePokemon> { BattlePokemon.CreateWild("rattata", 2) };
+            var engine = new BattleEngine(playerTeam, enemyTeam, BattleKind.Wild);
+            int guard = 0;
+            while (!engine.IsOver && guard++ < 500)
+                engine.ResolveTurn(BattleAction.Move(0));
+            Check(engine.IsOver, "Un combate con ventaja clara debería terminar antes de 500 turnos.");
+            Check(engine.PlayerWon, "Charmander nv 20 debería ganar a un Rattata nv 2.");
+
+            // FromTeamMember conserva PS actuales y PP.
+            TeamMember member = TeamMembers.Create("bulbasaur", 5);
+            member.hp = 10;
+            member.moves[0].pp = 5;
+            BattlePokemon fromMember = BattlePokemon.FromTeamMember(member, PokemonDatabase.Get("bulbasaur"));
+            CheckEqual(fromMember.currentHp, 10, "FromTeamMember debería respetar los PS actuales.");
+            CheckEqual(fromMember.moves[0].currentPp, 5, "FromTeamMember debería respetar los PP actuales.");
         }
 
         static TeamMember TryCreate(string speciesId, int level, string context)

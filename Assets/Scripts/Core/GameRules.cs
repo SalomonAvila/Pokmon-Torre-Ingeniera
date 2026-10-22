@@ -159,6 +159,50 @@ namespace TorreIngenieria.Core
         /// <summary>Créditos que se pierden al desmayarse.</summary>
         public static int CreditsLost(int credits) => (int)(credits * FaintedCreditsLoss);
 
+        // ---------- Estados y huida (propuesta: el Doc §7 no los detalla) ----------
+
+        /// <summary>Multiplicador de precisión por nivel de estadística (Gen 3): +n → (3+n)/3.</summary>
+        public static float AccuracyStageMultiplier(int stage)
+        {
+            int clamped = Math.Clamp(stage, -6, 6);
+            return clamped >= 0 ? (3f + clamped) / 3f : 3f / (3f - clamped);
+        }
+
+        /// <summary>Daño por veneno al final de cada turno: PS máximos / 8.</summary>
+        public const int PoisonDamageDivisor = 8;
+
+        /// <summary>Daño por quemadura al final de cada turno: PS máximos / 16.</summary>
+        public const int BurnDamageDivisor = 16;
+
+        /// <summary>Un Pokémon paralizado no se mueve con esta probabilidad.</summary>
+        public const float ParalysisSkipChance = 0.25f;
+
+        /// <summary>Turnos que dura el sueño (ambos inclusive).</summary>
+        public const int SleepMinTurns = 1;
+        public const int SleepMaxTurns = 3;
+
+        /// <summary>Un congelado se descongela con esta probabilidad por turno.</summary>
+        public const float FreezeThawChance = 0.20f;
+
+        /// <summary>
+        /// Probabilidad base de huir de un combate salvaje con la misma Velocidad. Escala con la ventaja
+        /// de Velocidad y se recorta al rango [0,2, 0,95] **(propuesta)**: el Doc §7 solo dice que se
+        /// puede huir de un salvaje y que de un entrenador o jefe no.
+        /// </summary>
+        public const float FleeBaseChance = 0.5f;
+        public const float FleeMinChance = 0.2f;
+        public const float FleeMaxChance = 0.95f;
+
+        /// <summary>Probabilidad de huir según la Velocidad de ambos; ver <see cref="FleeBaseChance"/>.</summary>
+        public static float FleeChance(int playerSpeed, int enemySpeed)
+        {
+            if (enemySpeed <= 0)
+                return FleeMaxChance;
+
+            float ratio = (float)playerSpeed / enemySpeed;
+            return Math.Clamp(FleeBaseChance * ratio, FleeMinChance, FleeMaxChance);
+        }
+
         /// <summary>Probabilidad de captura recortada al rango del documento (5 %–95 %).</summary>
         public static float ClampCaptureChance(float chance) =>
             Math.Clamp(chance, CaptureChanceMin, CaptureChanceMax);

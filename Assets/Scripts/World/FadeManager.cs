@@ -109,6 +109,11 @@ namespace TorreIngenieria.World
             if (busy)
                 return;
 
+            // Se marca ocupado ya mismo (no al arrancar la corrutina) para que dos disparos en el mismo
+            // fotograma —por ejemplo, pisar una casilla de encuentro y una zona de cambio— no se pisen.
+            busy = true;
+            group.blocksRaycasts = true;
+
             StartCoroutine(FadeAndLoadRoutine(sceneName, spawnId));
         }
 

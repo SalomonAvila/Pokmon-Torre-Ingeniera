@@ -85,8 +85,9 @@ namespace TorreIngenieria.Core
         /// <summary>
         /// Learnset Gen 3: los cuatro movimientos de mayor nivel que no superen el nivel actual.
         /// A igual nivel manda el orden de la tabla. Sin duplicados.
+        /// Público para que el combate materialice los movimientos de un rival salvaje.
         /// </summary>
-        static List<string> LearnsetMoves(PokemonData species, int level)
+        public static List<string> LearnsetMoves(PokemonData species, int level)
         {
             var candidates = new List<(int level, int order, string moveId)>();
             if (species.learnset != null)

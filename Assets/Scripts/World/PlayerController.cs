@@ -52,8 +52,15 @@ namespace TorreIngenieria.World
         /// <summary>Se invoca al chocar con una casilla bloqueada (posición del centro de esa casilla).</summary>
         public static event Action<Vector3> Bumped;
 
+        /// <summary>Se invoca al terminar un paso hasta una casilla nueva (posición del centro de esa casilla).</summary>
+        public static event Action<Vector3> Stepped;
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        static void ResetStatics() => Bumped = null;
+        static void ResetStatics()
+        {
+            Bumped = null;
+            Stepped = null;
+        }
 
         public Direction Facing => facing;
         public bool IsMoving => moving;
@@ -99,6 +106,13 @@ namespace TorreIngenieria.World
             {
                 transform.position = CellCenter(spawn.transform.position);
                 facing = spawn.Facing;
+                ShowFrame(0);
+            }
+            else if (SceneTransition.ConsumePendingPosition(out Vector3 returnPosition, out int returnFacing))
+            {
+                // Vuelta de un combate: cae en la misma casilla donde lo sorprendió el encuentro.
+                transform.position = CellCenter(returnPosition);
+                facing = (Direction)returnFacing;
                 ShowFrame(0);
             }
             else if (!string.IsNullOrEmpty(spawnId))
@@ -206,7 +220,10 @@ namespace TorreIngenieria.World
             moving = false;
 
             if (!blocked)
+            {
                 WarpZone.At(transform.position)?.Trigger();
+                Stepped?.Invoke(transform.position);
+            }
         }
 
         bool IsBlocked(Vector3 cellCenter)

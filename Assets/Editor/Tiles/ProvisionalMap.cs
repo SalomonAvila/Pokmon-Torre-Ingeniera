@@ -84,6 +84,14 @@ namespace TorreIngenieria.EditorTools
             MainMenuSceneBuilder.CreateMapHud(canvasObject.transform);
         }
 
+        /// <summary>
+        /// Zonas de encuentro del piso: revisa la capa <c>Encuentros</c> al dar cada paso y puede empezar un
+        /// combate salvaje (10 % por casilla; ver <see cref="EncounterZone"/>). Los pisos sin tiles de
+        /// encuentro (pasillos, lobby) son seguros.
+        /// </summary>
+        public static void AddEncounterZone() =>
+            new GameObject("ZonaEncuentros").AddComponent<EncounterZone>();
+
         public static TileBase[] LoadTiles(string sheet, int count) =>
             Enumerable.Range(0, count).Select(i => LoadTile(sheet, i)).ToArray();
 

@@ -165,6 +165,13 @@ namespace TorreIngenieria.Core
         }
 
         /// <summary>
+        /// Guarda y avisa cuando el combate ha modificado PS o PP del equipo. El combate muta los
+        /// <see cref="TeamMember"/> de <see cref="Save"/> y llama aquí al terminar; así el daño y los PP
+        /// gastados no se pierden al volver al mundo.
+        /// </summary>
+        public static void NotifyTeamChanged() => Commit();
+
+        /// <summary>
         /// Crea el Pokémon capturado con sus PS, EXP, movimientos y PP, y lo suma al equipo si hay sitio.
         /// La captura siempre cuenta para el Pokédex, aunque el equipo esté lleno (el prototipo no tiene PC).
         /// Devuelve el miembro creado para que el combate pueda mostrar su ficha.
