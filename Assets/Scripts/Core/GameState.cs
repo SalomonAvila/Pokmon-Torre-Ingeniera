@@ -165,13 +165,26 @@ namespace TorreIngenieria.Core
         }
 
         /// <summary>
+        /// Guarda y avisa cuando el combate ha modificado PS o PP del equipo. El combate muta los
+        /// <see cref="TeamMember"/> de <see cref="Save"/> y llama aquí al terminar; así el daño y los PP
+        /// gastados no se pierden al volver al mundo.
+        /// </summary>
+        public static void NotifyTeamChanged() => Commit();
+
+        /// <summary>
         /// Crea el Pokémon capturado con sus PS, EXP, movimientos y PP, y lo suma al equipo si hay sitio.
         /// La captura siempre cuenta para el Pokédex, aunque el equipo esté lleno (el prototipo no tiene PC).
         /// Devuelve el miembro creado para que el combate pueda mostrar su ficha.
+        ///
+        /// (propuesta) El capturado conserva los PS actuales del salvaje. Se crea con
+        /// <see cref="TeamMembers.CreateCaptured"/> (que parte de la EXP del nivel y copia los PS y los PP
+        /// actuales). Los PS nunca se guardan en 0 ni por encima del máximo; si no se pasan, el Pokémon
+        /// queda con los PS llenos. La captura no da EXP adicional.
         /// </summary>
-        public static TeamMember AddCapturedPokemon(string speciesId, int level)
+        public static TeamMember AddCapturedPokemon(string speciesId, int level, int currentHp = -1,
+            IReadOnlyList<int> currentPp = null)
         {
-            TeamMember member = TeamMembers.Create(speciesId, level);
+            TeamMember member = TeamMembers.CreateCaptured(speciesId, level, currentHp, currentPp);
 
             if (!Save.pokedex.Contains(speciesId))
                 Save.pokedex.Add(speciesId);
@@ -281,19 +294,56 @@ namespace TorreIngenieria.Core
         /// El Vigilante Gómez deja entrar al edificio con el inicial elegido y al menos un Pokémon capturado
         /// (Doc §8). La puerta Atrio ↔ Ascensores consulta esta condición. El inicial consta en el Pokédex
         /// desde que se elige, pero no cuenta como captura: la puerta exige una especie distinta de él.
+        ///
+        /// (propuesta) Mientras no exista la pantalla de elección de inicial, si la partida no lo tiene
+        /// fijado pero el equipo trae un Pokémon inicial (por ejemplo, el que añaden las herramientas de
+        /// prueba), se usa ese como inicial. Así una partida de prueba no queda bloqueada para siempre.
         /// </summary>
         public static bool PassesBuildingDoor
         {
             get
             {
-                if (string.IsNullOrEmpty(Save.starterId))
+                string starterId = string.IsNullOrEmpty(Save.starterId)
+                    ? StarterInTeam()
+                    : Save.starterId;
+
+                if (string.IsNullOrEmpty(starterId))
                     return false;
 
                 foreach (string species in Save.pokedex)
-                    if (species != Save.starterId)
+                    if (species != starterId)
                         return true;
                 return false;
             }
+        }
+
+        /// <summary>
+        /// (propuesta) Fija como inicial el primer Pokémon inicial del equipo si la partida aún no tiene
+        /// uno. Lo usan la carga de partida y las herramientas de prueba; no hace nada si ya hay inicial
+        /// o si el equipo no trae ninguno. No se llama desde <see cref="PassesBuildingDoor"/> porque esa
+        /// consulta no debe mutar la partida.
+        /// </summary>
+        public static void EnsureStarterFromTeam()
+        {
+            if (!string.IsNullOrEmpty(Save.starterId))
+                return;
+
+            string starter = StarterInTeam();
+            if (!string.IsNullOrEmpty(starter))
+                SetStarter(starter);
+        }
+
+        /// <summary>Primer Pokémon inicial del equipo, o <c>null</c> si no hay ninguno.</summary>
+        static string StarterInTeam()
+        {
+            if (Save.team == null)
+                return null;
+
+            foreach (TeamMember member in Save.team)
+                if (member != null && SpeciesCatalog.IsStarter(member.speciesId))
+                    return member.speciesId;
+
+            return null;
         }
 
         /// <summary>La Ing. Cantera entrega el Carné de acceso que activa los ascensores del sur.</summary>

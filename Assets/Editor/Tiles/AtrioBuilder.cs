@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Tilemaps;
 
 namespace TorreIngenieria.EditorTools
 {
@@ -141,6 +142,16 @@ namespace TorreIngenieria.EditorTools
             ProvisionalMap.AddFloorInfo("1");
             ProvisionalMap.AddMessageBox();
             ProvisionalMap.AddHud();
+            ProvisionalMap.AddEncounterZone();
+
+            // Zonas de encuentro provisionales de la plazoleta (Doc §7): un parche de jardineras junto al
+            // kiosco. Las jardineras definitivas llegan con el contenido del piso en la Etapa 8; por ahora
+            // bastan para probar los encuentros salvajes (niveles 2 a 5).
+            TileBase encounterMarker = ProvisionalMap.LoadTiles(TilesetName, 16)[TileA];
+            Tilemap encounters = MapSceneBuilder.Layer("Encuentros");
+            for (int row = 24; row <= 26; row++)
+                for (int col = 10; col <= 12; col++)
+                    encounters.SetTile(ProvisionalMap.Cell(col, row, height), encounterMarker);
 
             // Último escalón de las gradas superiores (entre las barandas) → pasillo de los ascensores.
             // Es la puerta del edificio: el Vigilante Gómez solo deja pasar con inicial y un Pokémon capturado.
@@ -158,6 +169,12 @@ namespace TorreIngenieria.EditorTools
                 new[] { "Entonces descansa un rato en el atrio." });
             ProvisionalMap.CreatePickup("TintoPrueba", 9, 21, height, "atrio_tinto_prueba", "tinto", 1,
                 new[] { "Encontraste un Tinto.", "Restaura 20 PS de un Pokémon." });
+
+            // Entrenador de práctica del kiosco (Doc §10): primer combate de entrenador y primera fuente
+            // de créditos. Queda junto al mostrador, mirando al camino; el combate real llega en la Etapa 6.
+            ProvisionalMap.CreateTrainer("EntrenadorKiosco", 19, 28, height, "kiosco",
+                new[] { "¡Hola! Soy el estudiante del kiosco.", "¿Quieres probar tu equipo en un combate de práctica?" },
+                PlayerController.Direction.Up);
 
             GameObject pedro = ProvisionalMap.CreatePlayer(ProvisionalMap.CellCenter(PlayerStart.x, PlayerStart.y, height));
             ProvisionalMap.SetupCamera(pedro.transform, width, height);

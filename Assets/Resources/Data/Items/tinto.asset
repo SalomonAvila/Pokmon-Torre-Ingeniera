@@ -18,4 +18,4 @@ MonoBehaviour:
   healAmount: 20
   catchBonus: 1
   price: 100
-  description: "Caf\xE9 tinto bien cargado. Restaura 20 PS."
+  description: "Caf\xE9 tinto bien cargado."

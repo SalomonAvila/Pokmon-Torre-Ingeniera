@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using TorreIngenieria.Battle;
 using TorreIngenieria.Core;
 using UnityEditor;
 using UnityEngine;
@@ -27,12 +28,19 @@ namespace TorreIngenieria.EditorTools
             Debug.Log("--- Datos, fórmulas y equipo (Etapa 1) ---");
 
             ValidateTypeChart();
+            ValidateTypeMessages();
+            ValidateTypeBadges();
+            ValidateHpBar();
             ValidateFormulas();
             ValidateSpeciesAssets();
             ValidateMoveAssets();
             ValidateItemAssets();
             ValidateTrainerAssets();
             ValidateTeamMembers();
+            ValidateExperience();
+            ValidateBattleEngine();
+            ValidateCapture();
+            ValidateSwitch();
 
             if (checksFailed == 0)
                 Debug.Log("Datos y fórmulas: todo coincide.");
@@ -73,6 +81,58 @@ namespace TorreIngenieria.EditorTools
                         Check(false, $"{PokemonTypeNames.DisplayName(attack)} contra " +
                                      $"{PokemonTypeNames.DisplayName(defend)} tiene un valor inválido ({value}).");
                 }
+        }
+
+        // ---------- Mensajes y colores de la interfaz ----------
+
+        static void ValidateTypeMessages()
+        {
+            Check(TypeChart.Describe(1f) == string.Empty,
+                "La efectividad normal no debería mostrar ningún mensaje.");
+            Check(TypeChart.Describe(2f) == "¡Es muy eficaz!",
+                "La efectividad doble debería decir '¡Es muy eficaz!'.");
+            Check(TypeChart.Describe(0.5f) == "No es muy eficaz...",
+                "La media efectividad debería decir 'No es muy eficaz...'.");
+            Check(TypeChart.Describe(0f) == "No afecta...",
+                "La inmunidad debería decir 'No afecta...'.");
+        }
+
+        static void ValidateTypeBadges()
+        {
+            Check(PokemonTypeNames.BadgeName(PokemonType.Electric) == "ELECTRICO",
+                "La etiqueta de Eléctrico debería evitar la vocal acentuada.");
+            Check(PokemonTypeNames.BadgeName(PokemonType.Psychic) == "PSIQUICO",
+                "La etiqueta de Psíquico debería evitar la vocal acentuada.");
+            Check(PokemonTypeNames.BadgeName(PokemonType.Dragon) == "DRAGON",
+                "La etiqueta de Dragón debería evitar la vocal acentuada.");
+
+            // Los fondos oscuros necesitan texto blanco para que la etiqueta se lea.
+            Check(PokemonTypeColors.BadgeText(PokemonType.Ghost) == "#FFFFFF",
+                "Fantasma debería usar texto blanco en la etiqueta.");
+            Check(PokemonTypeColors.BadgeText(PokemonType.Dragon) == "#FFFFFF",
+                "Dragón debería usar texto blanco en la etiqueta.");
+            Check(PokemonTypeColors.BadgeText(PokemonType.Dark) == "#FFFFFF",
+                "Siniestro debería usar texto blanco en la etiqueta.");
+            Check(PokemonTypeColors.BadgeText(PokemonType.Water) == "#101010",
+                "Agua debería usar texto oscuro en la etiqueta.");
+        }
+
+        static void ValidateHpBar()
+        {
+            Check(BattleHUD.HpColor(1f) == BattleHUD.HpGreen,
+                "La barra de PS llena debería ser verde.");
+            Check(BattleHUD.HpColor(0.51f) == BattleHUD.HpGreen,
+                "Con más del 50 % de PS la barra debería seguir verde.");
+            Check(BattleHUD.HpColor(0.5f) == BattleHUD.HpYellow,
+                "Con exactamente el 50 % de PS la barra debería ser amarilla.");
+            Check(BattleHUD.HpColor(0.4f) == BattleHUD.HpYellow,
+                "8/20 PS (40 %) debería pintar la barra de amarillo.");
+            Check(BattleHUD.HpColor(0.2f) == BattleHUD.HpYellow,
+                "Con exactamente el 20 % de PS la barra debería ser amarilla.");
+            Check(BattleHUD.HpColor(0.19f) == BattleHUD.HpRed,
+                "Por debajo del 20 % de PS la barra debería ser roja.");
+            Check(BattleHUD.HpColor(0f) == BattleHUD.HpRed,
+                "Sin PS la barra debería ser roja.");
         }
 
         // ---------- Fórmulas ----------
@@ -195,6 +255,14 @@ namespace TorreIngenieria.EditorTools
 
         static void ValidateTrainerAssets()
         {
+            ValidateBossTrainer();
+            ValidateRegularTrainer("kiosco", "1");
+            ValidateRegularTrainer("estudiante_concretos", "3");
+            ValidateRegularTrainer("monitora_suelos", "3");
+        }
+
+        static void ValidateBossTrainer()
+        {
             TrainerData cantera = TrainerDatabase.Get("cantera");
             Check(cantera != null, "Falta el asset del jefe 'cantera'.");
             if (cantera == null)
@@ -212,6 +280,33 @@ namespace TorreIngenieria.EditorTools
                 Check(monster.level > 0, $"Cantera tiene un Pokémon en nivel {monster.level}.");
                 foreach (string move in monster.moveIds)
                     Check(MoveDatabase.Exists(move), $"Cantera usa el movimiento '{move}', que no existe.");
+            }
+        }
+
+        /// <summary>
+        /// Entrenador normal: su equipo debe caer dentro del rango salvaje de su zona + 0 a +2 niveles
+        /// (Doc §8). Los jefes usan otra regla (+4) y se validan aparte.
+        /// </summary>
+        static void ValidateRegularTrainer(string id, string floorId)
+        {
+            TrainerData trainer = TrainerDatabase.Get(id);
+            Check(trainer != null, $"Falta el asset del entrenador '{id}'. Ejecuta Datos > Construir datos del prototipo.");
+            if (trainer == null)
+                return;
+
+            Check(!trainer.isBoss, $"'{id}' no debería estar marcado como jefe.");
+            Check(trainer.floorId == floorId, $"'{id}' debería ser del piso {floorId} y dice '{trainer.floorId}'.");
+            Check(trainer.team.Count > 0, $"'{id}' no tiene equipo.");
+
+            (int min, int max) = Building.WildLevelRange(floorId);
+            foreach (TrainerPokemon monster in trainer.team)
+            {
+                Check(PokemonDatabase.Exists(monster.speciesId), $"'{id}' usa '{monster.speciesId}', que no existe.");
+                Check(monster.level >= min && monster.level <= max + 2,
+                    $"'{id}' tiene a {monster.speciesId} en nivel {monster.level}; " +
+                    $"la zona {floorId} permite entre {min} y {max + 2} (+2 sobre el salvaje).");
+                foreach (string move in monster.moveIds)
+                    Check(MoveDatabase.Exists(move), $"'{id}' usa el movimiento '{move}', que no existe.");
             }
         }
 
@@ -360,6 +455,437 @@ namespace TorreIngenieria.EditorTools
                     $"'{speciesId}' en su nivel mínimo ({level}) no tiene ningún movimiento con poder; " +
                     "la IA salvaje se quedaría sin atacar.");
             }
+        }
+
+        // ---------- Experiencia, niveles y obediencia (Etapa 3) ----------
+
+        static void ValidateExperience()
+        {
+            // Doc §7: EXP base × nivel del rival / 7, sin bonus de entrenador.
+            CheckEqual(GameRules.ExpReward(64, 5), 45, "Bulbasaur nv 5 debería dar 45 de EXP.");
+            CheckEqual(GameRules.ExpReward(64, 10), 91, "Bulbasaur nv 10 debería dar 91 de EXP.");
+            CheckEqual(GameRules.ExpReward(45, 5), 32, "Una base 45 a nivel 5 debería dar 32 de EXP.");
+
+            // Un nivel: 125 + 91 = 216 (nivel 6). Los PS actuales suben la diferencia del máximo.
+            TeamMember oneLevel = TeamMembers.Create("bulbasaur", 5);
+            oneLevel.hp = 10;
+            ExpGainResult one = TeamMembers.GainExp(oneLevel, 91);
+            CheckEqual(one.OldLevel, 5, "La EXP debe partir del nivel 5.");
+            CheckEqual(one.NewLevel, 6, "Con 216 de EXP debería llegar al nivel 6.");
+            CheckEqual(one.LevelUps.Count, 1, "Debería registrarse un solo nivel.");
+            CheckEqual(oneLevel.exp, 216, "La EXP acumulada debería ser 216.");
+            CheckEqual(oneLevel.maxHp, 23, "Bulbasaur nv 6 debería tener 23 PS máximos.");
+            CheckEqual(oneLevel.hp, 12, "Los PS actuales deberían subir de 10 a 12 (diferencia de máximos).");
+            CheckEqual(one.LevelUps[0].HpGained, 2, "El nivel 6 debería aportar 2 PS máximos.");
+            Check(one.LevelUps[0].LearnedMoves.Count == 0,
+                "Bulbasaur no aprende movimientos al nivel 6.");
+
+            // Varios niveles en una sola entrega: 125 + 218 = 343 (niveles 6 y 7), con Látigo Cepa.
+            TeamMember multi = TeamMembers.Create("bulbasaur", 5);
+            multi.hp = 10;
+            ExpGainResult several = TeamMembers.GainExp(multi, 218);
+            CheckEqual(several.NewLevel, 7, "Con 343 de EXP debería llegar al nivel 7.");
+            CheckEqual(several.LevelUps.Count, 2, "Deberían registrarse dos niveles.");
+            CheckEqual(multi.exp, 343, "La EXP acumulada debería ser 343.");
+            CheckEqual(multi.maxHp, 25, "Bulbasaur nv 7 debería tener 25 PS máximos.");
+            CheckEqual(multi.hp, 14, "Los PS actuales deberían subir de 10 a 14.");
+            Check(multi.moves.Exists(slot => slot.moveId == "vine_whip"),
+                "Bulbasaur debería aprender Látigo Cepa al nivel 7.");
+            Check(several.LevelUps[1].LearnedMoves.Contains("vine_whip"),
+                "El segundo nivel debería informar Látigo Cepa como aprendido.");
+
+            // Con cuatro movimientos no se aprende el nuevo: se informa y no se reemplaza nada.
+            var fullMoves = new TeamMember
+            {
+                speciesId = "bulbasaur",
+                level = 5,
+                hp = 21,
+                maxHp = 21,
+                exp = 125,
+                moves = new List<MoveSlot>
+                {
+                    new MoveSlot { moveId = "tackle", pp = 35, maxPp = 35 },
+                    new MoveSlot { moveId = "growl", pp = 40, maxPp = 40 },
+                    new MoveSlot { moveId = "razor_leaf", pp = 25, maxPp = 25 },
+                    new MoveSlot { moveId = "body_slam", pp = 15, maxPp = 15 },
+                },
+            };
+            ExpGainResult full = TeamMembers.GainExp(fullMoves, 218);
+            CheckEqual(fullMoves.moves.Count, 4, "El equipo no debería pasar de cuatro movimientos.");
+            Check(!fullMoves.moves.Exists(slot => slot.moveId == "vine_whip"),
+                "Con cuatro movimientos no debería aprenderse Látigo Cepa.");
+            Check(full.LevelUps.Exists(step => step.MissedMoves.Contains("vine_whip")),
+                "El aviso debería indicar que Látigo Cepa no se pudo aprender.");
+
+            // Cafeína reutiliza la subida: fija la EXP mínima del siguiente nivel.
+            TeamMember candy = TeamMembers.Create("bulbasaur", 5);
+            ExpGainResult candyResult = TeamMembers.LevelUp(candy);
+            CheckEqual(candy.level, 6, "La Cafeína debería subir un nivel.");
+            CheckEqual(candy.exp, 216, "La Cafeína debería dejar la EXP mínima del nivel 6.");
+            CheckEqual(candyResult.LevelUps.Count, 1, "La Cafeína debería informar un nivel.");
+
+            // Tope 100: no se sube más y un debilitado no revive.
+            var capped = new TeamMember
+            {
+                speciesId = "bulbasaur",
+                level = 99,
+                hp = 0,
+                maxHp = 0,
+                exp = PokemonStats.ExperienceForLevel(99),
+                moves = new List<MoveSlot> { new MoveSlot { moveId = "tackle", pp = 35, maxPp = 35 } },
+            };
+            ExpGainResult cap = TeamMembers.GainExp(capped, 100000);
+            CheckEqual(capped.level, 100, "La EXP no debería pasar del nivel 100.");
+            CheckEqual(capped.exp, PokemonStats.ExperienceForLevel(100), "La EXP debería topar en la del nivel 100.");
+            CheckEqual(capped.hp, 0, "Un Pokémon debilitado no debería revivir al subir de nivel.");
+            CheckEqual(cap.ExpGained, PokemonStats.ExperienceForLevel(100) - PokemonStats.ExperienceForLevel(99),
+                "La EXP ganada debería recortarse al tope del nivel 100.");
+
+            // Barra de EXP: 0 al inicio del nivel, 1 al máximo.
+            CheckNear(BattleHUD.ExpRatio(125, 5), 0f, "La barra debería empezar vacía en el nivel 5.");
+            CheckNear(BattleHUD.ExpRatio(216, 6), 0f, "La barra debería reiniciarse al subir al nivel 6.");
+            CheckNear(BattleHUD.ExpRatio(170, 5), 45f / 91f, "La barra debería reflejar la EXP del tramo.");
+            CheckNear(BattleHUD.ExpRatio(PokemonStats.ExperienceForLevel(100), 100), 1f,
+                "En el nivel 100 la barra debería estar llena.");
+
+            // Obediencia (Doc §7): tope 10 + 5 × sellos y 30 % de desobedecer por encima.
+            CheckEqual(GameRules.ObedienceLevelCap(0), 10, "Sin sellos el tope debería ser 10.");
+            CheckEqual(GameRules.ObedienceLevelCap(1), 15, "Con un sello el tope debería ser 15.");
+            CheckEqual(GameRules.ObedienceLevelCap(3), 25, "Con tres sellos el tope debería ser 25.");
+            Check(!GameRules.Disobeys(10, 0, 0f), "En el tope de obediencia nunca debería desobedecer.");
+            Check(GameRules.Disobeys(11, 0, 0.29f), "Por encima del tope debería desobedecer con tirada baja.");
+            Check(!GameRules.Disobeys(11, 0, GameRules.DisobedienceChance),
+                "La tirada igual al 30 % no debería desobedecer.");
+            Check(!GameRules.Disobeys(15, 1, 0.29f), "Con un sello, nivel 15 todavía debería obedecer.");
+            Check(GameRules.Disobeys(16, 1, 0.29f), "Con un sello, nivel 16 debería poder desobedecer.");
+
+            // Integración en el motor: la tirada inyectada evita depender del azar.
+            var disobedienceEngine = new BattleEngine(
+                new List<BattlePokemon> { BattlePokemon.CreateWild("bulbasaur", 11) },
+                new List<BattlePokemon> { BattlePokemon.CreateWild("rattata", 2) },
+                BattleKind.Wild)
+            {
+                ObedienceSeals = 0,
+                ObedienceRoll = 0f,
+            };
+            List<BattleMessage> disobedienceMessages = disobedienceEngine.ResolveTurn(BattleAction.Move(0));
+            Check(disobedienceMessages.Exists(message => message.text.Contains("no obedece")),
+                "Con la tirada forzada, el motor debería avisar que el Pokémon no obedece.");
+        }
+
+        // ---------- Motor de combate (Etapa 3) ----------
+
+        static void ValidateBattleEngine()
+        {
+            // Estado de un salvaje: PS, tipos y learnset.
+            BattlePokemon wild = BattlePokemon.CreateWild("bulbasaur", 5);
+            CheckEqual(wild.maxHp, 21, "El salvaje Bulbasaur nv 5 debería tener 21 PS.");
+            CheckEqual(wild.currentHp, 21, "El salvaje Bulbasaur nv 5 debería empezar con los PS llenos.");
+            Check(wild.HasType(PokemonType.Grass) && wild.HasType(PokemonType.Poison),
+                "El salvaje Bulbasaur debería ser Planta/Veneno.");
+            CheckEqual(wild.moves.Count, 2, "El salvaje Bulbasaur nv 5 debería conocer 2 movimientos.");
+
+            // Cambios de estadística de combate (Gen 3).
+            CheckEqual(BattlePokemon.ModifiedStat(100, 0), 100, "Sin cambios, la estadística debería ser igual.");
+            CheckEqual(BattlePokemon.ModifiedStat(100, 2), 200, "+2 debería doblar la estadística.");
+            CheckEqual(BattlePokemon.ModifiedStat(100, -2), 50, "−2 debería dejar la mitad de la estadística.");
+
+            // Huida y precisión (propuestas en GameRules).
+            CheckNear(GameRules.FleeChance(50, 50), 0.5f, "Con la misma Velocidad se debería huir el 50 %.");
+            CheckNear(GameRules.FleeChance(200, 50), GameRules.FleeMaxChance, "Huir rápido debería topar en el máximo.");
+            CheckNear(GameRules.FleeChance(10, 200), GameRules.FleeMinChance, "Huir lento debería topar en el mínimo.");
+            CheckNear(GameRules.AccuracyStageMultiplier(0), 1f, "Sin cambios, la precisión debería ser la base.");
+            CheckNear(GameRules.AccuracyStageMultiplier(-1), 0.75f, "−1 de precisión debería ser 0,75.");
+
+            // Un combate con ventaja clara termina y lo gana el jugador (la variación aleatoria no cambia el final).
+            var playerTeam = new List<BattlePokemon> { BattlePokemon.CreateWild("charmander", 20) };
+            var enemyTeam = new List<BattlePokemon> { BattlePokemon.CreateWild("rattata", 2) };
+            var engine = new BattleEngine(playerTeam, enemyTeam, BattleKind.Wild);
+            int guard = 0;
+            while (!engine.IsOver && guard++ < 500)
+                engine.ResolveTurn(BattleAction.Move(0));
+            Check(engine.IsOver, "Un combate con ventaja clara debería terminar antes de 500 turnos.");
+            Check(engine.PlayerWon, "Charmander nv 20 debería ganar a un Rattata nv 2.");
+
+            // Un movimiento de estado (Gruñido, poder 0) no debe pasar por la tabla de efectividad.
+            var statusEngine = new BattleEngine(
+                new List<BattlePokemon> { BattlePokemon.CreateWild("bulbasaur", 5) },
+                new List<BattlePokemon> { BattlePokemon.CreateWild("rattata", 5) },
+                BattleKind.Wild);
+            List<BattleMessage> statusMessages = statusEngine.ResolveTurn(BattleAction.Move(1));
+            Check(statusMessages.Exists(message => message.text == "¡Bulbasaur usó Gruñido!"),
+                "El turno de prueba debería usar Gruñido.");
+            Check(!statusMessages.Exists(message =>
+                    message.text.Contains("eficaz") || message.text.Contains("No afecta")),
+                "Un movimiento de estado no debería mostrar mensajes de efectividad.");
+
+            // FromTeamMember conserva PS actuales y PP.
+            TeamMember member = TeamMembers.Create("bulbasaur", 5);
+            member.hp = 10;
+            member.moves[0].pp = 5;
+            BattlePokemon fromMember = BattlePokemon.FromTeamMember(member, PokemonDatabase.Get("bulbasaur"));
+            CheckEqual(fromMember.currentHp, 10, "FromTeamMember debería respetar los PS actuales.");
+            CheckEqual(fromMember.moves[0].currentPp, 5, "FromTeamMember debería respetar los PP actuales.");
+        }
+
+        static void ValidateCapture()
+        {
+            // Bulbasaur nv 5 tiene 21 PS y catchRate 45 (escala oficial 1–255). La fórmula normaliza
+            // entre 255 y recorta a los límites del documento. Los bonus por estado son (propuesta).
+            CheckNear(GameRules.CaptureChance(21, 1, 45, 1f, 1f), 0.1709f, 0.001f,
+                "Captura de Bulbasaur a 1 PS sin estado debería ser ~17,1 %.");
+            CheckNear(GameRules.CaptureChance(21, 1, 45, 1f, 2f), 0.3417f, 0.001f,
+                "El sueño o la congelación deberían duplicar la captura.");
+            CheckNear(GameRules.CaptureChance(21, 1, 45, 1f, 1.5f), 0.2563f, 0.001f,
+                "Veneno, quemadura o parálisis deberían subir la captura un 50 %.");
+            CheckNear(GameRules.CaptureChance(21, 21, 45, 1f, 1f), 0.0588f, 0.001f,
+                "A PS completos la captura debería ser menor que a 1 PS.");
+            CheckNear(GameRules.CaptureChance(21, 1, 1, 1f, 1f), GameRules.CaptureChanceMin, 0.0001f,
+                "La captura debería respetar el mínimo.");
+            CheckNear(GameRules.CaptureChance(21, 1, 255, 1f, 2f), GameRules.CaptureChanceMax, 0.0001f,
+                "La captura debería respetar el máximo.");
+
+            // Las sacudidas son presentación y no vuelven a tirar: 3 en una captura y 0–2 en un escape.
+            CheckEqual(GameRules.CaptureShakes(0.05f, false), 0,
+                "Un escape al 5 % no debería mostrar sacudidas.");
+            CheckEqual(GameRules.CaptureShakes(0.95f, false), 2,
+                "Un escape al 95 % debería mostrar como máximo dos sacudidas.");
+            CheckEqual(GameRules.CaptureShakes(0.50f, false), 1,
+                "Un escape al 50 % debería mostrar una sacudida.");
+            CheckEqual(GameRules.CaptureShakes(0.05f, true), 3,
+                "Una captura debería mostrar siempre tres sacudidas.");
+
+            // La captura solo existe contra salvajes (Doc §7): en un combate de entrenador se rechaza
+            // y no gasta el turno.
+            var trainerEngine = new BattleEngine(
+                new List<BattlePokemon> { BattlePokemon.CreateWild("charmander", 5) },
+                new List<BattlePokemon> { BattlePokemon.CreateWild("rattata", 5) },
+                BattleKind.Trainer);
+            trainerEngine.ResolveTurn(BattleAction.Item("pokeball"));
+            Check(!trainerEngine.Captured, "No se debería capturar en un combate de entrenador.");
+            Check(!trainerEngine.ItemConsumed, "La Pokébola no debería gastarse en un combate de entrenador.");
+            Check(!trainerEngine.CaptureAttempted,
+                "En un combate de entrenador ni siquiera debería intentarse la captura.");
+            CheckEqual(trainerEngine.CaptureShakes, 0,
+                "Un combate de entrenador no debería mostrar sacudidas.");
+
+            // La tirada se inyecta para que las pruebas no dependan del azar. A 1 PS, Rattata (catchRate
+            // 255) llega al 95 % y la captura sale con tres sacudidas y el «¡Ya!».
+            var captureEngine = new BattleEngine(
+                new List<BattlePokemon> { BattlePokemon.CreateWild("charmander", 5) },
+                new List<BattlePokemon> { BattlePokemon.CreateWild("rattata", 5) },
+                BattleKind.Wild);
+            captureEngine.EnemyActive.TakeDamage(captureEngine.EnemyActive.maxHp - 1);
+            List<BattleMessage> captureMessages =
+                captureEngine.ResolveTurn(BattleAction.Item("pokeball"), captureRoll: 0f);
+            Check(captureEngine.Captured, "Con una tirada de 0 la captura debería salir.");
+            Check(captureEngine.IsOver, "Una captura exitosa debería cerrar el combate.");
+            Check(captureEngine.CaptureAttempted, "La captura debería quedar marcada como intentada.");
+            Check(captureEngine.ItemConsumed, "La Pokébola debería gastarse también al capturar.");
+            CheckEqual(captureEngine.CaptureShakes, 3,
+                "Una captura debería mostrar siempre tres sacudidas.");
+            CheckEqual(captureMessages.FindAll(message => message.autoAdvance).Count, 3,
+                "La captura debería encolar tres mensajes de sacudida automáticos.");
+            Check(captureMessages.Exists(message => message.text == "¡Ya!"),
+                "La captura debería terminar con «¡Ya!».");
+            Check(captureMessages.Exists(message => message.text == "¡Atrapaste a Rattata!"),
+                "La captura debería anunciar el Pokémon atrapado.");
+
+            // Un fallo al 95 % deja dos sacudidas; el mensaje final es «¡Se escapó!».
+            var highFailEngine = new BattleEngine(
+                new List<BattlePokemon> { BattlePokemon.CreateWild("charmander", 5) },
+                new List<BattlePokemon> { BattlePokemon.CreateWild("rattata", 5) },
+                BattleKind.Wild);
+            highFailEngine.EnemyActive.TakeDamage(highFailEngine.EnemyActive.maxHp - 1);
+            List<BattleMessage> highFailMessages =
+                highFailEngine.ResolveTurn(BattleAction.Item("pokeball"), captureRoll: 0.99f);
+            Check(!highFailEngine.Captured, "Con una tirada de 0,99 la captura no debería salir.");
+            Check(highFailEngine.CaptureAttempted, "El fallo debería quedar marcado como intento.");
+            CheckEqual(highFailEngine.CaptureShakes, 2,
+                "Un fallo al 95 % debería dejar dos sacudidas.");
+            CheckEqual(highFailMessages.FindAll(message => message.autoAdvance).Count, 2,
+                "El fallo al 95 % debería encolar dos sacudidas automáticas.");
+            Check(highFailMessages.Exists(message => message.text == "¡Se escapó!"),
+                "El fallo debería terminar con «¡Se escapó!».");
+
+            // A PS completos Bulbasaur cae al 5,88 %, así que un fallo no muestra sacudidas.
+            var lowFailEngine = new BattleEngine(
+                new List<BattlePokemon> { BattlePokemon.CreateWild("charmander", 5) },
+                new List<BattlePokemon> { BattlePokemon.CreateWild("bulbasaur", 5) },
+                BattleKind.Wild);
+            List<BattleMessage> lowFailMessages =
+                lowFailEngine.ResolveTurn(BattleAction.Item("pokeball"), captureRoll: 0.99f);
+            Check(!lowFailEngine.Captured, "A PS completos la captura de Bulbasaur no debería salir.");
+            CheckEqual(lowFailEngine.CaptureShakes, 0,
+                "Un fallo al 5,88 % no debería mostrar sacudidas.");
+            CheckEqual(lowFailMessages.FindAll(message => message.autoAdvance).Count, 0,
+                "Un fallo con pocas probabilidades no debería encolar sacudidas.");
+            Check(lowFailMessages.Exists(message => message.text == "¡Se escapó!"),
+                "El fallo sin sacudidas debería anunciar «¡Se escapó!».");
+
+            // La Pokébola se gasta haya o no captura; el curativo solo si tenía efecto.
+            var ballEngine = new BattleEngine(
+                new List<BattlePokemon> { BattlePokemon.CreateWild("charmander", 20) },
+                new List<BattlePokemon> { BattlePokemon.CreateWild("rattata", 2) },
+                BattleKind.Wild);
+            ballEngine.ResolveTurn(BattleAction.Item("pokeball"), captureRoll: 0.99f);
+            Check(ballEngine.ItemConsumed, "La Pokébola debería gastarse aunque la captura falle.");
+            Check(!ballEngine.Captured, "Con una tirada de 0,99 no debería capturarse.");
+
+            // El capturado conserva los PS y los PP actuales, y la EXP es solo la del nivel (sin bonus).
+            var wild = BattlePokemon.CreateWild("bulbasaur", 5);
+            wild.TakeDamage(7);
+            wild.moves[0].currentPp = 3;
+            var wildPp = new int[wild.moves.Count];
+            for (int i = 0; i < wild.moves.Count; i++)
+                wildPp[i] = wild.moves[i].currentPp;
+
+            TeamMember captured = TeamMembers.CreateCaptured(wild.speciesId, wild.level,
+                wild.currentHp, wildPp);
+            CheckEqual(captured.hp, wild.currentHp,
+                "El capturado debería conservar los PS actuales del salvaje.");
+            CheckEqual(captured.maxHp, wild.maxHp,
+                "El capturado debería conservar los PS máximos del salvaje.");
+            CheckEqual(captured.moves[0].pp, 3,
+                "El capturado debería conservar los PP actuales del salvaje.");
+            CheckEqual(captured.exp, PokemonStats.ExperienceForLevel(wild.level),
+                "La captura no debería dar EXP adicional.");
+
+            // PS y PP fuera de rango se recortan; los PS 0 nunca se guardan.
+            TeamMember clamped = TeamMembers.CreateCaptured("bulbasaur", 5, 999, new[] { 999 });
+            CheckEqual(clamped.hp, clamped.maxHp,
+                "Los PS por encima del máximo deberían recortarse.");
+            CheckEqual(clamped.moves[0].pp, clamped.moves[0].maxPp,
+                "Los PP por encima del máximo deberían recortarse.");
+            TeamMember noZero = TeamMembers.CreateCaptured("bulbasaur", 5, 0, new[] { -1 });
+            CheckEqual(noZero.hp, noZero.maxHp,
+                "Un capturado no debería guardarse con 0 PS.");
+            CheckEqual(noZero.moves[0].pp, 0,
+                "Los PP negativos deberían recortarse a 0.");
+            TeamMember defaults = TeamMembers.CreateCaptured("bulbasaur", 5);
+            CheckEqual(defaults.hp, defaults.maxHp,
+                "Sin PS actuales, el capturado debería quedar con los PS llenos, no con el centinela.");
+            CheckEqual(defaults.moves[0].pp, defaults.moves[0].maxPp,
+                "Sin PP actuales, el capturado debería quedar con los PP máximos.");
+
+            var healEngine = new BattleEngine(
+                new List<BattlePokemon> { BattlePokemon.CreateWild("bulbasaur", 5) },
+                new List<BattlePokemon> { BattlePokemon.CreateWild("rattata", 2) },
+                BattleKind.Wild);
+            healEngine.PlayerActive.TakeDamage(10);
+            int hpBefore = healEngine.PlayerActive.currentHp;
+            healEngine.ResolveTurn(BattleAction.Item("tinto"));
+            Check(healEngine.ItemConsumed, "El Tinto debería gastar el turno.");
+            Check(healEngine.PlayerActive.currentHp > hpBefore, "El Tinto debería recuperar PS.");
+
+            var fullHpEngine = new BattleEngine(
+                new List<BattlePokemon> { BattlePokemon.CreateWild("bulbasaur", 5) },
+                new List<BattlePokemon> { BattlePokemon.CreateWild("rattata", 2) },
+                BattleKind.Wild);
+            fullHpEngine.ResolveTurn(BattleAction.Item("tinto"));
+            Check(!fullHpEngine.ItemConsumed, "Un curativo a PS completos no debería gastar el turno.");
+        }
+
+        // ---------- Cambio de Pokémon (Etapa 3) ----------
+
+        static void ValidateSwitch()
+        {
+            // El rival de prueba lleva solo Arañazo (100 % de precisión): siempre ataca al que entra,
+            // así el validador no depende de la tirada de precisión ni de la IA.
+            var switchEngine = new BattleEngine(
+                new List<BattlePokemon>
+                {
+                    BattlePokemon.CreateWild("charmander", 20),
+                    BattlePokemon.CreateWild("bulbasaur", 20),
+                },
+                new List<BattlePokemon> { SingleMoveEnemy() },
+                BattleKind.Wild);
+
+            Check(switchEngine.CanSwitchTo(1), "Debería poder cambiarse a un compañero sano.");
+            Check(!switchEngine.CanSwitchTo(0), "No debería poder cambiarse al Pokémon activo.");
+            Check(!switchEngine.CanSwitchTo(99), "No debería poder cambiarse a un índice fuera del equipo.");
+
+            switchEngine.PlayerTeam[0].attackStage = 2;
+            int oldHp = switchEngine.PlayerTeam[0].currentHp;
+            int newHp = switchEngine.PlayerTeam[1].currentHp;
+            int turnBefore = switchEngine.TurnCount;
+            List<BattleMessage> switchMessages = switchEngine.ResolveTurn(BattleAction.Switch(1));
+
+            CheckEqual(switchEngine.PlayerIndex, 1, "El índice activo debería pasar al compañero elegido.");
+            Check(ReferenceEquals(switchEngine.PlayerActive, switchEngine.PlayerTeam[1]),
+                "El Pokémon activo debería ser el que entró.");
+            CheckEqual(switchEngine.TurnCount, turnBefore + 1, "El cambio debería gastar el turno.");
+            CheckEqual(switchEngine.SwitchMessageCount, 2,
+                "El cambio debería separar los dos mensajes de entrada y salida.");
+            Check(switchMessages[0].text == "¡Vuelve, Charmander!",
+                "El primer mensaje debería despedir al Pokémon que sale.");
+            Check(switchMessages[1].text == "¡Adelante, Bulbasaur!",
+                "El segundo mensaje debería presentar al Pokémon que entra.");
+            CheckEqual(switchEngine.PlayerTeam[0].currentHp, oldHp,
+                "El Pokémon que sale no debería recibir el ataque del rival.");
+            Check(switchEngine.PlayerTeam[1].currentHp < newHp,
+                "El rival debería atacar al Pokémon que entró.");
+            Check(switchMessages.Exists(message => message.text.Contains("Arañazo")),
+                "El turno del cambio debería incluir el ataque del rival.");
+            CheckEqual(switchEngine.PlayerTeam[0].attackStage, 0,
+                "Los cambios de estadística deberían reiniciarse al salir del campo.");
+
+            // Cambiar al mismo Pokémon no gasta el turno ni deja atacar al rival.
+            var sameEngine = new BattleEngine(
+                new List<BattlePokemon>
+                {
+                    BattlePokemon.CreateWild("charmander", 20),
+                    BattlePokemon.CreateWild("bulbasaur", 20),
+                },
+                new List<BattlePokemon> { SingleMoveEnemy() },
+                BattleKind.Wild);
+            List<BattleMessage> sameMessages = sameEngine.ResolveTurn(BattleAction.Switch(0));
+            CheckEqual(sameEngine.PlayerIndex, 0, "El Pokémon activo no debería cambiar.");
+            CheckEqual(sameEngine.TurnCount, 0, "Un cambio inválido no debería gastar el turno.");
+            CheckEqual(sameEngine.SwitchMessageCount, 0, "Un cambio inválido no debería separar mensajes.");
+            Check(sameMessages.Exists(message => message.text.Contains("ya está en combate")),
+                "El aviso debería indicar que el Pokémon ya está en combate.");
+
+            // Un compañero debilitado no puede entrar.
+            var faintedEngine = new BattleEngine(
+                new List<BattlePokemon>
+                {
+                    BattlePokemon.CreateWild("charmander", 20),
+                    BattlePokemon.CreateWild("bulbasaur", 20),
+                },
+                new List<BattlePokemon> { SingleMoveEnemy() },
+                BattleKind.Wild);
+            faintedEngine.PlayerTeam[1].TakeDamage(faintedEngine.PlayerTeam[1].maxHp);
+            Check(!faintedEngine.CanSwitchTo(1), "No debería poder cambiarse a un Pokémon debilitado.");
+            List<BattleMessage> faintedMessages = faintedEngine.ResolveTurn(BattleAction.Switch(1));
+            CheckEqual(faintedEngine.PlayerIndex, 0, "El Pokémon activo no debería cambiar.");
+            CheckEqual(faintedEngine.TurnCount, 0, "Un cambio a un debilitado no debería gastar el turno.");
+            Check(faintedMessages.Exists(message => message.text.Contains("debilitado")),
+                "El aviso debería indicar que el compañero está debilitado.");
+
+            // Un índice fuera del equipo tampoco gasta el turno.
+            var invalidEngine = new BattleEngine(
+                new List<BattlePokemon>
+                {
+                    BattlePokemon.CreateWild("charmander", 20),
+                    BattlePokemon.CreateWild("bulbasaur", 20),
+                },
+                new List<BattlePokemon> { SingleMoveEnemy() },
+                BattleKind.Wild);
+            List<BattleMessage> invalidMessages = invalidEngine.ResolveTurn(BattleAction.Switch(99));
+            CheckEqual(invalidEngine.PlayerIndex, 0, "El Pokémon activo no debería cambiar.");
+            CheckEqual(invalidEngine.TurnCount, 0, "Un índice inválido no debería gastar el turno.");
+            Check(invalidMessages.Exists(message => message.text.Contains("no está en el equipo")),
+                "El aviso debería indicar que el Pokémon no está en el equipo.");
+        }
+
+        /// <summary>Rival de prueba con un solo movimiento de 100 % de precisión (Arañazo).</summary>
+        static BattlePokemon SingleMoveEnemy()
+        {
+            BattlePokemon enemy = BattlePokemon.CreateWild("pidgey", 1);
+            enemy.moves.Clear();
+            enemy.moves.Add(new BattleMoveSlot { moveId = "scratch", currentPp = 35, maxPp = 35 });
+            return enemy;
         }
 
         static TeamMember TryCreate(string speciesId, int level, string context)

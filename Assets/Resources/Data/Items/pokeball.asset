@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: pokeball
   m_EditorClassIdentifier: Assembly-CSharp::TorreIngenieria.Core.ItemData
   itemId: pokeball
-  displayName: "Pok\xE9bola"
+  displayName: "POK\xC9BOLA"
   category: 1
   healAmount: 0
   catchBonus: 1
   price: 200
-  description: "Dispositivo para capturar Pok\xE9mon salvajes."
+  description: "DISPOSITIVO PARA CAPTURAR POK\xC9MON SALVAJES."

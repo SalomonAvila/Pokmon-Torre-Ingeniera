@@ -18,4 +18,4 @@ MonoBehaviour:
   healAmount: 50
   catchBonus: 1
   price: 250
-  description: Bebida caliente de la plazoleta. Restaura 50 PS.
+  description: Bebida caliente de la plazoleta.

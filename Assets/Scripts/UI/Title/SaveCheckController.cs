@@ -38,6 +38,8 @@ namespace TorreIngenieria.UI
                 if (choice == 0)
                 {
                     yield return dialogue.Say("Cargando partida...");
+                    // (propuesta) Partidas de prueba antiguas sin inicial fijado: se toma el inicial del equipo.
+                    GameState.EnsureStarterFromTeam();
                     // TODO: cargar la ubicación guardada; por ahora siempre el atrio.
                     LoadWorld();
                     yield break;
@@ -61,6 +63,7 @@ namespace TorreIngenieria.UI
             yield return dialogue.Say("Creando una nueva partida...");
             SaveData data = SaveSystem.CreateNew();
             GameState.Save = data;
+            GameState.EnsureStarterFromTeam();
 
             yield return IntroducePlayer(data);
             yield return dialogue.Say($"¡Listo, {data.playerName}! Tu aventura en la Torre de Ingeniería está por comenzar.");

@@ -110,6 +110,14 @@ namespace TorreIngenieria.Core
         /// <summary>Nivel máximo que obedece el equipo con tantos sellos: 10 + 5 × sellos.</summary>
         public static int ObedienceLevelCap(int seals) => ObedienceBase + ObediencePerSeal * seals;
 
+        /// <summary>
+        /// Decide si un Pokémon desobedece con una tirada de 0 a 1. Solo pasa por encima del tope de
+        /// obediencia y con la probabilidad del 30 % del Doc §7. La tirada se inyecta para poder probar
+        /// el caso sin azar; el combate le pasa <c>Random.value</c>.
+        /// </summary>
+        public static bool Disobeys(int level, int seals, float roll) =>
+            level > ObedienceLevelCap(seals) && roll < DisobedienceChance;
+
         /// <summary>Nivel salvaje mínimo del piso con posición k: 3 + 3k.</summary>
         public static int WildMinLevel(int k) => 3 + 3 * k;
 
@@ -159,9 +167,66 @@ namespace TorreIngenieria.Core
         /// <summary>Créditos que se pierden al desmayarse.</summary>
         public static int CreditsLost(int credits) => (int)(credits * FaintedCreditsLoss);
 
+        // ---------- Estados y huida (propuesta: el Doc §7 no los detalla) ----------
+
+        /// <summary>Multiplicador de precisión por nivel de estadística (Gen 3): +n → (3+n)/3.</summary>
+        public static float AccuracyStageMultiplier(int stage)
+        {
+            int clamped = Math.Clamp(stage, -6, 6);
+            return clamped >= 0 ? (3f + clamped) / 3f : 3f / (3f - clamped);
+        }
+
+        /// <summary>Daño por veneno al final de cada turno: PS máximos / 8.</summary>
+        public const int PoisonDamageDivisor = 8;
+
+        /// <summary>Daño por quemadura al final de cada turno: PS máximos / 16.</summary>
+        public const int BurnDamageDivisor = 16;
+
+        /// <summary>Un Pokémon paralizado no se mueve con esta probabilidad.</summary>
+        public const float ParalysisSkipChance = 0.25f;
+
+        /// <summary>Turnos que dura el sueño (ambos inclusive).</summary>
+        public const int SleepMinTurns = 1;
+        public const int SleepMaxTurns = 3;
+
+        /// <summary>Un congelado se descongela con esta probabilidad por turno.</summary>
+        public const float FreezeThawChance = 0.20f;
+
+        /// <summary>
+        /// Probabilidad base de huir de un combate salvaje con la misma Velocidad. Escala con la ventaja
+        /// de Velocidad y se recorta al rango [0,2, 0,95] **(propuesta)**: el Doc §7 solo dice que se
+        /// puede huir de un salvaje y que de un entrenador o jefe no.
+        /// </summary>
+        public const float FleeBaseChance = 0.5f;
+        public const float FleeMinChance = 0.2f;
+        public const float FleeMaxChance = 0.95f;
+
+        /// <summary>Probabilidad de huir según la Velocidad de ambos; ver <see cref="FleeBaseChance"/>.</summary>
+        public static float FleeChance(int playerSpeed, int enemySpeed)
+        {
+            if (enemySpeed <= 0)
+                return FleeMaxChance;
+
+            float ratio = (float)playerSpeed / enemySpeed;
+            return Math.Clamp(FleeBaseChance * ratio, FleeMinChance, FleeMaxChance);
+        }
+
         /// <summary>Probabilidad de captura recortada al rango del documento (5 %–95 %).</summary>
         public static float ClampCaptureChance(float chance) =>
             Math.Clamp(chance, CaptureChanceMin, CaptureChanceMax);
+
+        /// <summary>
+        /// Sacudidas que muestra la Pokébola. Una captura siempre enseña tres; un escape usa la
+        /// probabilidad ya recortada y se queda en 0–2. Es solo presentación: la tirada que decide
+        /// el resultado es una sola y no se vuelve a tirar para contar las sacudidas.
+        /// </summary>
+        public static int CaptureShakes(float chance, bool success)
+        {
+            if (success)
+                return 3;
+
+            return Math.Clamp((int)(chance * 3f), 0, 2);
+        }
 
         /// <summary>
         /// Daño de un golpe (fórmula Gen 3). El poder 0 devuelve 0. El daño nunca baja de 1.
