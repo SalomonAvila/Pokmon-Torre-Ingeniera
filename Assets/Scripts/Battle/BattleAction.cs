@@ -26,9 +26,13 @@ namespace TorreIngenieria.Battle
         Move,
         Run,
         Item,
+        Switch,
     }
 
-    /// <summary>Acción elegida para un turno: movimiento, huida o uso de un objeto de la mochila.</summary>
+    /// <summary>
+    /// Acción elegida para un turno: movimiento, huida, uso de un objeto de la mochila o cambio de
+    /// Pokémon. El cambio ocupa el turno y el rival ataca al Pokémon que entra.
+    /// </summary>
     public class BattleAction
     {
         public BattleActionKind kind = BattleActionKind.None;
@@ -39,6 +43,9 @@ namespace TorreIngenieria.Battle
         /// <summary>Id del objeto de la mochila que se usa (solo con <see cref="BattleActionKind.Item"/>).</summary>
         public string itemId;
 
+        /// <summary>Índice del compañero que entra (solo con <see cref="BattleActionKind.Switch"/>).</summary>
+        public int switchIndex = -1;
+
         public static BattleAction Move(int moveIndex) =>
             new BattleAction { kind = BattleActionKind.Move, moveIndex = moveIndex };
 
@@ -46,5 +53,8 @@ namespace TorreIngenieria.Battle
 
         public static BattleAction Item(string itemId) =>
             new BattleAction { kind = BattleActionKind.Item, itemId = itemId };
+
+        public static BattleAction Switch(int switchIndex) =>
+            new BattleAction { kind = BattleActionKind.Switch, switchIndex = switchIndex };
     }
 }

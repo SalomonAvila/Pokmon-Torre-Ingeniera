@@ -40,6 +40,7 @@ namespace TorreIngenieria.EditorTools
             ValidateExperience();
             ValidateBattleEngine();
             ValidateCapture();
+            ValidateSwitch();
 
             if (checksFailed == 0)
                 Debug.Log("Datos y fórmulas: todo coincide.");
@@ -783,6 +784,108 @@ namespace TorreIngenieria.EditorTools
                 BattleKind.Wild);
             fullHpEngine.ResolveTurn(BattleAction.Item("tinto"));
             Check(!fullHpEngine.ItemConsumed, "Un curativo a PS completos no debería gastar el turno.");
+        }
+
+        // ---------- Cambio de Pokémon (Etapa 3) ----------
+
+        static void ValidateSwitch()
+        {
+            // El rival de prueba lleva solo Arañazo (100 % de precisión): siempre ataca al que entra,
+            // así el validador no depende de la tirada de precisión ni de la IA.
+            var switchEngine = new BattleEngine(
+                new List<BattlePokemon>
+                {
+                    BattlePokemon.CreateWild("charmander", 20),
+                    BattlePokemon.CreateWild("bulbasaur", 20),
+                },
+                new List<BattlePokemon> { SingleMoveEnemy() },
+                BattleKind.Wild);
+
+            Check(switchEngine.CanSwitchTo(1), "Debería poder cambiarse a un compañero sano.");
+            Check(!switchEngine.CanSwitchTo(0), "No debería poder cambiarse al Pokémon activo.");
+            Check(!switchEngine.CanSwitchTo(99), "No debería poder cambiarse a un índice fuera del equipo.");
+
+            switchEngine.PlayerTeam[0].attackStage = 2;
+            int oldHp = switchEngine.PlayerTeam[0].currentHp;
+            int newHp = switchEngine.PlayerTeam[1].currentHp;
+            int turnBefore = switchEngine.TurnCount;
+            List<BattleMessage> switchMessages = switchEngine.ResolveTurn(BattleAction.Switch(1));
+
+            CheckEqual(switchEngine.PlayerIndex, 1, "El índice activo debería pasar al compañero elegido.");
+            Check(ReferenceEquals(switchEngine.PlayerActive, switchEngine.PlayerTeam[1]),
+                "El Pokémon activo debería ser el que entró.");
+            CheckEqual(switchEngine.TurnCount, turnBefore + 1, "El cambio debería gastar el turno.");
+            CheckEqual(switchEngine.SwitchMessageCount, 2,
+                "El cambio debería separar los dos mensajes de entrada y salida.");
+            Check(switchMessages[0].text == "¡Vuelve, Charmander!",
+                "El primer mensaje debería despedir al Pokémon que sale.");
+            Check(switchMessages[1].text == "¡Adelante, Bulbasaur!",
+                "El segundo mensaje debería presentar al Pokémon que entra.");
+            CheckEqual(switchEngine.PlayerTeam[0].currentHp, oldHp,
+                "El Pokémon que sale no debería recibir el ataque del rival.");
+            Check(switchEngine.PlayerTeam[1].currentHp < newHp,
+                "El rival debería atacar al Pokémon que entró.");
+            Check(switchMessages.Exists(message => message.text.Contains("Arañazo")),
+                "El turno del cambio debería incluir el ataque del rival.");
+            CheckEqual(switchEngine.PlayerTeam[0].attackStage, 0,
+                "Los cambios de estadística deberían reiniciarse al salir del campo.");
+
+            // Cambiar al mismo Pokémon no gasta el turno ni deja atacar al rival.
+            var sameEngine = new BattleEngine(
+                new List<BattlePokemon>
+                {
+                    BattlePokemon.CreateWild("charmander", 20),
+                    BattlePokemon.CreateWild("bulbasaur", 20),
+                },
+                new List<BattlePokemon> { SingleMoveEnemy() },
+                BattleKind.Wild);
+            List<BattleMessage> sameMessages = sameEngine.ResolveTurn(BattleAction.Switch(0));
+            CheckEqual(sameEngine.PlayerIndex, 0, "El Pokémon activo no debería cambiar.");
+            CheckEqual(sameEngine.TurnCount, 0, "Un cambio inválido no debería gastar el turno.");
+            CheckEqual(sameEngine.SwitchMessageCount, 0, "Un cambio inválido no debería separar mensajes.");
+            Check(sameMessages.Exists(message => message.text.Contains("ya está en combate")),
+                "El aviso debería indicar que el Pokémon ya está en combate.");
+
+            // Un compañero debilitado no puede entrar.
+            var faintedEngine = new BattleEngine(
+                new List<BattlePokemon>
+                {
+                    BattlePokemon.CreateWild("charmander", 20),
+                    BattlePokemon.CreateWild("bulbasaur", 20),
+                },
+                new List<BattlePokemon> { SingleMoveEnemy() },
+                BattleKind.Wild);
+            faintedEngine.PlayerTeam[1].TakeDamage(faintedEngine.PlayerTeam[1].maxHp);
+            Check(!faintedEngine.CanSwitchTo(1), "No debería poder cambiarse a un Pokémon debilitado.");
+            List<BattleMessage> faintedMessages = faintedEngine.ResolveTurn(BattleAction.Switch(1));
+            CheckEqual(faintedEngine.PlayerIndex, 0, "El Pokémon activo no debería cambiar.");
+            CheckEqual(faintedEngine.TurnCount, 0, "Un cambio a un debilitado no debería gastar el turno.");
+            Check(faintedMessages.Exists(message => message.text.Contains("debilitado")),
+                "El aviso debería indicar que el compañero está debilitado.");
+
+            // Un índice fuera del equipo tampoco gasta el turno.
+            var invalidEngine = new BattleEngine(
+                new List<BattlePokemon>
+                {
+                    BattlePokemon.CreateWild("charmander", 20),
+                    BattlePokemon.CreateWild("bulbasaur", 20),
+                },
+                new List<BattlePokemon> { SingleMoveEnemy() },
+                BattleKind.Wild);
+            List<BattleMessage> invalidMessages = invalidEngine.ResolveTurn(BattleAction.Switch(99));
+            CheckEqual(invalidEngine.PlayerIndex, 0, "El Pokémon activo no debería cambiar.");
+            CheckEqual(invalidEngine.TurnCount, 0, "Un índice inválido no debería gastar el turno.");
+            Check(invalidMessages.Exists(message => message.text.Contains("no está en el equipo")),
+                "El aviso debería indicar que el Pokémon no está en el equipo.");
+        }
+
+        /// <summary>Rival de prueba con un solo movimiento de 100 % de precisión (Arañazo).</summary>
+        static BattlePokemon SingleMoveEnemy()
+        {
+            BattlePokemon enemy = BattlePokemon.CreateWild("pidgey", 1);
+            enemy.moves.Clear();
+            enemy.moves.Add(new BattleMoveSlot { moveId = "scratch", currentPp = 35, maxPp = 35 });
+            return enemy;
         }
 
         static TeamMember TryCreate(string speciesId, int level, string context)

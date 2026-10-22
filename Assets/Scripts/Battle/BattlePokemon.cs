@@ -182,5 +182,20 @@ namespace TorreIngenieria.Battle
         public void TakeDamage(int damage) => currentHp = Mathf.Max(0, currentHp - damage);
 
         public void Heal(int amount) => currentHp = Mathf.Min(maxHp, currentHp + amount);
+
+        /// <summary>
+        /// Reinicia los cambios de estadística de combate. Se aplica al salir del campo (cambio manual
+        /// o desmayo), como en Gen 3: los stages no acompañan al Pokémon cuando vuelve más tarde.
+        /// </summary>
+        public void ResetStages()
+        {
+            attackStage = 0;
+            defenseStage = 0;
+            spAttackStage = 0;
+            spDefenseStage = 0;
+            speedStage = 0;
+            accuracyStage = 0;
+            evasionStage = 0;
+        }
     }
 }

@@ -96,14 +96,29 @@ namespace TorreIngenieria.Battle
             while (!engine.IsOver)
             {
                 BattleAction action = null;
-                yield return ui.ChooseAction(engine.PlayerActive, engine.CanPlayerFlee, value => action = value);
+                yield return ui.ChooseAction(engine.PlayerTeam, engine.PlayerIndex, engine.CanPlayerFlee,
+                    value => action = value);
                 if (action == null)
                     continue;
 
                 List<BattleMessage> messages = engine.ResolveTurn(action);
                 if (action.kind == BattleActionKind.Item && engine.ItemConsumed)
                     GameState.AddItem(action.itemId, -1);
-                yield return ui.Messages(messages);
+
+                // En un cambio se muestran primero «¡Vuelve…!» y «¡Adelante…!», se refrescan las fichas
+                // y después sigue el turno: así el ataque del rival se ve sobre el Pokémon que entró.
+                int switchMessages = action.kind == BattleActionKind.Switch ? engine.SwitchMessageCount : 0;
+                if (switchMessages > 0 && switchMessages < messages.Count)
+                {
+                    yield return ui.Messages(messages.GetRange(0, switchMessages));
+                    ui.Bind(engine.PlayerActive, engine.EnemyActive, SlotFor(slots, engine.PlayerActive)?.member);
+                    yield return ui.Messages(messages.GetRange(switchMessages, messages.Count - switchMessages));
+                }
+                else
+                {
+                    yield return ui.Messages(messages);
+                }
+
                 ui.Bind(engine.PlayerActive, engine.EnemyActive, SlotFor(slots, engine.PlayerActive)?.member);
             }
 
@@ -135,9 +150,9 @@ namespace TorreIngenieria.Battle
             else
                 RestoreTeam(slots);
 
-            // Doc §7: al ganar, el Pokémon que venció recibe base × nivel del rival / 7. La captura
-            // y la huida no dan EXP. Con el cambio de Pokémon pendiente hay un solo participante:
-            // el que quedó activo al terminar.
+            // Doc §7: al ganar, el Pokémon activo recibe base × nivel del rival / 7. La captura y la
+            // huida no dan EXP. El prototipo no reparte EXP entre los que participaron antes de un cambio:
+            // la recibe el que quedó activo al terminar.
             if (engine.PlayerWon)
                 yield return AwardExperience(engine, slots);
 

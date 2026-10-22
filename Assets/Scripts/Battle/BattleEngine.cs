@@ -11,8 +11,9 @@ namespace TorreIngenieria.Battle
     /// estado, y decide el final (victoria, captura, derrota o huida).
     ///
     /// Es lógica sin escena: no depende de la UI ni de GameObjects. Devuelve la lista de mensajes del turno
-    /// y deja el estado en <see cref="PlayerActive"/>/<see cref="EnemyActive"/>. La experiencia la entrega
-    /// <see cref="BattleSystem"/> al ganar; los combates de entrenador siguen pendientes.
+    /// y deja el estado en <see cref="PlayerActive"/>/<see cref="EnemyActive"/>. El cambio de Pokémon
+    /// gasta el turno y el rival ataca al que entra. La experiencia la entrega <see cref="BattleSystem"/>
+    /// al ganar; los combates de entrenador siguen pendientes.
     /// </summary>
     public class BattleEngine
     {
@@ -39,6 +40,12 @@ namespace TorreIngenieria.Battle
         /// <summary>Sacudidas de la Pokébola: 3 en una captura y 0–2 en un escape.</summary>
         public int CaptureShakes { get; private set; }
 
+        /// <summary>
+        /// Mensajes iniciales del último cambio («¡Vuelve…!» y «¡Adelante…!»). La UI los muestra antes
+        /// de refrescar las fichas, para que el ataque del rival se vea ya sobre el Pokémon que entró.
+        /// </summary>
+        public int SwitchMessageCount { get; private set; }
+
         /// <summary>El último turno gastó un objeto de la mochila (para descontarlo del inventario).</summary>
         public bool ItemConsumed { get; private set; }
 
@@ -50,6 +57,9 @@ namespace TorreIngenieria.Battle
 
         public BattlePokemon PlayerActive => PlayerTeam[playerIndex];
         public BattlePokemon EnemyActive => EnemyTeam[enemyIndex];
+
+        /// <summary>Índice del Pokémon activo del jugador dentro de <see cref="PlayerTeam"/>.</summary>
+        public int PlayerIndex => playerIndex;
 
         public BattleEngine(List<BattlePokemon> playerTeam, List<BattlePokemon> enemyTeam, BattleKind kind)
         {
@@ -64,6 +74,13 @@ namespace TorreIngenieria.Battle
         public bool CanPlayerFlee => Kind == BattleKind.Wild;
 
         /// <summary>
+        /// Un cambio válido apunta a otro miembro del equipo que no esté debilitado. El Pokémon activo
+        /// no puede cambiarse por sí mismo y un índice fuera del equipo no gasta el turno.
+        /// </summary>
+        public bool CanSwitchTo(int index) =>
+            index >= 0 && index < PlayerTeam.Count && index != playerIndex && !PlayerTeam[index].IsFainted;
+
+        /// <summary>
         /// Resuelve un turno completo y devuelve los mensajes, en orden, para la UI. La tirada de captura
         /// se puede fijar desde las pruebas; si se omite, sale de <see cref="Random.value"/>.
         /// </summary>
@@ -71,6 +88,7 @@ namespace TorreIngenieria.Battle
         {
             var messages = new List<BattleMessage>();
             ItemConsumed = false;
+            SwitchMessageCount = 0;
             if (IsOver)
                 return messages;
 
@@ -78,8 +96,35 @@ namespace TorreIngenieria.Battle
             CaptureAttempted = false;
             CaptureShakes = 0;
 
+            // Un cambio inválido se avisa sin gastar el turno ni dejar que el rival ataque.
+            if (playerAction.kind == BattleActionKind.Switch && !CanSwitchTo(playerAction.switchIndex))
+            {
+                AddSwitchError(playerAction.switchIndex, messages);
+                return messages;
+            }
+
             TurnCount++;
             BattleAction enemyAction = BattleAI.ChooseWild(EnemyActive, PlayerActive);
+
+            if (playerAction.kind == BattleActionKind.Switch)
+            {
+                int previousIndex = playerIndex;
+                BattlePokemon previous = PlayerTeam[previousIndex];
+                playerIndex = playerAction.switchIndex;
+                previous.ResetStages();
+
+                messages.Add($"¡Vuelve, {previous.DisplayName}!");
+                messages.Add($"¡Adelante, {PlayerActive.DisplayName}!");
+                SwitchMessageCount = messages.Count;
+
+                // El cambio gasta el turno. El rival ya eligió su movimiento antes de ver entrar al
+                // nuevo Pokémon y ataca a este, no al que salió.
+                if (!IsOver)
+                    UseMove(EnemyActive, PlayerActive, enemyAction.moveIndex, messages, false);
+                if (!IsOver)
+                    ResolveEndOfTurn(messages);
+                return messages;
+            }
 
             if (playerAction.kind == BattleActionKind.Item)
             {
@@ -148,6 +193,7 @@ namespace TorreIngenieria.Battle
             {
                 if (HasHealthy(PlayerTeam))
                 {
+                    PlayerActive.ResetStages();
                     playerIndex = FirstHealthy(PlayerTeam);
                     messages.Add($"¡Adelante, {PlayerActive.DisplayName}!");
                 }
@@ -164,6 +210,7 @@ namespace TorreIngenieria.Battle
             {
                 if (HasHealthy(EnemyTeam))
                 {
+                    EnemyActive.ResetStages();
                     enemyIndex = FirstHealthy(EnemyTeam);
                     messages.Add($"El rival envió a {EnemyActive.DisplayName}.");
                 }
@@ -219,6 +266,19 @@ namespace TorreIngenieria.Battle
             {
                 messages.Add("¡No pudiste escapar!");
             }
+        }
+
+        /// <summary>Aviso de un cambio que la UI ya debería haber bloqueado; no gasta el turno.</summary>
+        void AddSwitchError(int index, List<BattleMessage> messages)
+        {
+            if (index == playerIndex)
+                messages.Add($"{PlayerActive.DisplayName} ya está en combate.");
+            else if (index < 0 || index >= PlayerTeam.Count)
+                messages.Add("Ese Pokémon no está en el equipo.");
+            else if (PlayerTeam[index].IsFainted)
+                messages.Add($"{PlayerTeam[index].DisplayName} está debilitado y no puede combatir.");
+            else
+                messages.Add("No puedes cambiar a ese Pokémon.");
         }
 
         // ---------- Objetos ----------

@@ -38,8 +38,17 @@ namespace TorreIngenieria.EditorTools
         /// <summary>Margen interior de los menús: deja libre el borde ornamental de 36 px.</summary>
         const float MenuPadding = 40f;
 
-        /// <summary>Separación entre el cursor y la etiqueta, y entre esta y la columna de detalle.</summary>
+        /// <summary>Separación entre el cursor, las columnas de texto y la columna de detalle.</summary>
         const float MenuRowSpacing = 12f;
+
+        /// <summary>
+        /// Ancho de la columna de nivel/estado del menú de cambio. "EN COMBATE" y "DEB" caben con el
+        /// autoajuste de la fuente, y el ancho fijo mantiene las tres columnas alineadas.
+        /// </summary>
+        const float LevelColumnWidth = 120f;
+
+        /// <summary>Ancho de las etiquetas PS y EXP para que las dos barras empiecen en la misma x.</summary>
+        const float HudBarLabelWidth = 40f;
 
         /// <summary>El cursor se dibuja a 3× para que no compita con el texto de 22 px.</summary>
         const float CursorScale = 3f;
@@ -174,7 +183,7 @@ namespace TorreIngenieria.EditorTools
             psLabel.font = font;
             psLabel.fontStyle = FontStyles.Bold;
             psLabel.alignment = TextAlignmentOptions.MidlineLeft;
-            psLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 24f;
+            psLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = HudBarLabelWidth;
 
             RectTransform track = CreateImage(barRow, "BarraPSFondo", HpTrackColor);
             track.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
@@ -185,12 +194,12 @@ namespace TorreIngenieria.EditorTools
             Image expFill = null;
             if (showExpBar)
             {
-                RectTransform expRow = CreateHudRow(panel, "FilaEXP", 12);
-                TextMeshProUGUI expLabel = CreateText(expRow, "EtiquetaEXP", "EXP", 10, TextBlack);
+                RectTransform expRow = CreateHudRow(panel, "FilaEXP", 16);
+                TextMeshProUGUI expLabel = CreateText(expRow, "EtiquetaEXP", "EXP", 12, TextBlack);
                 expLabel.font = font;
                 expLabel.fontStyle = FontStyles.Bold;
                 expLabel.alignment = TextAlignmentOptions.MidlineLeft;
-                expLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 24f;
+                expLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = HudBarLabelWidth;
 
                 RectTransform expTrack = CreateImage(expRow, "BarraEXPFondo", ExpTrackColor);
                 expTrack.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
@@ -258,12 +267,16 @@ namespace TorreIngenieria.EditorTools
             grid.padding = new RectOffset((int)MenuPadding, (int)MenuPadding, 10, 10);
             grid.childAlignment = TextAnchor.MiddleCenter;
 
-            const int maxRows = 4;
-            var rows = new Object[maxRows];
-            var labels = new Object[maxRows];
-            var details = new Object[maxRows];
-            var cursors = new Object[maxRows];
-            for (int i = 0; i < maxRows; i++)
+            // Tres filas visibles: el resto se alcanza desplazando la ventana de una en una.
+            // Una celda por opción: el menú principal (2 columnas) necesita dos celdas por fila.
+            const int visibleRows = 3;
+            int cellCount = visibleRows * columns;
+            var rows = new Object[cellCount];
+            var labels = new Object[cellCount];
+            var levels = new Object[cellCount];
+            var details = new Object[cellCount];
+            var cursors = new Object[cellCount];
+            for (int i = 0; i < cellCount; i++)
             {
                 var row = new GameObject($"Opcion{i + 1}", typeof(RectTransform));
                 row.transform.SetParent(panel, false);
@@ -289,14 +302,33 @@ namespace TorreIngenieria.EditorTools
                 label.overflowMode = TextOverflowModes.Ellipsis; // los nombres largos se recortan con puntos
                 label.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
 
+                // Columna de nivel/estado: "Nv 5" normalmente, "EN COMBATE" para el activo y "DEB"
+                // para los debilitados. El autoajuste encoge el texto si no cabe en el ancho fijo.
+                TextMeshProUGUI level = CreateText(row.transform, "Nivel", string.Empty, 14, TextBlack);
+                level.font = font;
+                level.alignment = TextAlignmentOptions.Center;
+                level.enableAutoSizing = true;
+                level.fontSizeMin = 8f;
+                level.fontSizeMax = 14f;
+                var levelLayout = level.gameObject.AddComponent<LayoutElement>();
+                levelLayout.preferredWidth = LevelColumnWidth;
+                levelLayout.flexibleWidth = 0f;
+                level.gameObject.SetActive(false); // solo la lista del equipo usa esta columna
+
                 TextMeshProUGUI detail = CreateText(row.transform, "Detalle", string.Empty, 20, TextBlack);
                 detail.font = font;
                 detail.alignment = TextAlignmentOptions.MidlineRight;
                 detail.overflowMode = TextOverflowModes.Ellipsis;
+                // Los PS largos (150/300) no caben a 20 px en la columna fija: el autoajuste los encoge
+                // sin recortar dígitos ni tocar el borde del marco.
+                detail.enableAutoSizing = true;
+                detail.fontSizeMin = 10f;
+                detail.fontSizeMax = 20f;
                 detail.gameObject.AddComponent<LayoutElement>().preferredWidth = ItemDetailWidth;
 
                 rows[i] = row;
                 labels[i] = label;
+                levels[i] = level;
                 details[i] = detail;
                 cursors[i] = cursor.gameObject;
             }
@@ -315,6 +347,7 @@ namespace TorreIngenieria.EditorTools
                 ("scrollUp", scrollUp), ("scrollDown", scrollDown));
             AssignArray(menu, "rows", rows);
             AssignArray(menu, "labels", labels);
+            AssignArray(menu, "levels", levels);
             AssignArray(menu, "details", details);
             AssignArray(menu, "cursors", cursors);
             return menu;

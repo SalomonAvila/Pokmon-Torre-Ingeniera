@@ -10,10 +10,10 @@ namespace TorreIngenieria.Battle
 {
     /// <summary>
     /// Interfaz del combate: fichas de los dos combatientes, sus sprites, el cuadro de mensajes y los menús
-    /// (principal, de movimientos y de objetos). Es solo presentación: recibe el estado del
-    /// <see cref="BattleEngine"/> y devuelve las acciones elegidas. El menú principal sigue el orden del
-    /// Doc §7: Luchar, Mochila, Pokémon, Huir; Mochila abre los objetos usables y Pokémon es un aviso
-    /// provisional hasta que exista el cambio de Pokémon en combate.
+    /// (principal, de movimientos, de objetos y de cambio de Pokémon). Es solo presentación: recibe el
+    /// estado del <see cref="BattleEngine"/> y devuelve las acciones elegidas. El menú principal sigue el
+    /// orden del Doc §7: Luchar, Mochila, Pokémon, Huir; Mochila abre los objetos usables y Pokémon abre
+    /// la lista del equipo para cambiar al activo por otro compañero sano.
     /// </summary>
     public class BattleUI : MonoBehaviour
     {
@@ -142,10 +142,11 @@ namespace TorreIngenieria.Battle
         }
 
         /// <summary>
-        /// Menú principal. Devuelve Luchar (con su movimiento), Huir, usar un objeto o <c>null</c> en el
-        /// aviso de Pokémon. La Mochila vuelve al menú si no hay objetos usables.
+        /// Menú principal. Devuelve Luchar (con su movimiento), Huir, usar un objeto o cambiar de Pokémon.
+        /// La Mochila y el cambio vuelven al menú si no hay nada usable o ningún compañero al que cambiar.
         /// </summary>
-        public IEnumerator ChooseAction(BattlePokemon player, bool canFlee, Action<BattleAction> onChosen)
+        public IEnumerator ChooseAction(IReadOnlyList<BattlePokemon> team, int activeIndex, bool canFlee,
+            Action<BattleAction> onChosen)
         {
             string[] options = canFlee
                 ? new[] { "LUCHAR", "MOCHILA", "POKÉMON", "HUIR" }
@@ -166,7 +167,7 @@ namespace TorreIngenieria.Battle
                 if (choice == 0)
                 {
                     int moveIndex = -1;
-                    yield return ChooseMove(player, value => moveIndex = value);
+                    yield return ChooseMove(team[activeIndex], value => moveIndex = value);
                     if (moveIndex < 0)
                         continue;
 
@@ -185,15 +186,126 @@ namespace TorreIngenieria.Battle
                     yield break;
                 }
 
+                if (choice == 2)
+                {
+                    int switchIndex = -1;
+                    yield return ChooseSwitch(team, activeIndex, value => switchIndex = value);
+                    if (switchIndex < 0)
+                        continue;
+
+                    onChosen(BattleAction.Switch(switchIndex));
+                    yield break;
+                }
+
                 if (canFlee && choice == 3)
                 {
                     onChosen(BattleAction.Run());
                     yield break;
                 }
-
-                message.SetPanel(DialogueBox.PanelSide.Full);
-                yield return message.Say("Cambiar de Pokémon todavía está en construcción.");
             }
+        }
+
+        /// <summary>
+        /// Lista el equipo para cambiar al Pokémon activo por otro. El mismo Pokémon y los debilitados
+        /// quedan deshabilitados; si no hay ningún destino válido, avisa y no gasta el turno.
+        /// </summary>
+        IEnumerator ChooseSwitch(IReadOnlyList<BattlePokemon> team, int activeIndex, Action<int> onChosen)
+        {
+            var rows = new List<BattleMenu.SwitchRowData>();
+            bool anyEnabled = false;
+
+            for (int i = 0; i < team.Count; i++)
+            {
+                BattlePokemon member = team[i];
+                bool enabled = i != activeIndex && !member.IsFainted;
+                anyEnabled |= enabled;
+                rows.Add(new BattleMenu.SwitchRowData
+                {
+                    name = member.DisplayName,
+                    level = $"Nv {member.level}",
+                    hp = $"{member.currentHp}/{member.maxHp}",
+                    enabled = enabled,
+                    isActive = i == activeIndex,
+                    isFainted = member.IsFainted,
+                    currentHp = member.currentHp,
+                    maxHp = member.maxHp,
+                });
+            }
+
+            if (rows.Count == 0 || !anyEnabled)
+            {
+                message.SetPanel(DialogueBox.PanelSide.Full);
+                yield return message.Say("No tienes otro Pokémon en condiciones de combatir.");
+                onChosen(-1);
+                yield break;
+            }
+
+            // La lista ocupa la mitad izquierda; el mensaje (resumen del Pokémon) queda a la derecha.
+            message.SetPanel(DialogueBox.PanelSide.Right);
+            string previous = message.CurrentText;
+            int chosen = -1;
+            yield return moveMenu.ChooseSwitch(rows.ToArray(), value => chosen = value,
+                index => ShowSwitchDescription(team, activeIndex, index, previous));
+
+            if (chosen < 0)
+                message.ShowText(previous, false); // al cancelar se recupera el mensaje anterior
+            onChosen(chosen);
+        }
+
+        /// <summary>
+        /// Resumen del Pokémon resaltado en el panel derecho: tipos con su color, barra de PS, nivel,
+        /// estado y, en el pie, las teclas o la situación cuando no se puede elegir.
+        /// </summary>
+        void ShowSwitchDescription(IReadOnlyList<BattlePokemon> team, int activeIndex, int index, string fallback)
+        {
+            if (index < 0 || index >= team.Count)
+            {
+                message.ShowText(fallback, false);
+                return;
+            }
+
+            message.ShowMarkup(ComposeSwitchDescription(team[index], index == activeIndex));
+        }
+
+        /// <summary>
+        /// Texto del panel derecho del menú de cambio. Los tipos usan la etiqueta con su color de fondo
+        /// (igual que la descripción de movimientos) para que se lean sobre el marco claro.
+        /// </summary>
+        static string ComposeSwitchDescription(BattlePokemon member, bool isActive)
+        {
+            string types = TypeBadge(member.primaryType);
+            if (member.hasSecondaryType)
+                types += " " + TypeBadge(member.secondaryType);
+
+            float ratio = member.maxHp > 0 ? Mathf.Clamp01((float)member.currentHp / member.maxHp) : 0f;
+            string hp = $"PS {HpBar(ratio)} {member.currentHp}/{member.maxHp}";
+
+            string info = $"NV {member.level}";
+            string status = BattleHUD.StatusLabel(member.status);
+            if (!string.IsNullOrEmpty(status))
+                info += $"  {status}";
+
+            // Cuatro líneas fijas: las teclas solo ocupan el pie cuando la fila se puede elegir; en el
+            // activo o el debilitado ese renglón avisa de su situación.
+            string footer = member.IsFainted ? "DEBILITADO"
+                : isActive ? "EN COMBATE"
+                : "Z ELEGIR   X VOLVER";
+
+            return $"<size=16>{types}\n{hp}\n{info}\n{footer}</size>";
+        }
+
+        /// <summary>Etiqueta de tipo con su color de fondo y el texto de contraste.</summary>
+        static string TypeBadge(PokemonType type) =>
+            $"<mark={PokemonTypeColors.Hex(type)}FF>" +
+            $"<color={PokemonTypeColors.BadgeText(type)}> {PokemonTypeNames.BadgeName(type)} </color></mark>";
+
+        /// <summary>Barra de PS textual de 8 tramos, con el color que tendría la barra real.</summary>
+        static string HpBar(float ratio)
+        {
+            const int segments = 8;
+            int filled = Mathf.Clamp(Mathf.RoundToInt(Mathf.Clamp01(ratio) * segments), 0, segments);
+            string color = ColorUtility.ToHtmlStringRGB(BattleHUD.HpColor(ratio));
+            return $"[<color=#{color}>{new string('#', filled)}</color>{new string('-', segments - filled)}]";
         }
 
         /// <summary>
