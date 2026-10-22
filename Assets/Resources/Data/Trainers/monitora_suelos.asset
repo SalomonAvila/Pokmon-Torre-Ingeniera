@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e646e05248605eb4da2c09a2d06aabae, type: 3}
+  m_Name: monitora_suelos
+  m_EditorClassIdentifier: Assembly-CSharp::TorreIngenieria.Core.TrainerData
+  trainerId: monitora_suelos
+  displayName: Monitora de Suelos
+  trainerClass: Monitora
+  ai: 1
+  team:
+  - speciesId: geodude
+    level: 4
+    moveIds:
+    - tackle
+  - speciesId: onix
+    level: 5
+    moveIds:
+    - tackle
+    - harden
+  rewardCredits: 0
+  isBoss: 0
+  floorId: 3
+  sealId: 
+  defeatDialogue: Buen combate. Con eso ya puedes pensar en la Ing. Cantera.
+  hintDialogue: Cantera usa Geodude y Onix; el agua castiga a los dos.

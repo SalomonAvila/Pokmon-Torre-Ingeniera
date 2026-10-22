@@ -12,8 +12,9 @@ namespace TorreIngenieria.Battle
     /// arma los equipos, conduce el bucle de turnos con <see cref="BattleEngine"/> y la <see cref="BattleUI"/>,
     /// y vuelve al mundo con el fundido de <see cref="SceneTransition"/>.
     ///
-    /// Al ganar o huir se conservan los PS y los PP del equipo; al perder se restauran como estaban antes
-    /// del combate (el desmayo con pérdida de créditos y el reaparecer en el lobby son de la segunda mitad).
+    /// Al ganar, capturar o huir se conservan los PS y los PP del equipo; al perder se restauran como estaban
+    /// antes del combate. Los objetos gastados no se devuelven. El desmayo con pérdida de créditos y el
+    /// reaparecer en el lobby son de la segunda mitad.
     /// </summary>
     public class BattleSystem : MonoBehaviour
     {
@@ -80,8 +81,11 @@ namespace TorreIngenieria.Battle
                 yield break;
             }
 
-            var engine = new BattleEngine(playerTeam, enemyTeam, BattleRequest.Kind);
-            ui.Bind(engine.PlayerActive, engine.EnemyActive);
+            var engine = new BattleEngine(playerTeam, enemyTeam, BattleRequest.Kind)
+            {
+                ObedienceSeals = GameState.SealCount,
+            };
+            ui.Bind(engine.PlayerActive, engine.EnemyActive, SlotFor(slots, engine.PlayerActive)?.member);
 
             var intro = new List<string>();
             if (BattleRequest.Kind == BattleKind.Wild)
@@ -96,22 +100,82 @@ namespace TorreIngenieria.Battle
                 if (action == null)
                     continue;
 
-                List<string> messages = engine.ResolveTurn(action);
+                List<BattleMessage> messages = engine.ResolveTurn(action);
+                if (action.kind == BattleActionKind.Item && engine.ItemConsumed)
+                    GameState.AddItem(action.itemId, -1);
                 yield return ui.Messages(messages);
-                ui.Bind(engine.PlayerActive, engine.EnemyActive);
+                ui.Bind(engine.PlayerActive, engine.EnemyActive, SlotFor(slots, engine.PlayerActive)?.member);
             }
 
-            // Al ganar o huir se conservan PS y PP; al perder se deja el equipo como estaba.
-            if (engine.PlayerWon || engine.FledAway)
+            // La captura cuenta para el Pokédex y se suma al equipo solo si hay sitio (no hay PC en el
+            // prototipo). No da EXP ni cuenta como victoria.
+            if (engine.Captured)
+            {
+                bool kept = GameState.CanAddToTeam;
+                var pp = new int[engine.EnemyActive.moves.Count];
+                for (int i = 0; i < engine.EnemyActive.moves.Count; i++)
+                    pp[i] = engine.EnemyActive.moves[i].currentPp;
+
+                GameState.AddCapturedPokemon(engine.CapturedSpeciesId, engine.CapturedLevel,
+                    engine.EnemyActive.currentHp, pp);
+
+                yield return ui.Messages(new[]
+                {
+                    kept
+                        ? "Se añadió a tu equipo."
+                        : $"{engine.EnemyActive.DisplayName} quedó registrado en el Pokédex, " +
+                          "pero no se pudo conservar: el equipo está lleno.",
+                });
+            }
+
+            // Al ganar, capturar o huir se conservan PS y PP; al perder se deja el equipo como estaba.
+            // Los objetos gastados no se devuelven en ningún caso.
+            if (engine.PlayerWon || engine.FledAway || engine.Captured)
                 WriteBackTeam(slots);
             else
                 RestoreTeam(slots);
+
+            // Doc §7: al ganar, el Pokémon que venció recibe base × nivel del rival / 7. La captura
+            // y la huida no dan EXP. Con el cambio de Pokémon pendiente hay un solo participante:
+            // el que quedó activo al terminar.
+            if (engine.PlayerWon)
+                yield return AwardExperience(engine, slots);
 
             GameState.NotifyTeamChanged();
             yield return null;
 
             ReturnToWorld(Building.SceneFor(GameState.Save.location));
         }
+
+        IEnumerator AwardExperience(BattleEngine engine, List<PlayerSlot> slots)
+        {
+            PlayerSlot winner = SlotFor(slots, engine.PlayerActive);
+            if (winner == null)
+                yield break;
+
+            PokemonData defeated = PokemonDatabase.Get(engine.EnemyActive.speciesId);
+            if (defeated == null)
+                yield break;
+
+            int exp = GameRules.ExpReward(defeated.baseExp, engine.EnemyActive.level);
+            if (exp <= 0)
+                yield break;
+
+            ExpGainResult result = TeamMembers.GainExp(winner.member, exp);
+            if (result.ExpGained <= 0)
+                yield break;
+
+            // El HUD usa la copia de combate para PS y nivel. La barra de EXP se anima desde los
+            // valores viejos y, al terminar, se refresca la ficha con el nivel y los PS nuevos.
+            winner.pokemon.level = winner.member.level;
+            winner.pokemon.maxHp = winner.member.maxHp;
+            winner.pokemon.currentHp = winner.member.hp;
+            yield return ui.ShowExpGain(winner.member, result);
+            ui.Bind(engine.PlayerActive, engine.EnemyActive, winner.member);
+        }
+
+        static PlayerSlot SlotFor(List<PlayerSlot> slots, BattlePokemon pokemon) =>
+            slots.Find(slot => ReferenceEquals(slot.pokemon, pokemon));
 
         List<BattlePokemon> BuildEnemyTeam()
         {

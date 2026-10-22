@@ -28,13 +28,16 @@ namespace TorreIngenieria.Core
             return hasSecondary ? value * Effectiveness(attack, secondary) : value;
         }
 
-        /// <summary>Describe el multiplicador como lo muestra el juego: "No afecta", "Poco eficaz"...</summary>
+        /// <summary>
+        /// Describe el multiplicador con los textos del documento. La efectividad normal no muestra
+        /// nada, y los tres puntos van en ASCII porque la fuente pixel no incluye el glifo "…".
+        /// </summary>
         public static string Describe(float effectiveness) => effectiveness switch
         {
-            <= 0f => "No afecta…",
-            < 1f => "No es muy eficaz…",
-            > 1f => "¡Es supereficaz!",
-            _ => "Es eficaz.",
+            <= 0f => "No afecta...",
+            < 1f => "No es muy eficaz...",
+            > 1f => "¡Es muy eficaz!",
+            _ => string.Empty,
         };
 
         static float[,] Build()

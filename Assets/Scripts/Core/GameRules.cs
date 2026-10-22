@@ -110,6 +110,14 @@ namespace TorreIngenieria.Core
         /// <summary>Nivel máximo que obedece el equipo con tantos sellos: 10 + 5 × sellos.</summary>
         public static int ObedienceLevelCap(int seals) => ObedienceBase + ObediencePerSeal * seals;
 
+        /// <summary>
+        /// Decide si un Pokémon desobedece con una tirada de 0 a 1. Solo pasa por encima del tope de
+        /// obediencia y con la probabilidad del 30 % del Doc §7. La tirada se inyecta para poder probar
+        /// el caso sin azar; el combate le pasa <c>Random.value</c>.
+        /// </summary>
+        public static bool Disobeys(int level, int seals, float roll) =>
+            level > ObedienceLevelCap(seals) && roll < DisobedienceChance;
+
         /// <summary>Nivel salvaje mínimo del piso con posición k: 3 + 3k.</summary>
         public static int WildMinLevel(int k) => 3 + 3 * k;
 
@@ -206,6 +214,19 @@ namespace TorreIngenieria.Core
         /// <summary>Probabilidad de captura recortada al rango del documento (5 %–95 %).</summary>
         public static float ClampCaptureChance(float chance) =>
             Math.Clamp(chance, CaptureChanceMin, CaptureChanceMax);
+
+        /// <summary>
+        /// Sacudidas que muestra la Pokébola. Una captura siempre enseña tres; un escape usa la
+        /// probabilidad ya recortada y se queda en 0–2. Es solo presentación: la tirada que decide
+        /// el resultado es una sola y no se vuelve a tirar para contar las sacudidas.
+        /// </summary>
+        public static int CaptureShakes(float chance, bool success)
+        {
+            if (success)
+                return 3;
+
+            return Math.Clamp((int)(chance * 3f), 0, 2);
+        }
 
         /// <summary>
         /// Daño de un golpe (fórmula Gen 3). El poder 0 devuelve 0. El daño nunca baja de 1.

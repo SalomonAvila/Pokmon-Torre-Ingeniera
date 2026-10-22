@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using TorreIngenieria.World;
 using Unity.Cinemachine;
@@ -184,6 +183,42 @@ namespace TorreIngenieria.EditorTools
             return interactable;
         }
 
+        /// <summary>
+        /// Entrenador de prueba centrado en la casilla, con el cuadro de caminata de Pedro y otro tinte.
+        /// El combate de entrenadores llega en la Etapa 6; hasta entonces <see cref="Interactable"/> lo
+        /// marca como vencido al hablar (comportamiento provisional). La orientación se usa para el
+        /// sprite y deja preparada la casilla para la visión de <c>TrainerController</c>.
+        /// </summary>
+        public static Interactable CreateTrainer(string name, int col, int row, int height, string trainerId,
+            string[] lines, PlayerController.Direction facing = PlayerController.Direction.Down)
+        {
+            var go = new GameObject(name);
+            go.transform.position = CellCenter(col, row, height);
+
+            var spriteObject = new GameObject("Sprite");
+            spriteObject.transform.SetParent(go.transform, false);
+            spriteObject.transform.localPosition = new Vector3(0, -0.45f, 0);
+
+            string pose = facing switch
+            {
+                PlayerController.Direction.Up => "Pedro_Arriba_Quieto",
+                PlayerController.Direction.Left => "Pedro_Izquierda_Quieto",
+                PlayerController.Direction.Right => "Pedro_Derecha_Quieto",
+                _ => "Pedro_Abajo_Quieto",
+            };
+
+            var sprite = spriteObject.AddComponent<SpriteRenderer>();
+            sprite.sortingOrder = MapSceneBuilder.CharacterSortingOrder;
+            sprite.color = new Color(1f, 0.78f, 0.72f); // tinte para distinguirlo de Pedro y del NPC
+            sprite.sprite = AssetDatabase.LoadAllAssetsAtPath(PedroSheetPath).OfType<Sprite>()
+                .FirstOrDefault(s => s.name == pose);
+
+            var interactable = go.AddComponent<Interactable>();
+            ConfigureInteractable(interactable, Interactable.Kind.Trainer, lines, null, 0,
+                null, null, null, 0, null, trainerId);
+            return interactable;
+        }
+
         /// <summary>Objeto recogible en el suelo; usa el sprite de un tile provisional.</summary>
         public static Interactable CreatePickup(string name, int col, int row, int height,
             string pickupId, string itemId, int amount, string[] lines)
@@ -328,14 +363,12 @@ namespace TorreIngenieria.EditorTools
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        /// <summary>Guarda la escena y la agrega al build (quitando las que ya no existen).</summary>
+        /// <summary>Guarda la escena y la registra en Build Profiles sin alterar el orden de las demás.</summary>
         public static string Save(Scene scene, string sceneName)
         {
             string path = MapSceneBuilder.MapPath(sceneName);
             EditorSceneManager.SaveScene(scene, path);
-            var scenes = EditorBuildSettings.scenes.Where(s => File.Exists(s.path) && s.path != path).ToList();
-            scenes.Add(new EditorBuildSettingsScene(path, true));
-            EditorBuildSettings.scenes = scenes.ToArray();
+            BuildScenes.Register(path);
             return path;
         }
 

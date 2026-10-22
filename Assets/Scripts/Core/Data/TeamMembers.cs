@@ -4,6 +4,34 @@ using UnityEngine;
 
 namespace TorreIngenieria.Core
 {
+    /// <summary>Resultado de un nivel ganado: PS ganados y movimientos aprendidos u omitidos.</summary>
+    public sealed class LevelUpEvent
+    {
+        public int Level;
+        public int HpGained;
+        public readonly List<string> LearnedMoves = new List<string>();
+        public readonly List<string> MissedMoves = new List<string>();
+    }
+
+    /// <summary>
+    /// Resultado de entregar EXP o de subir niveles con un objeto como la Cafeína. Incluye el tramo
+    /// completo para que la UI pueda animar la barra y mostrar un mensaje por nivel.
+    /// </summary>
+    public sealed class ExpGainResult
+    {
+        public int OldLevel;
+        public int OldExp;
+        public int NewLevel;
+        public int NewExp;
+
+        /// <summary>EXP que realmente se sumó (0 si ya estaba en el nivel 100).</summary>
+        public int ExpGained;
+
+        public readonly List<LevelUpEvent> LevelUps = new List<LevelUpEvent>();
+
+        public bool LeveledUp => LevelUps.Count > 0;
+    }
+
     /// <summary>
     /// Única factoría del equipo: convierte especie + nivel en un <see cref="TeamMember"/> con PS,
     /// EXP, movimientos y PP, y repara esos campos derivados al cargar una partida.
@@ -34,6 +62,126 @@ namespace TorreIngenieria.Core
                 throw new ArgumentNullException(nameof(pokemon));
 
             return Create(pokemon.speciesId, pokemon.level, pokemon.moveIds);
+        }
+
+        /// <summary>
+        /// Crea el Pokémon capturado. Parte de <see cref="Create(string, int)"/> (EXP del nivel,
+        /// movimientos y PP máximos) y después copia los PS y los PP actuales del salvaje; los PP van
+        /// en el mismo orden que los movimientos del learnset. (propuesta) Los PS nunca se guardan en 0
+        /// ni por encima del máximo; si no se pasan, quedan llenos. La captura no da EXP adicional:
+        /// solo la del nivel.
+        /// </summary>
+        public static TeamMember CreateCaptured(string speciesId, int level, int currentHp = -1,
+            IReadOnlyList<int> currentPp = null)
+        {
+            TeamMember member = Create(speciesId, level);
+
+            if (currentHp > 0)
+                member.hp = Math.Min(currentHp, member.maxHp);
+
+            if (currentPp != null)
+            {
+                int count = Math.Min(currentPp.Count, member.moves.Count);
+                for (int i = 0; i < count; i++)
+                    member.moves[i].pp = Math.Clamp(currentPp[i], 0, member.moves[i].maxPp);
+            }
+
+            return member;
+        }
+
+        /// <summary>
+        /// Suma EXP y sube todos los niveles que correspondan, en bucle y con tope en 100 (Doc §7).
+        /// Los PS actuales suben la diferencia entre el máximo nuevo y el anterior; un Pokémon debilitado
+        /// (0 PS) no revive. Los movimientos nuevos del learnset se aprenden solos si hay hueco; con
+        /// cuatro se anotan en <see cref="LevelUpEvent.MissedMoves"/> y no se reemplaza nada.
+        /// Solo se guarda <c>maxHp</c>; las demás estadísticas se derivan de <see cref="PokemonStats"/>.
+        /// La función es la misma para el combate y para objetos que suben niveles (Cafeína).
+        /// </summary>
+        public static ExpGainResult GainExp(TeamMember member, int amount)
+        {
+            var result = new ExpGainResult();
+            if (member == null || string.IsNullOrEmpty(member.speciesId))
+                return result;
+
+            PokemonData species = PokemonDatabase.Get(member.speciesId);
+            if (species == null)
+                return result;
+
+            member.level = Math.Clamp(member.level, PokemonStats.MinLevel, PokemonStats.MaxLevel);
+            result.OldLevel = member.level;
+
+            int levelFloor = PokemonStats.ExperienceForLevel(member.level);
+            result.OldExp = Math.Max(member.exp, levelFloor);
+            member.exp = result.OldExp;
+
+            int maxExp = PokemonStats.ExperienceForLevel(PokemonStats.MaxLevel);
+            int beforeExp = member.exp;
+            member.exp = Math.Min(maxExp, member.exp + Math.Max(0, amount));
+            result.ExpGained = member.exp - beforeExp;
+
+            // maxHp es el único campo derivado que se guarda: se recalcula antes de repartir los
+            // aumentos de nivel. El centinela de PS completos pasa al máximo; el 0 se respeta.
+            int oldMaxHp = PokemonStats.MaxHp(species.baseHp, member.level);
+            member.maxHp = oldMaxHp;
+            if (member.hp < 0 || member.hp > oldMaxHp)
+                member.hp = oldMaxHp;
+
+            if (member.moves == null)
+                member.moves = new List<MoveSlot>();
+
+            while (member.level < PokemonStats.MaxLevel &&
+                   member.exp >= PokemonStats.ExperienceForLevel(member.level + 1))
+            {
+                int previousMaxHp = member.maxHp;
+                member.level++;
+                member.maxHp = PokemonStats.MaxHp(species.baseHp, member.level);
+
+                int hpGained = member.maxHp - previousMaxHp;
+                if (member.hp > 0)
+                    member.hp = Math.Min(member.maxHp, member.hp + hpGained);
+
+                var levelUp = new LevelUpEvent
+                {
+                    Level = member.level,
+                    HpGained = hpGained,
+                };
+                LearnMovesAtLevel(member, species, levelUp);
+                result.LevelUps.Add(levelUp);
+            }
+
+            result.NewLevel = member.level;
+            result.NewExp = member.exp;
+            return result;
+        }
+
+        /// <summary>
+        /// Sube niveles sin EXP de combate (Cafeína). Para cada nivel fija la EXP mínima del siguiente
+        /// y reutiliza <see cref="GainExp"/>, así los PS y los movimientos se tratan igual que en el
+        /// combate. (propuesta) La Cafeína aún no existe como objeto en los datos del prototipo.
+        /// </summary>
+        public static ExpGainResult LevelUp(TeamMember member, int levels = 1)
+        {
+            var result = new ExpGainResult();
+            if (member == null || levels <= 0)
+                return result;
+
+            result.OldLevel = member.level;
+            result.OldExp = member.exp;
+
+            for (int i = 0; i < levels && member.level < PokemonStats.MaxLevel; i++)
+            {
+                int threshold = PokemonStats.ExperienceForLevel(member.level + 1);
+                if (member.exp < threshold)
+                    member.exp = threshold;
+
+                ExpGainResult step = GainExp(member, 0);
+                result.LevelUps.AddRange(step.LevelUps);
+                result.ExpGained += step.ExpGained;
+            }
+
+            result.NewLevel = member.level;
+            result.NewExp = member.exp;
+            return result;
         }
 
         /// <summary>Materializa el equipo completo de un entrenador o jefe.</summary>
@@ -200,6 +348,49 @@ namespace TorreIngenieria.Core
             }
 
             return member;
+        }
+
+        /// <summary>
+        /// Aprende los movimientos del learnset que corresponden exactamente al nivel alcanzado. Si ya
+        /// hay cuatro, el movimiento queda en <see cref="LevelUpEvent.MissedMoves"/>: el menú para
+        /// olvidar uno se aplaza hasta que lo necesiten los Apuntes.
+        /// </summary>
+        static void LearnMovesAtLevel(TeamMember member, PokemonData species, LevelUpEvent levelUp)
+        {
+            if (species.learnset == null)
+                return;
+
+            var known = new HashSet<string>();
+            foreach (MoveSlot slot in member.moves)
+                if (slot != null && !string.IsNullOrEmpty(slot.moveId))
+                    known.Add(slot.moveId);
+
+            foreach (LearnsetEntry entry in species.learnset)
+            {
+                if (entry == null || entry.level != levelUp.Level || string.IsNullOrEmpty(entry.moveId))
+                    continue;
+
+                if (!known.Add(entry.moveId))
+                    continue;
+
+                MoveData move = MoveDatabase.Get(entry.moveId);
+                if (move == null)
+                    continue;
+
+                if (member.moves.Count >= MaxMoves)
+                {
+                    levelUp.MissedMoves.Add(entry.moveId);
+                    continue;
+                }
+
+                member.moves.Add(new MoveSlot
+                {
+                    moveId = entry.moveId,
+                    pp = move.maxPp,
+                    maxPp = move.maxPp,
+                });
+                levelUp.LearnedMoves.Add(entry.moveId);
+            }
         }
 
         /// <summary>

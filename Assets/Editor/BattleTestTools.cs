@@ -8,9 +8,9 @@ using UnityEngine.SceneManagement;
 namespace TorreIngenieria.EditorTools
 {
     /// <summary>
-    /// Herramientas para probar el combate (Etapa 3) mientras no existe la selección del inicial ni la
-    /// captura: dan un equipo de prueba y arrancan un encuentro salvaje desde el mapa abierto.
-    /// El equipo se guarda en la partida, así que sobrevive a la vuelta del combate.
+    /// Herramientas para probar el combate (Etapa 3): dan un equipo y objetos de prueba y arrancan un
+    /// encuentro salvaje desde el mapa abierto. El equipo, el inventario y el Pokédex se guardan en la
+    /// partida, así que sobreviven a la vuelta del combate.
     /// </summary>
     public static class BattleTestTools
     {
@@ -25,8 +25,20 @@ namespace TorreIngenieria.EditorTools
             if (GameState.TeamCount < 2)
                 GameState.TryAddToTeam(TeamMembers.Create("charmander", 5));
 
+            // Mientras no exista la elección de inicial, el primer inicial del equipo cuenta como elegido.
+            // Así la puerta del edificio puede abrirse en las partidas de prueba tras una captura distinta.
+            GameState.EnsureStarterFromTeam();
+
+            // Objetos para probar la Mochila de combate: captura (Pokébola) y curación (Tinto/Agua).
+            GameState.AddItem("pokeball", 5);
+            GameState.AddItem("tinto", 3);
+            GameState.AddItem("agua_panela", 1);
+
             Debug.Log($"Equipo de prueba listo: {GameState.TeamCount} Pokémon " +
-                      $"({string.Join(", ", GameState.Save.team.ConvertAll(member => member.speciesId))}).");
+                      $"({string.Join(", ", GameState.Save.team.ConvertAll(member => member.speciesId))}). " +
+                      $"Inventario: pokeball x{GameState.CountItem("pokeball")}, " +
+                      $"tinto x{GameState.CountItem("tinto")}, " +
+                      $"agua_panela x{GameState.CountItem("agua_panela")}.");
         }
 
         [MenuItem("Torre Ingeniería/Combate/Iniciar combate salvaje (prueba)")]

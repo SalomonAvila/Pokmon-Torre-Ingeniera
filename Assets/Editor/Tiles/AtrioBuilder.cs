@@ -170,6 +170,12 @@ namespace TorreIngenieria.EditorTools
             ProvisionalMap.CreatePickup("TintoPrueba", 9, 21, height, "atrio_tinto_prueba", "tinto", 1,
                 new[] { "Encontraste un Tinto.", "Restaura 20 PS de un Pokémon." });
 
+            // Entrenador de práctica del kiosco (Doc §10): primer combate de entrenador y primera fuente
+            // de créditos. Queda junto al mostrador, mirando al camino; el combate real llega en la Etapa 6.
+            ProvisionalMap.CreateTrainer("EntrenadorKiosco", 19, 28, height, "kiosco",
+                new[] { "¡Hola! Soy el estudiante del kiosco.", "¿Quieres probar tu equipo en un combate de práctica?" },
+                PlayerController.Direction.Up);
+
             GameObject pedro = ProvisionalMap.CreatePlayer(ProvisionalMap.CellCenter(PlayerStart.x, PlayerStart.y, height));
             ProvisionalMap.SetupCamera(pedro.transform, width, height);
 

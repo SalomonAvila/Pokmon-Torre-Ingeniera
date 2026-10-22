@@ -521,11 +521,6 @@ namespace TorreIngenieria.EditorTools
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        static void AddSceneToBuildFirst(string path)
-        {
-            var scenes = EditorBuildSettings.scenes.Where(s => s.path != path).ToList();
-            scenes.Insert(0, new EditorBuildSettingsScene(path, true));
-            EditorBuildSettings.scenes = scenes.ToArray();
-        }
+        static void AddSceneToBuildFirst(string path) => BuildScenes.Register(path);
     }
 }

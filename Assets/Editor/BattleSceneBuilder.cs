@@ -35,11 +35,25 @@ namespace TorreIngenieria.EditorTools
         const float PixelScale = 4f;
         const int DialogBoxBorder = 9;
 
+        /// <summary>Margen interior de los menús: deja libre el borde ornamental de 36 px.</summary>
+        const float MenuPadding = 40f;
+
+        /// <summary>Separación entre el cursor y la etiqueta, y entre esta y la columna de detalle.</summary>
+        const float MenuRowSpacing = 12f;
+
+        /// <summary>El cursor se dibuja a 3× para que no compita con el texto de 22 px.</summary>
+        const float CursorScale = 3f;
+
+        /// <summary>Ancho reservado para las cantidades (x12, x15...).</summary>
+        const float ItemDetailWidth = 84f;
+
         static readonly Color TextBlack = new Color32(0x10, 0x10, 0x10, 0xFF);
         static readonly Color SkyColor = new Color32(0x9A, 0xD0, 0xE8, 0xFF);
         static readonly Color GroundColor = new Color32(0x88, 0xC0, 0x70, 0xFF);
         static readonly Color HpTrackColor = new Color32(0x40, 0x40, 0x48, 0xFF);
         static readonly Color HpFillColor = new Color32(0x50, 0xC8, 0x50, 0xFF);
+        static readonly Color ExpTrackColor = new Color32(0x40, 0x40, 0x48, 0xFF);
+        static readonly Color ExpFillColor = new Color32(0x58, 0xB8, 0xF0, 0xFF);
 
         [MenuItem("Torre Ingeniería/Construir escena de combate")]
         public static void Build()
@@ -87,18 +101,21 @@ namespace TorreIngenieria.EditorTools
                 new Vector2(0, 0), new Vector2(220, 290), new Vector2(200, 200));
 
             BattleHUD enemyHud = CreateHud(canvas, "FichaRival", new Vector2(0, 1),
-                new Vector2(16, -16), new Vector2(360, 136), boxSprite, font);
+                new Vector2(16, -16), new Vector2(380, 164), boxSprite, font, false);
             BattleHUD playerHud = CreateHud(canvas, "FichaJugador", new Vector2(1, 0),
-                new Vector2(-16, 200), new Vector2(360, 136), boxSprite, font);
+                new Vector2(-16, 200), new Vector2(380, 184), boxSprite, font, true, true);
 
             DialogueBox message = CreateDialogueBox(canvas, controls, boxSprite, arrowSprite, font);
 
-            BattleMenu menu = CreateMenu(canvas, "MenuPrincipal", controls, boxSprite, cursorSprite, font,
-                new Vector2(1, 0), new Vector2(1, 0), new Vector2(-8, 8), new Vector2(608, 176),
-                new Vector2(260, 60), 2);
-            BattleMenu moveMenu = CreateMenu(canvas, "MenuMovimientos", controls, boxSprite, cursorSprite, font,
-                new Vector2(0, 0), new Vector2(0, 0), new Vector2(8, 8), new Vector2(608, 176),
-                new Vector2(560, 34), 1);
+            // La franja inferior se reparte: el mensaje a la izquierda y el menú principal a la derecha.
+            // La lista de movimientos/objetos hace lo contrario (lista a la izquierda, mensaje a la derecha).
+            float split = DialogueBox.SplitRatio;
+            BattleMenu menu = CreateMenu(canvas, "MenuPrincipal", controls, boxSprite, cursorSprite, arrowSprite, font,
+                new Vector2(split, 0), new Vector2(1, 0), new Vector2(0, 8), new Vector2(-8, 184),
+                new Vector2(183, 60), 2);
+            BattleMenu moveMenu = CreateMenu(canvas, "MenuMovimientos", controls, boxSprite, cursorSprite, arrowSprite,
+                font, new Vector2(0, 0), new Vector2(split, 0), new Vector2(8, 8), new Vector2(0, 184),
+                new Vector2(475, 34), 1);
 
             var ui = canvas.gameObject.AddComponent<BattleUI>();
             Assign(ui, ("enemyHud", enemyHud), ("playerHud", playerHud),
@@ -116,21 +133,21 @@ namespace TorreIngenieria.EditorTools
         // ---------- Fichas de PS ----------
 
         /// <summary>
-        /// Ficha de PS con tres filas apiladas: nombre/nivel, barra y PS/estado. El padding descuenta
-        /// el borde del marco (9 px) y deja un margen extra, así el texto nunca toca las Pokébolas.
+        /// Ficha de PS con tres filas apiladas: nombre/nivel, barra con etiqueta PS y PS/estado.
+        /// Usa el mismo borde (36 px) que el cuadro inferior y deja un margen extra, así el texto
+        /// nunca toca las Pokébolas.
         /// </summary>
         static BattleHUD CreateHud(Transform canvas, string name, Vector2 anchor, Vector2 position,
-            Vector2 size, Sprite boxSprite, TMP_FontAsset font)
+            Vector2 size, Sprite boxSprite, TMP_FontAsset font, bool showNumbers, bool showExpBar = false)
         {
-            // A 2× el borde del marco mide 18 px (9 px de sprite); el relleno deja 6 px más de margen.
-            RectTransform panel = CreatePixelBox(canvas, name, boxSprite, 2f);
+            RectTransform panel = CreatePixelBox(canvas, name, boxSprite);
             panel.anchorMin = panel.anchorMax = anchor;
             panel.pivot = anchor;
             panel.anchoredPosition = position;
             panel.sizeDelta = size;
 
             var layout = panel.gameObject.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(24, 24, 20, 20);
+            layout.padding = new RectOffset(40, 40, 38, 38);
             layout.spacing = 6;
             layout.childAlignment = TextAnchor.MiddleCenter;
             layout.childControlWidth = true;
@@ -150,13 +167,39 @@ namespace TorreIngenieria.EditorTools
             levelText.font = font;
             levelText.alignment = TextAlignmentOptions.MidlineRight;
 
-            // Fila 2: barra de PS. El relleno se estira desde la izquierda en BattleHUD.Show.
-            RectTransform track = CreateImage(panel, "BarraPSFondo", HpTrackColor);
-            track.gameObject.AddComponent<LayoutElement>().preferredHeight = 18;
+            // Fila 2: etiqueta PS a la izquierda y barra. El relleno se estira desde la izquierda
+            // en BattleHUD.Show.
+            RectTransform barRow = CreateHudRow(panel, "FilaBarra", 18);
+            TextMeshProUGUI psLabel = CreateText(barRow, "EtiquetaPS", "PS", 12, TextBlack);
+            psLabel.font = font;
+            psLabel.fontStyle = FontStyles.Bold;
+            psLabel.alignment = TextAlignmentOptions.MidlineLeft;
+            psLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 24f;
+
+            RectTransform track = CreateImage(barRow, "BarraPSFondo", HpTrackColor);
+            track.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
             RectTransform fill = CreateImage(track, "BarraPS", HpFillColor);
             Stretch(fill);
 
-            // Fila 3: estado a la izquierda y PS actuales/máximos a la derecha.
+            // Fila 3 (solo jugador): barra de EXP. Es (propuesta): la Fig. 30 no la muestra.
+            Image expFill = null;
+            if (showExpBar)
+            {
+                RectTransform expRow = CreateHudRow(panel, "FilaEXP", 12);
+                TextMeshProUGUI expLabel = CreateText(expRow, "EtiquetaEXP", "EXP", 10, TextBlack);
+                expLabel.font = font;
+                expLabel.fontStyle = FontStyles.Bold;
+                expLabel.alignment = TextAlignmentOptions.MidlineLeft;
+                expLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 24f;
+
+                RectTransform expTrack = CreateImage(expRow, "BarraEXPFondo", ExpTrackColor);
+                expTrack.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+                RectTransform expFillRect = CreateImage(expTrack, "BarraEXP", ExpFillColor);
+                Stretch(expFillRect);
+                expFill = expFillRect.GetComponent<Image>();
+            }
+
+            // Fila 4: estado a la izquierda y PS actuales/máximos a la derecha.
             RectTransform bottomRow = CreateHudRow(panel, "FilaPS", 22);
             TextMeshProUGUI statusText = CreateText(bottomRow, "Estado", string.Empty, 12, TextBlack);
             statusText.font = font;
@@ -171,6 +214,10 @@ namespace TorreIngenieria.EditorTools
             var hud = panel.gameObject.AddComponent<BattleHUD>();
             Assign(hud, ("nameText", nameText), ("levelText", levelText), ("hpText", hpText),
                 ("statusText", statusText), ("hpBar", fill.GetComponent<Image>()));
+            if (expFill != null)
+                Assign(hud, ("expBar", expFill));
+            AssignBool(hud, "showHpNumbers", showNumbers);
+            AssignBool(hud, "showExpBar", showExpBar);
             return hud;
         }
 
@@ -194,26 +241,24 @@ namespace TorreIngenieria.EditorTools
         // ---------- Menús ----------
 
         static BattleMenu CreateMenu(Transform canvas, string name, InputActionAsset controls, Sprite boxSprite,
-            Sprite cursorSprite, TMP_FontAsset font, Vector2 anchorMin, Vector2 anchorMax, Vector2 position,
-            Vector2 size, Vector2 cellSize, int columns)
+            Sprite cursorSprite, Sprite scrollSprite, TMP_FontAsset font, Vector2 anchorMin, Vector2 anchorMax,
+            Vector2 offsetMin, Vector2 offsetMax, Vector2 cellSize, int columns)
         {
             RectTransform panel = CreatePixelBox(canvas, name, boxSprite);
             panel.anchorMin = anchorMin;
             panel.anchorMax = anchorMax;
-            panel.pivot = anchorMin;
-            panel.anchoredPosition = position;
-            panel.sizeDelta = size;
+            panel.offsetMin = offsetMin;
+            panel.offsetMax = offsetMax;
 
             var grid = panel.gameObject.AddComponent<GridLayoutGroup>();
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             grid.constraintCount = columns;
             grid.cellSize = cellSize;
             grid.spacing = new Vector2(6, 4);
-            grid.padding = new RectOffset(20, 16, 10, 10);
+            grid.padding = new RectOffset((int)MenuPadding, (int)MenuPadding, 10, 10);
             grid.childAlignment = TextAnchor.MiddleCenter;
 
             const int maxRows = 4;
-            const float cursorScale = PixelScale;
             var rows = new Object[maxRows];
             var labels = new Object[maxRows];
             var details = new Object[maxRows];
@@ -223,7 +268,7 @@ namespace TorreIngenieria.EditorTools
                 var row = new GameObject($"Opcion{i + 1}", typeof(RectTransform));
                 row.transform.SetParent(panel, false);
                 var layout = row.AddComponent<HorizontalLayoutGroup>();
-                layout.spacing = 10;
+                layout.spacing = MenuRowSpacing;
                 layout.childAlignment = TextAnchor.MiddleLeft;
                 layout.childControlWidth = true;
                 layout.childControlHeight = true;
@@ -232,8 +277,8 @@ namespace TorreIngenieria.EditorTools
 
                 var slot = new GameObject("CursorSlot", typeof(RectTransform));
                 slot.transform.SetParent(row.transform, false);
-                slot.AddComponent<LayoutElement>().preferredWidth = cursorSprite.rect.width * cursorScale;
-                RectTransform cursor = CreatePixelImage(slot.transform, "Cursor", cursorSprite, cursorScale);
+                slot.AddComponent<LayoutElement>().preferredWidth = cursorSprite.rect.width * CursorScale;
+                RectTransform cursor = CreatePixelImage(slot.transform, "Cursor", cursorSprite, CursorScale);
                 cursor.anchorMin = cursor.anchorMax = cursor.pivot = new Vector2(0.5f, 0.5f);
                 cursor.anchoredPosition = Vector2.zero;
 
@@ -241,11 +286,14 @@ namespace TorreIngenieria.EditorTools
                 label.font = font;
                 label.fontStyle = FontStyles.UpperCase;
                 label.alignment = TextAlignmentOptions.MidlineLeft;
+                label.overflowMode = TextOverflowModes.Ellipsis; // los nombres largos se recortan con puntos
                 label.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
 
                 TextMeshProUGUI detail = CreateText(row.transform, "Detalle", string.Empty, 20, TextBlack);
                 detail.font = font;
                 detail.alignment = TextAlignmentOptions.MidlineRight;
+                detail.overflowMode = TextOverflowModes.Ellipsis;
+                detail.gameObject.AddComponent<LayoutElement>().preferredWidth = ItemDetailWidth;
 
                 rows[i] = row;
                 labels[i] = label;
@@ -253,17 +301,42 @@ namespace TorreIngenieria.EditorTools
                 cursors[i] = cursor.gameObject;
             }
 
+            GameObject scrollUp = CreateScrollArrow(panel, "FlechaArriba", scrollSprite,
+                new Vector2(1f, 1f), new Vector2(-16f, -9f), 180f);
+            GameObject scrollDown = CreateScrollArrow(panel, "FlechaAbajo", scrollSprite,
+                new Vector2(1f, 0f), new Vector2(-16f, 9f), 0f);
+
             var menu = panel.gameObject.AddComponent<BattleMenu>();
             var canvasGroup = panel.gameObject.AddComponent<CanvasGroup>();
             canvasGroup.alpha = 0f;
             canvasGroup.blocksRaycasts = false;
             canvasGroup.interactable = false;
-            Assign(menu, ("controls", controls), ("group", canvasGroup), ("grid", grid));
+            Assign(menu, ("controls", controls), ("group", canvasGroup), ("grid", grid),
+                ("scrollUp", scrollUp), ("scrollDown", scrollDown));
             AssignArray(menu, "rows", rows);
             AssignArray(menu, "labels", labels);
             AssignArray(menu, "details", details);
             AssignArray(menu, "cursors", cursors);
             return menu;
+        }
+
+        /// <summary>
+        /// Flecha de desplazamiento en la esquina superior o inferior derecha, dentro del marco y
+        /// sobre el fondo claro (el borde es oscuro y la flecha no se vería encima).
+        /// </summary>
+        static GameObject CreateScrollArrow(Transform parent, string name, Sprite sprite, Vector2 anchor,
+            Vector2 position, float angle)
+        {
+            RectTransform rect = CreatePixelImage(parent, name, sprite, 2f);
+            rect.anchorMin = rect.anchorMax = anchor;
+            // Con el pivote abajo, la flecha de abajo crece hacia dentro; la de arriba se gira 180°
+            // alrededor de ese pivote y también queda dentro del marco.
+            rect.pivot = new Vector2(0.5f, 0f);
+            rect.anchoredPosition = position;
+            rect.localEulerAngles = new Vector3(0f, 0f, angle);
+            rect.gameObject.AddComponent<LayoutElement>().ignoreLayout = true; // no es una celda de la rejilla
+            rect.gameObject.SetActive(false);
+            return rect.gameObject;
         }
 
         // ---------- Cuadro de texto ----------
@@ -282,8 +355,10 @@ namespace TorreIngenieria.EditorTools
             text.fontStyle = FontStyles.UpperCase;
             text.alignment = TextAlignmentOptions.TopLeft;
             text.textWrappingMode = TextWrappingModes.Normal;
+            text.lineSpacing = 0f;
             text.rectTransform.anchorMin = Vector2.zero;
             text.rectTransform.anchorMax = Vector2.one;
+            // Mismo margen interior (48 px) en el cuadro completo y en las dos mitades.
             text.rectTransform.offsetMin = new Vector2(48, 32);
             text.rectTransform.offsetMax = new Vector2(-48, -40);
 
@@ -317,7 +392,8 @@ namespace TorreIngenieria.EditorTools
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = ReferenceResolution;
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-            scaler.matchWidthOrHeight = 1f;
+            // Se ajusta por ancho para que las mitades de la franja inferior midan lo mismo en 16:9 y 3:2.
+            scaler.matchWidthOrHeight = 0f;
             return go.transform;
         }
 
@@ -375,19 +451,32 @@ namespace TorreIngenieria.EditorTools
 
         static void EnsurePixelFont()
         {
-            if (AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(PixelFontAssetPath) != null)
-                return;
+            TMP_FontAsset asset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(PixelFontAssetPath);
+            if (asset == null)
+            {
+                var font = AssetDatabase.LoadAssetAtPath<Font>(PixelFontPath);
+                asset = TMP_FontAsset.CreateFontAsset(font, 32, 4, GlyphRenderMode.SDFAA, 512, 512,
+                    AtlasPopulationMode.Dynamic, false);
+                asset.name = "PressStart2P SDF";
+                AssetDatabase.CreateAsset(asset, PixelFontAssetPath);
 
-            var font = AssetDatabase.LoadAssetAtPath<Font>(PixelFontPath);
-            TMP_FontAsset asset = TMP_FontAsset.CreateFontAsset(font, 32, 4, GlyphRenderMode.SDFAA, 512, 512,
-                AtlasPopulationMode.Dynamic, false);
-            asset.name = "PressStart2P SDF";
-            AssetDatabase.CreateAsset(asset, PixelFontAssetPath);
+                asset.atlasTextures[0].name = asset.name + " Atlas";
+                asset.material.name = asset.name + " Material";
+                AssetDatabase.AddObjectToAsset(asset.atlasTextures[0], asset);
+                AssetDatabase.AddObjectToAsset(asset.material, asset);
+            }
 
-            asset.atlasTextures[0].name = asset.name + " Atlas";
-            asset.material.name = asset.name + " Material";
-            AssetDatabase.AddObjectToAsset(asset.atlasTextures[0], asset);
-            AssetDatabase.AddObjectToAsset(asset.material, asset);
+            // Los textos de la interfaz van en mayúsculas: asegura las vocales acentuadas y la eñe
+            // (por ejemplo POKÉBOLA y POKÉMON) en el atlas dinámico. El texto fuente ya se escribe con
+            // las mayúsculas acentuadas, así que el glifo debe existir sí o sí.
+            const string UppercaseLatin = "ÁÉÍÓÚÜÑ¿¡";
+            if (!asset.TryAddCharacters(UppercaseLatin, out string missing) && !string.IsNullOrEmpty(missing))
+                Debug.LogWarning($"La fuente no tiene estos glifos: {missing}");
+
+            if (!asset.HasCharacter('É') || !asset.HasCharacter('Ñ'))
+                Debug.LogError("La fuente pixel no incluye É o Ñ; POKÉBOLA/POKÉMON se verían mal.");
+
+            EditorUtility.SetDirty(asset);
             AssetDatabase.SaveAssets();
         }
 
@@ -461,6 +550,19 @@ namespace TorreIngenieria.EditorTools
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
+        static void AssignBool(Object target, string field, bool value)
+        {
+            var serialized = new SerializedObject(target);
+            SerializedProperty property = serialized.FindProperty(field);
+            if (property == null)
+            {
+                Debug.LogError($"{target.GetType().Name} no tiene el campo '{field}'.");
+                return;
+            }
+            property.boolValue = value;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         static void AssignArray(Object target, string field, Object[] values)
         {
             var serialized = new SerializedObject(target);
@@ -471,11 +573,6 @@ namespace TorreIngenieria.EditorTools
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        static void AddSceneToBuild(string path)
-        {
-            var scenes = EditorBuildSettings.scenes.Where(s => s.path != path).ToList();
-            scenes.Add(new EditorBuildSettingsScene(path, true));
-            EditorBuildSettings.scenes = scenes.ToArray();
-        }
+        static void AddSceneToBuild(string path) => BuildScenes.Register(path);
     }
 }

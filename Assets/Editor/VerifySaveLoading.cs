@@ -237,6 +237,7 @@ namespace TorreIngenieria.EditorTools
             SaveData previous = GameState.Save;
             try
             {
+                // El Pokédex se arma a mano: AddCapturedPokemon hace Commit y escribiría partida.json.
                 GameState.Save = new SaveData { starterId = "" };
                 Check(!GameState.PassesBuildingDoor,
                     "Sin inicial, la puerta del edificio debe estar cerrada.");
@@ -256,6 +257,26 @@ namespace TorreIngenieria.EditorTools
                 GameState.Save = captureWithoutStarter;
                 Check(!GameState.PassesBuildingDoor,
                     "Con una captura pero sin inicial, la puerta debe estar cerrada.");
+
+                // Partida de prueba: no hay starterId, pero el equipo trae un inicial. La puerta debe
+                // inferirlo para no quedarse bloqueada aunque el equipo esté lleno.
+                var inferredStarter = new SaveData { starterId = "" };
+                inferredStarter.team.Add(TeamMembers.Create("bulbasaur", 5));
+                inferredStarter.pokedex.Add("bulbasaur");
+                GameState.Save = inferredStarter;
+                Check(!GameState.PassesBuildingDoor,
+                    "Sin starterId y solo con el inicial del equipo, la puerta debe seguir cerrada.");
+                inferredStarter.pokedex.Add("pidgey");
+                Check(GameState.PassesBuildingDoor,
+                    "Sin starterId, el inicial del equipo debe contar cuando hay una captura distinta.");
+
+                // El inicial inferido no necesita estar en el Pokédex: basta con una captura distinta.
+                var inferredStarterWithoutDex = new SaveData { starterId = "" };
+                inferredStarterWithoutDex.team.Add(TeamMembers.Create("bulbasaur", 5));
+                inferredStarterWithoutDex.pokedex.Add("pidgey");
+                GameState.Save = inferredStarterWithoutDex;
+                Check(GameState.PassesBuildingDoor,
+                    "El inicial del equipo debe abrir la puerta aunque no figure en el Pokédex.");
             }
             finally
             {

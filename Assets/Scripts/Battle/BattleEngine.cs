@@ -8,11 +8,11 @@ namespace TorreIngenieria.Battle
     /// <summary>
     /// Motor de un combate por turnos (Doc §7): resuelve la acción del jugador y la del salvaje en orden
     /// (prioridad y Velocidad), aplica daño con la fórmula de <see cref="GameRules"/> y los efectos de
-    /// estado, y decide el final (victoria, derrota o huida).
+    /// estado, y decide el final (victoria, captura, derrota o huida).
     ///
     /// Es lógica sin escena: no depende de la UI ni de GameObjects. Devuelve la lista de mensajes del turno
-    /// y deja el estado en <see cref="PlayerActive"/>/<see cref="EnemyActive"/>. La captura, la experiencia y
-    /// los combates de entrenador son de la segunda mitad de la etapa.
+    /// y deja el estado en <see cref="PlayerActive"/>/<see cref="EnemyActive"/>. La experiencia la entrega
+    /// <see cref="BattleSystem"/> al ganar; los combates de entrenador siguen pendientes.
     /// </summary>
     public class BattleEngine
     {
@@ -27,6 +27,26 @@ namespace TorreIngenieria.Battle
         public bool IsOver { get; private set; }
         public bool PlayerWon { get; private set; }
         public bool FledAway { get; private set; }
+
+        /// <summary>La captura cerró el combate; no cuenta como victoria ni da EXP (Doc §7).</summary>
+        public bool Captured { get; private set; }
+        public string CapturedSpeciesId { get; private set; }
+        public int CapturedLevel { get; private set; }
+
+        /// <summary>En el último turno se lanzó una Pokébola en un combate salvaje (haya capturado o no).</summary>
+        public bool CaptureAttempted { get; private set; }
+
+        /// <summary>Sacudidas de la Pokébola: 3 en una captura y 0–2 en un escape.</summary>
+        public int CaptureShakes { get; private set; }
+
+        /// <summary>El último turno gastó un objeto de la mochila (para descontarlo del inventario).</summary>
+        public bool ItemConsumed { get; private set; }
+
+        /// <summary>Sellos del jugador; fijan el tope de obediencia (Doc §7). BattleSystem lo asigna al empezar.</summary>
+        public int ObedienceSeals { get; set; }
+
+        /// <summary>Tirada de obediencia inyectable para las pruebas; si es nula se usa <see cref="Random.value"/>.</summary>
+        public float? ObedienceRoll { get; set; }
 
         public BattlePokemon PlayerActive => PlayerTeam[playerIndex];
         public BattlePokemon EnemyActive => EnemyTeam[enemyIndex];
@@ -43,15 +63,37 @@ namespace TorreIngenieria.Battle
         /// <summary>Solo se puede huir de un combate salvaje (Doc §7).</summary>
         public bool CanPlayerFlee => Kind == BattleKind.Wild;
 
-        /// <summary>Resuelve un turno completo y devuelve los mensajes, en orden, para la UI.</summary>
-        public List<string> ResolveTurn(BattleAction playerAction)
+        /// <summary>
+        /// Resuelve un turno completo y devuelve los mensajes, en orden, para la UI. La tirada de captura
+        /// se puede fijar desde las pruebas; si se omite, sale de <see cref="Random.value"/>.
+        /// </summary>
+        public List<BattleMessage> ResolveTurn(BattleAction playerAction, float? captureRoll = null)
         {
-            var messages = new List<string>();
+            var messages = new List<BattleMessage>();
+            ItemConsumed = false;
             if (IsOver)
                 return messages;
 
+            // La captura es del turno actual; no se arrastra el intento anterior a la UI.
+            CaptureAttempted = false;
+            CaptureShakes = 0;
+
             TurnCount++;
             BattleAction enemyAction = BattleAI.ChooseWild(EnemyActive, PlayerActive);
+
+            if (playerAction.kind == BattleActionKind.Item)
+            {
+                bool consumed = UseItem(playerAction.itemId, messages, captureRoll);
+                ItemConsumed = consumed;
+
+                // Usar un objeto gasta el turno y el salvaje ataca después, salvo que la captura tenga
+                // éxito o que el objeto no se haya podido usar.
+                if (consumed && !IsOver)
+                    UseMove(EnemyActive, PlayerActive, enemyAction.moveIndex, messages, false);
+                if (consumed && !IsOver)
+                    ResolveEndOfTurn(messages);
+                return messages;
+            }
 
             if (playerAction.kind == BattleActionKind.Run)
             {
@@ -63,7 +105,8 @@ namespace TorreIngenieria.Battle
                 if (!IsOver)
                     UseMove(EnemyActive, PlayerActive, enemyAction.moveIndex, messages, false);
 
-                ResolveEndOfTurn(messages);
+                if (!IsOver)
+                    ResolveEndOfTurn(messages);
                 return messages;
             }
 
@@ -87,7 +130,7 @@ namespace TorreIngenieria.Battle
 
         // ---------- Turno ----------
 
-        void ResolveEndOfTurn(List<string> messages)
+        void ResolveEndOfTurn(List<BattleMessage> messages)
         {
             ResolveFaints(messages);
             if (IsOver)
@@ -99,7 +142,7 @@ namespace TorreIngenieria.Battle
         }
 
         /// <summary>Cambia al siguiente Pokémon sano o termina el combate cuando un bando se queda sin ninguno.</summary>
-        void ResolveFaints(List<string> messages)
+        void ResolveFaints(List<BattleMessage> messages)
         {
             if (PlayerActive.IsFainted)
             {
@@ -133,7 +176,7 @@ namespace TorreIngenieria.Battle
             }
         }
 
-        void ApplyResidual(BattlePokemon pokemon, List<string> messages, bool isPlayer)
+        void ApplyResidual(BattlePokemon pokemon, List<BattleMessage> messages, bool isPlayer)
         {
             if (pokemon.IsFainted)
                 return;
@@ -163,7 +206,7 @@ namespace TorreIngenieria.Battle
             return Random.value < 0.5f;
         }
 
-        void TryFlee(List<string> messages)
+        void TryFlee(List<BattleMessage> messages)
         {
             float chance = GameRules.FleeChance(PlayerActive.Speed, EnemyActive.Speed);
             if (Random.value < chance)
@@ -178,13 +221,108 @@ namespace TorreIngenieria.Battle
             }
         }
 
+        // ---------- Objetos ----------
+
+        /// <summary>
+        /// Usa un objeto de la mochila en el Pokémon activo. Devuelve si gastó el turno: la Pokébola
+        /// siempre lo gasta (haya o no captura), el curativo solo si tenía efecto y los objetos que no
+        /// aplican en combate no lo gastan. La captura se rechaza fuera de un combate salvaje (Doc §7).
+        /// </summary>
+        bool UseItem(string itemId, List<BattleMessage> messages, float? captureRoll)
+        {
+            ItemData item = ItemDatabase.Get(itemId);
+            if (item == null)
+            {
+                messages.Add("Ese objeto no existe.");
+                return false;
+            }
+
+            if (item.category == ItemCategory.Ball)
+            {
+                if (Kind != BattleKind.Wild)
+                {
+                    messages.Add("No puedes capturar un Pokémon de entrenador.");
+                    return false;
+                }
+
+                TryCapture(item, messages, captureRoll);
+                return true;
+            }
+
+            if (item.category == ItemCategory.Heal)
+            {
+                if (PlayerActive.IsFainted)
+                {
+                    messages.Add($"{PlayerActive.DisplayName} está debilitado.");
+                    return false;
+                }
+
+                if (PlayerActive.currentHp >= PlayerActive.maxHp)
+                {
+                    messages.Add($"{PlayerActive.DisplayName} ya tiene los PS completos.");
+                    return false;
+                }
+
+                int before = PlayerActive.currentHp;
+                PlayerActive.Heal(item.healAmount);
+                messages.Add($"{PlayerActive.DisplayName} recuperó {PlayerActive.currentHp - before} PS.");
+                return true;
+            }
+
+            messages.Add("Ese objeto no se puede usar en combate.");
+            return false;
+        }
+
+        void TryCapture(ItemData ball, List<BattleMessage> messages, float? captureRoll)
+        {
+            PokemonData species = PokemonDatabase.Get(EnemyActive.speciesId);
+            if (species == null)
+            {
+                messages.Add("No se pudo leer la especie del rival.");
+                return;
+            }
+
+            float chance = GameRules.CaptureChance(EnemyActive.maxHp, EnemyActive.currentHp,
+                species.catchRate, ball.catchBonus, CaptureStatusBonus(EnemyActive.status));
+
+            // Una sola tirada decide el resultado. Las sacudidas son presentación: una captura
+            // siempre muestra tres, y un escape usa la probabilidad recortada a 0–2.
+            float roll = captureRoll ?? Random.value;
+            bool success = roll < chance;
+            CaptureAttempted = true;
+            CaptureShakes = GameRules.CaptureShakes(chance, success);
+
+            messages.Add($"¡Lanzaste una {ball.displayName}!");
+            for (int i = 0; i < CaptureShakes; i++)
+                messages.Add(new BattleMessage("¡La Pokébola se sacude...!", true));
+
+            if (success)
+            {
+                Captured = true;
+                CapturedSpeciesId = EnemyActive.speciesId;
+                CapturedLevel = EnemyActive.level;
+                IsOver = true;
+                messages.Add("¡Ya!");
+                messages.Add($"¡Atrapaste a {EnemyActive.DisplayName}!");
+                return;
+            }
+
+            messages.Add("¡Se escapó!");
+        }
+
+        /// <summary>Bonus de captura por estado (propuesta del Doc §7; 1 sin estado).</summary>
+        static float CaptureStatusBonus(StatusCondition status) => status switch
+        {
+            StatusCondition.Sleep or StatusCondition.Freeze => 2f,
+            StatusCondition.Poison or StatusCondition.Burn or StatusCondition.Paralysis => 1.5f,
+            _ => 1f,
+        };
+
         // ---------- Movimientos ----------
 
-        void UseMove(BattlePokemon attacker, BattlePokemon defender, int moveIndex, List<string> messages,
+        void UseMove(BattlePokemon attacker, BattlePokemon defender, int moveIndex, List<BattleMessage> messages,
             bool attackerIsPlayer)
         {
-            bool defenderIsPlayer = !attackerIsPlayer;
-
             if (moveIndex < 0 || moveIndex >= attacker.moves.Count)
             {
                 messages.Add($"{Name(attacker, attackerIsPlayer)} no puede moverse.");
@@ -214,7 +352,8 @@ namespace TorreIngenieria.Battle
                 return;
             }
 
-            if (move.power <= 0)
+            // Los movimientos de estado no pasan por la tabla de efectividad.
+            if (move.category == MoveCategory.Status || move.power <= 0)
             {
                 ApplyEffect(move, attacker, defender, messages, attackerIsPlayer);
                 return;
@@ -223,7 +362,8 @@ namespace TorreIngenieria.Battle
             float effectiveness = defender.GetTypeEffectiveness(move.type);
             if (effectiveness <= 0f)
             {
-                messages.Add($"No afecta a {Name(defender, defenderIsPlayer)}…");
+                // Inmunidad: no hay daño ni mensaje de daño, solo el aviso exacto del documento.
+                messages.Add(TypeChart.Describe(effectiveness));
                 return;
             }
 
@@ -239,15 +379,27 @@ namespace TorreIngenieria.Battle
 
             if (critical)
                 messages.Add("¡Golpe crítico!");
-            if (!Mathf.Approximately(effectiveness, 1f))
-                messages.Add(TypeChart.Describe(effectiveness));
+
+            // El aviso de efectividad va después del daño y el caso neutro no muestra nada.
+            string effectivenessMessage = TypeChart.Describe(effectiveness);
+            if (!string.IsNullOrEmpty(effectivenessMessage))
+                messages.Add(effectivenessMessage);
 
             ApplyEffect(move, attacker, defender, messages, attackerIsPlayer);
         }
 
-        /// <summary>Comprueba sueño, congelación y parálisis antes de dejar mover al Pokémon.</summary>
-        bool CanAct(BattlePokemon pokemon, List<string> messages, bool isPlayer)
+        /// <summary>
+        /// Comprueba la obediencia del jugador (Doc §7: por encima de 10 + 5 × sellos desobedece el 30 %)
+        /// y después sueño, congelación y parálisis antes de dejar mover al Pokémon.
+        /// </summary>
+        bool CanAct(BattlePokemon pokemon, List<BattleMessage> messages, bool isPlayer)
         {
+            if (isPlayer && GameRules.Disobeys(pokemon.level, ObedienceSeals, ObedienceRoll ?? Random.value))
+            {
+                messages.Add($"¡{Name(pokemon, isPlayer)} no obedece!");
+                return false;
+            }
+
             switch (pokemon.status)
             {
                 case StatusCondition.Sleep:
@@ -294,7 +446,7 @@ namespace TorreIngenieria.Battle
             return Random.value < accuracy;
         }
 
-        void ApplyEffect(MoveData move, BattlePokemon attacker, BattlePokemon defender, List<string> messages,
+        void ApplyEffect(MoveData move, BattlePokemon attacker, BattlePokemon defender, List<BattleMessage> messages,
             bool attackerIsPlayer)
         {
             if (move.effect == MoveEffect.None)

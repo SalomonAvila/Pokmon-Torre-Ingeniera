@@ -210,12 +210,14 @@ namespace TorreIngenieria.EditorTools
 
         static readonly ItemRow[] Items =
         {
-            new ItemRow("tinto", "Tinto", ItemCategory.Heal, "Café tinto bien cargado. Restaura 20 PS.",
+            new ItemRow("tinto", "Tinto", ItemCategory.Heal, "Café tinto bien cargado.",
                 heal: GameRules.TintoHeal, price: 100),
             new ItemRow("agua_panela", "Agua de panela", ItemCategory.Heal,
-                "Bebida caliente de la plazoleta. Restaura 50 PS.", heal: GameRules.PanelaWaterHeal, price: 250),
-            new ItemRow("pokeball", "Pokébola", ItemCategory.Ball,
-                "Dispositivo para capturar Pokémon salvajes.", catchBonus: 1f, price: 200),
+                "Bebida caliente de la plazoleta.", heal: GameRules.PanelaWaterHeal, price: 250),
+            // El nombre lleva la É en mayúscula en el propio texto fuente: no depende de que
+            // ToUpperInvariant ni el estilo UpperCase de TMP encuentren el glifo.
+            new ItemRow("pokeball", "POKÉBOLA", ItemCategory.Ball,
+                "DISPOSITIVO PARA CAPTURAR POKÉMON SALVAJES.", catchBonus: 1f, price: 200),
         };
 
         // ---------- Tabla de entrenadores ----------
@@ -260,6 +262,28 @@ namespace TorreIngenieria.EditorTools
                 floorId: "3", sealId: "3",
                 defeat: "Buen trabajo. El protocolo \"Evaluación Total\" queda superado en este piso.",
                 hint: "La roca no teme al fuego, pero el agua y la planta la parten en dos. Busca un tipo con ventaja."),
+
+            // Combate de práctica de la plazoleta (Doc §10). El §6 cuenta solo los dos del piso 3;
+            // este es el primero de los tres entrenadores estudiantes del prototipo y la primera fuente
+            // de créditos antes de la tienda de Don Chucho.
+            new TrainerRow("kiosco", "Estudiante del kiosco", "Estudiante", TrainerAi.Trainer, false,
+                new[] { Monster("rattata", 4, "tackle", "tail_whip") },
+                floorId: "1",
+                defeat: "¡Buena! Se nota que practicaste. Toma estos créditos para la tienda.",
+                hint: "Don Chucho sube al lobby con lo que sobra del kiosco."),
+
+            new TrainerRow("estudiante_concretos", "Estudiante de Concretos", "Estudiante", TrainerAi.Trainer, false,
+                new[] { Monster("geodude", 4, "tackle") },
+                floorId: "3",
+                defeat: "Nada mal. La roca aguanta, pero el agua y la planta la rompen.",
+                hint: "En las salas de roca, busca un movimiento de agua o de planta."),
+
+            new TrainerRow("monitora_suelos", "Monitora de Suelos", "Monitora", TrainerAi.Trainer, false,
+                new[] { Monster("geodude", 4, "tackle"),
+                        Monster("onix", 5, "tackle", "harden") },
+                floorId: "3",
+                defeat: "Buen combate. Con eso ya puedes pensar en la Ing. Cantera.",
+                hint: "Cantera usa Geodude y Onix; el agua castiga a los dos."),
         };
 
         [MenuItem("Torre Ingeniería/Datos/Construir datos del prototipo")]

@@ -20,6 +20,10 @@ namespace TorreIngenieria.World
             {
                 GameState.CurrentFloor = floor;
                 GameState.MarkFloorVisited(floor);
+
+                // (propuesta) Partidas de prueba sin elección de inicial: si el equipo trae uno, se fija
+                // aquí para que la puerta del edificio y el Pokédex no dependan de pasar por el título.
+                GameState.EnsureStarterFromTeam();
             }
             else
                 Debug.LogWarning($"'{floor}' no es un piso válido del edificio.");
