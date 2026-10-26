@@ -3,7 +3,7 @@
 Plan de desarrollo del prototipo (vertical slice, Doc §6): plazoleta (`Atrio`), lobby (`Ascensores`) y piso 3.
 Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partida de prueba y un commit "Avance: ...".
 
-Última revisión: 25 de octubre de 2026. Etapas 0, 1, 2 y 3 **cerradas** (la 3 en el commit `c5a5db9` "Avance: cambio de Pokemon y cierre de etapa 3", PR #2 `combate-nucleo` fusionado en `main` el 22 oct). Etapa 4 parcial. Se integra el trabajo de **menús** (maquetas A–L) en las Etapas 4, 7 y 9. Siguiente: completar la 4 (Equipo y Mochila) y luego la 5.
+Última revisión: 25 de octubre de 2026. Etapas 0, 1, 2 y 3 **cerradas** (la 3 en el commit `c5a5db9` "Avance: cambio de Pokemon y cierre de etapa 3", PR #2 `combate-nucleo` fusionado en `main` el 22 oct). Etapa 4 **cerrada** (menús probados en Play el 25 oct). Se integra el trabajo de **menús** (maquetas A–L) en las Etapas 4, 7 y 9. Siguiente: Etapa 5 (inicio y tutorial).
 
 > **Nota del 25 oct:** el avance de la Etapa 4 se actualizó revisando el código, no con una prueba en Play.
 
@@ -135,7 +135,7 @@ Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partid
 
 ---
 
-## Etapa 4: Encuentros, plazoleta y menús de Equipo y Mochila (4 a 6 días) — 🟡 PARCIAL
+## Etapa 4: Encuentros, plazoleta y menús de Equipo y Mochila (4 a 6 días) — ✅ CERRADA
 
 **Encontrado en el código (25 oct 2026):** `EncounterZone` sobre la capa `Encuentros`, que no inicia combate sin equipo o con todo el equipo debilitado, y una zona provisional de jardineras en `Atrio` (filas 24–26, columnas 10–12). **Faltan** los menús de Equipo y Mochila fuera de combate.
 
@@ -145,7 +145,7 @@ Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partid
 - Validación en `ValidateRules`: toda especie de una zona de encuentro debe estar en el catálogo del piso.
 - Equipo máximo de 6 (`GameRules.MaxTeamSize`).
 
-**Base común de menús** (`Assets/Scripts/UI/Menu/`) — 🟡 código escrito el 25 oct, falta probar en Play:
+**Base común de menús** (`Assets/Scripts/UI/Menu/`) — ✅ probada en Play el 25 oct, con el arte generado:
 - `GameMenu`: cada pantalla es una corrutina que espera a la siguiente (la pila de corrutinas hace de pila de pantallas); B (`Cancel`) siempre vuelve atrás. `GameMenu.IsOpen` bloquea a `PlayerController`.
 - Es un **prefab** (`Assets/Resources/UI/MenuJuego.prefab`) que genera `GameMenuBuilder` (**Torre Ingeniería > Construir menú del juego**) y que se instancia la primera vez que se abre: los mapas no necesitan regenerarse.
 - Componentes compartidos: `HpBar` (`UI/Common`, extraída de `BattleHUD`, que ahora delega en ella), `PokemonTypeColors.BadgeMarkup` (etiqueta de tipo, compartida con el combate), `MenuList` (lista con cursor, cancelar, desplazamiento y ◀ ▶) y `TeamSlotView` (estados normal, seleccionado, vacío, debilitado y marcado para cambiar).
@@ -331,7 +331,7 @@ Generadas con IA a partir del estilo de FireRed/LeafGreen. Están en `Docs/Maque
 | 1 | Datos y fórmulas | ✅ **Cerrada** (datos, fórmulas, equipo y assets validados; compilación sin errores) |
 | 2 | Interacción y diálogo | ✅ **Cerrada** (Interactable, HUD, acciones de input, bloqueo y prueba en Play superados) |
 | 3 | Combate núcleo | ✅ **Cerrada** (escena, motor, IA, captura, EXP, cambio de Pokémon y retorno; PR #2) |
-| 4 | Encuentros, plazoleta y menús | 🟡 **Parcial** (`EncounterZone` y jardineras del Atrio; menú de pausa, Equipo, Resumen y Mochila escritos el 25 oct, falta prueba en Play y arte) |
+| 4 | Encuentros, plazoleta y menús | ✅ **Cerrada** (encuentros, menú de pausa, Equipo, Resumen y Mochila con arte; probada en Play el 25 oct) |
 | 5 | Flujo de inicio y tutorial | 🟡 **20 %** (título y puerta hechos; faltan Intro, inicial, Gabriel y spawn de desmayo) |
 | 6 | Entrenadores y jefe | ❌ **0 %** (el entrenador del kiosco solo se marca vencido al hablarle) |
 | 7 | Servicios y menú de pausa | ❌ **0 %** (12 maquetas de menús listas; 6 por regenerar) |
@@ -345,6 +345,8 @@ Generadas con IA a partir del estilo de FireRed/LeafGreen. Están en `Docs/Maque
 
 ## Registro de avance
 
+- **25 oct 2026 — Sprites oficiales de Gen 3:** los 36 PNG de `Assets/Art/Pokemon/` se reemplazaron por los de Pokémon Showdown (frente de `gen3frlg`, espalda de `gen3-back`, recortados a 64×64; iconos de `gen5icons`, 32×32), con el mismo nombre y `.meta`, así que las referencias no cambian. Fuente local en `../sprites/` (fuera del repositorio; incluye los entrenadores Gen 3 para las Etapas 5 y 6) y respaldo de los de Antigravity en `../sprites/respaldo-antigravity/`. Uso educativo y sin ánimo de lucro (Doc §1).
+- **25 oct 2026 — Etapa 4 cerrada:** arte de Antigravity (49 PNG: sprites de las 12 especies, iconos de objetos, fichas, fondos y mochilas) enlazado con **Construir todo**; los tres validadores pasan y el menú se probó en Play sin problemas. Siguiente: Etapa 5.
 - **25 oct 2026 — Menús de la Etapa 4 (código):** `GameMenu` (prefab en `Resources/UI`, generado por **Construir menú del juego**), menú de pausa con 8 opciones (EQUIPO, MOCHILA y GUARDAR activas), Equipo (ver, CAMBIAR, DATOS), Resumen (INFO, ESTADÍSTICAS, MOVIMIENTOS con detalle) y Mochila (bolsillos, USAR curativos en el equipo, TIRAR). `HpBar` y `BadgeMarkup` compartidos con el combate; `dexNumber`, `icon` de objeto y carga automática del arte en `PrototypeDataBuilder`; pruebas nuevas en `ValidateData`. Compila (comprobado con `dotnet build`); **pendiente:** ejecutar los builders, los validadores y la prueba en Play, y generar el arte.
 - **25 oct 2026 — Gabriel en la plazoleta:** Gabriel aparece en `Atrio`, entrega el inicial y las 5 Pokébolas ("Sí, ayúdame") antes de la puerta; en Ascensores queda el combate tutorial. Con "Puedo solo", Gabriel insiste y vuelve a preguntar, para no bloquear la partida sin Pokébolas.
 - **25 oct 2026 — Plan actualizado con los menús:** la Etapa 3 figura cerrada en `main` (PR #2) y la 4 tiene `EncounterZone` y las jardineras del Atrio. Se integran los menús de las maquetas A–L: Equipo, Resumen y Mochila en la Etapa 4; menú de pausa, Guardar, Opciones, Carné, Pokédex y Mapa en la 7; arte final y revisión contra maquetas en la 9. Nuevas decisiones: resolución de menús 1024×576 ×4, maquetas solo como referencia, datos que no se usan (género, naturaleza, habilidad y objeto equipado), opción PEDRO → Carné, SALIR cierra el menú y Opciones compartidas. La Etapa 5 pasa a ir justo después de la 4. Detectado en prueba: desde "Nueva partida" no se puede pasar al Vigilante (equipo vacío, sin inicial ni Pokébolas) hasta la Etapa 5.
