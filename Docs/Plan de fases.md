@@ -145,13 +145,13 @@ Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partid
 - Validación en `ValidateRules`: toda especie de una zona de encuentro debe estar en el catálogo del piso.
 - Equipo máximo de 6 (`GameRules.MaxTeamSize`).
 
-**Base común de menús** (`Assets/Scripts/UI/Menu/`):
-- `MenuStack`: abre pantallas una encima de otra; B (`Cancel`) siempre vuelve a la anterior.
-- `PlayerController` no se mueve mientras haya un menú abierto (igual que con `DialogueBox.IsOpen`).
-- Componentes compartidos: `HpBar` (extraída de `BattleHUD`, sin duplicarla), `TypeBadge` y `PokemonSlot` (estados normal, seleccionado, vacío y debilitado).
-- Builder de editor que agrega el canvas de menús a cada mapa, como `ProvisionalMap.AddHud()`.
-- Piezas de arte provisionales: se reutilizan `CuadroDialogo.png` (9-slice) y `CursorOpcion.png`.
-- Mientras no exista el menú de pausa (Etapa 7), la acción `Menu` abre directamente el Equipo.
+**Base común de menús** (`Assets/Scripts/UI/Menu/`) — 🟡 código escrito el 25 oct, falta probar en Play:
+- `GameMenu`: cada pantalla es una corrutina que espera a la siguiente (la pila de corrutinas hace de pila de pantallas); B (`Cancel`) siempre vuelve atrás. `GameMenu.IsOpen` bloquea a `PlayerController`.
+- Es un **prefab** (`Assets/Resources/UI/MenuJuego.prefab`) que genera `GameMenuBuilder` (**Torre Ingeniería > Construir menú del juego**) y que se instancia la primera vez que se abre: los mapas no necesitan regenerarse.
+- Componentes compartidos: `HpBar` (`UI/Common`, extraída de `BattleHUD`, que ahora delega en ella), `PokemonTypeColors.BadgeMarkup` (etiqueta de tipo, compartida con el combate), `MenuList` (lista con cursor, cancelar, desplazamiento y ◀ ▶) y `TeamSlotView` (estados normal, seleccionado, vacío, debilitado y marcado para cambiar).
+- El arte de `Assets/Art/UI/Menu/` es opcional: sin él se pintan colores planos de la paleta; al añadirlo y volver a construir el menú se aplica.
+- **Torre Ingeniería > Construir todo** (Ctrl+Shift+B, `BuildEverything`): importa el arte nuevo, regenera datos y menú y corre los tres validadores. No regenera escenas, para no renumerar sus ids en el diff.
+- El menú de pausa (maqueta 01) ya existe con sus 8 opciones: EQUIPO, MOCHILA y GUARDAR funcionan; las demás avisan "en construcción" hasta la Etapa 7.
 
 **Equipo** (maquetas A y C):
 - Lista real desde `GameState.Save.team`: líder grande a la izquierda y 5 espacios a la derecha.
@@ -162,11 +162,13 @@ Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partid
 - Tres páginas (INFO, ESTADÍSTICAS y MOVIMIENTOS) que se cambian con ◀ ▶; ▲ ▼ pasa al Pokémon anterior o siguiente.
 - Página de movimientos con potencia, precisión, categoría y descripción (`MoveData`).
 - Se agrega `dexNumber` a `PokemonData` (desde `PrototypeDataBuilder`) y su prueba en `ValidateData`.
+- `PrototypeDataBuilder` asigna los sprites de cada especie si existen (`Assets/Art/Pokemon/<id>_frente.png`, `_espalda.png`, `_icono.png`); el combate también los usa.
 
 **Mochila** (maqueta G):
 - Bolsillos por `ItemCategory`: `Heal` → OBJETOS, `Ball` → POKÉBOLAS, `Key` → OBJETOS CLAVE.
-- Usar (curativos fuera de combate, a través del modo objetivo del Equipo) y tirar.
-- Se agrega `icon` a `ItemData` con los iconos 16×16 de los objetos del prototipo y su prueba en `ValidateData`.
+- Usar (curativos fuera de combate, a través del modo objetivo del Equipo) y tirar (de uno en uno, con confirmación).
+- La curación vive en `TeamMembers.ApplyHeal` (pura, probada en `ValidateData`) y `GameState.UseHealItem`; el Tinto no revive ni se gasta si no cura.
+- Se agrega `icon` a `ItemData`; `PrototypeDataBuilder` lo asigna desde `Assets/Art/UI/Objetos/<id>.png` si existe.
 
 **Hecho cuando:** caminas por las jardineras de `Atrio`, aparecen salvajes según la tabla y puedes capturarlos o derrotarlos; el equipo respeta el máximo de 6. Con la tecla de menú ves tu equipo, cambias el orden, abres el resumen de cada Pokémon y usas un Tinto desde la Mochila, y el cambio se conserva al guardar y cargar.
 
@@ -260,7 +262,7 @@ Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partid
 
 ## Maquetas de menús
 
-Generadas con IA a partir del estilo de FireRed/LeafGreen. Están en `Docs/Maquetas/` (fuera del repositorio, como el resto de `Docs/`). La columna "Prompt" es la letra del prompt con el que se generó cada una.
+Generadas con IA a partir del estilo de FireRed/LeafGreen. Están en `Docs/Maquetas/` (local: `.gitignore` excluye `/Docs/`). La columna "Prompt" es la letra del prompt con el que se generó cada una.
 
 | Archivo | Prompt | Pantalla | Etapa | Estado |
 |---|---|---|---|---|
@@ -312,7 +314,7 @@ Generadas con IA a partir del estilo de FireRed/LeafGreen. Están en `Docs/Maque
 | 1 | `PokemonType.cs`, `TypeChart.cs`, `MoveData.cs`, `PokemonData.cs`, `ItemData.cs`, `TrainerData.cs`, `PokemonStats.cs`, `GameRules.cs`, `Databases.cs`, `Assets/Editor/Data/PrototypeDataBuilder.cs`, `ValidateData.cs` y los assets generados en `Assets/Resources/Data/` |
 | 2 | `Interactable.cs`, `HUD.cs`, `WorldMessage.cs`, `DialogueBox.cs`, `ChoiceBox.cs`, `PlayerController.cs`, `ProvisionalMap.cs`, `MainMenuSceneBuilder.cs`, `AtrioBuilder.cs`, `Building.cs` (`HudTitle`) y escenas regeneradas |
 | 3 | `Assets/Scripts/Battle/` (`BattleEngine`, `BattleSystem`, `BattleAI`, `BattleUI`, `BattleMenu`, `BattleHUD`, `BattlePokemon`, `BattleAction`, `BattleRequest`), `BattleSceneBuilder.cs`, `BattleTestTools.cs` y escena `Battle.unity` |
-| 4 | `EncounterZone.cs`, tablas de zonas, `Assets/Scripts/UI/Menu/` (`MenuStack`, `HpBar`, `TypeBadge`, `PokemonSlot`, Equipo, Resumen y Mochila), builder del canvas de menús, `PlayerController.cs`, `PokemonData.cs` (`dexNumber`), `ItemData.cs` (`icon`), `PrototypeDataBuilder.cs`, `ValidateData.cs`, `Assets/Art/UI/Menu/` (provisional) y `Docs/Maquetas/` |
+| 4 | `EncounterZone.cs`, tablas de zonas, `Assets/Scripts/UI/Menu/` (`GameMenu`, `MenuList`, `TeamScreen`, `TeamSlotView`, `SummaryScreen`, `BagScreen`), `UI/Common/HpBar.cs`, `BattleHUD.cs`, `BattleUI.cs`, `PokemonType.cs` (`BadgeMarkup`), `Assets/Editor/GameMenuBuilder.cs`, prefab `Assets/Resources/UI/MenuJuego.prefab`, `PlayerController.cs`, `GameState.cs`, `TeamMembers.cs`, `PokemonData.cs` (`dexNumber`), `ItemData.cs` (`icon`), `PrototypeDataBuilder.cs`, `ValidateData.cs`, arte en `Assets/Art/Pokemon/`, `Assets/Art/UI/Objetos/` y `Assets/Art/UI/Menu/` y `Docs/Maquetas/` |
 | 5 | Escena `Intro.unity`, selector de inicial, diálogos del Vigilante y Gabriel, spawn de desmayo |
 | 6 | `TrainerController.cs`, `TrainerData` del piso 3, `BossData` de Cantera, pantalla de nota y `ProgressTools.cs` |
 | 7 | Tienda de Don Chucho, selector de ascensor, desmayo, `Assets/Scripts/UI/Menu/` (Pausa, Guardar, Opciones, Carné, Pokédex y Mapa), `GameSettings.cs` (velocidad de texto), `SaveSystem.cs` (v5) y `VerifySaveLoading.cs` |
@@ -329,7 +331,7 @@ Generadas con IA a partir del estilo de FireRed/LeafGreen. Están en `Docs/Maque
 | 1 | Datos y fórmulas | ✅ **Cerrada** (datos, fórmulas, equipo y assets validados; compilación sin errores) |
 | 2 | Interacción y diálogo | ✅ **Cerrada** (Interactable, HUD, acciones de input, bloqueo y prueba en Play superados) |
 | 3 | Combate núcleo | ✅ **Cerrada** (escena, motor, IA, captura, EXP, cambio de Pokémon y retorno; PR #2) |
-| 4 | Encuentros, plazoleta y menús | 🟡 **Parcial** (`EncounterZone` y jardineras del Atrio; faltan Equipo, Resumen y Mochila) |
+| 4 | Encuentros, plazoleta y menús | 🟡 **Parcial** (`EncounterZone` y jardineras del Atrio; menú de pausa, Equipo, Resumen y Mochila escritos el 25 oct, falta prueba en Play y arte) |
 | 5 | Flujo de inicio y tutorial | 🟡 **20 %** (título y puerta hechos; faltan Intro, inicial, Gabriel y spawn de desmayo) |
 | 6 | Entrenadores y jefe | ❌ **0 %** (el entrenador del kiosco solo se marca vencido al hablarle) |
 | 7 | Servicios y menú de pausa | ❌ **0 %** (12 maquetas de menús listas; 6 por regenerar) |
@@ -343,6 +345,7 @@ Generadas con IA a partir del estilo de FireRed/LeafGreen. Están en `Docs/Maque
 
 ## Registro de avance
 
+- **25 oct 2026 — Menús de la Etapa 4 (código):** `GameMenu` (prefab en `Resources/UI`, generado por **Construir menú del juego**), menú de pausa con 8 opciones (EQUIPO, MOCHILA y GUARDAR activas), Equipo (ver, CAMBIAR, DATOS), Resumen (INFO, ESTADÍSTICAS, MOVIMIENTOS con detalle) y Mochila (bolsillos, USAR curativos en el equipo, TIRAR). `HpBar` y `BadgeMarkup` compartidos con el combate; `dexNumber`, `icon` de objeto y carga automática del arte en `PrototypeDataBuilder`; pruebas nuevas en `ValidateData`. Compila (comprobado con `dotnet build`); **pendiente:** ejecutar los builders, los validadores y la prueba en Play, y generar el arte.
 - **25 oct 2026 — Gabriel en la plazoleta:** Gabriel aparece en `Atrio`, entrega el inicial y las 5 Pokébolas ("Sí, ayúdame") antes de la puerta; en Ascensores queda el combate tutorial. Con "Puedo solo", Gabriel insiste y vuelve a preguntar, para no bloquear la partida sin Pokébolas.
 - **25 oct 2026 — Plan actualizado con los menús:** la Etapa 3 figura cerrada en `main` (PR #2) y la 4 tiene `EncounterZone` y las jardineras del Atrio. Se integran los menús de las maquetas A–L: Equipo, Resumen y Mochila en la Etapa 4; menú de pausa, Guardar, Opciones, Carné, Pokédex y Mapa en la 7; arte final y revisión contra maquetas en la 9. Nuevas decisiones: resolución de menús 1024×576 ×4, maquetas solo como referencia, datos que no se usan (género, naturaleza, habilidad y objeto equipado), opción PEDRO → Carné, SALIR cierra el menú y Opciones compartidas. La Etapa 5 pasa a ir justo después de la 4. Detectado en prueba: desde "Nueva partida" no se puede pasar al Vigilante (equipo vacío, sin inicial ni Pokébolas) hasta la Etapa 5.
 - **21 oct 2026 — Etapa 2 cerrada:** rama `interaccion-dialogo`; `Interactable` (NPC/letrero/objeto/entrenador), opciones en `WorldMessage`, bloqueo de movimiento con `DialogueBox.IsOpen`/`ChoiceBox.IsChoosing`, acciones `Interact`/`Cancel`/`Menu`/`Map` en `PlayerController`, `HUD` con piso/sellos/créditos (`Building.HudTitle`) y contenido de prueba en `Atrio` (`NpcPrueba`, `TintoPrueba`). Escenas regeneradas; compilación y los tres validadores pasan. **Prueba en Play superada:** diálogo con opción, recogida del Tinto, persistencia al recargar y HUD con el piso actual. Repositorio de ramas anotado en `AGENTS.md`. Siguiente: Etapa 3.

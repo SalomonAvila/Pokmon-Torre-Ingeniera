@@ -19,3 +19,4 @@ MonoBehaviour:
   catchBonus: 1
   price: 200
   description: "DISPOSITIVO PARA CAPTURAR POK\xC9MON SALVAJES."
+  icon: {fileID: 21300000, guid: 6c5f54e0997a1791fb10b6500bc23b7f, type: 3}

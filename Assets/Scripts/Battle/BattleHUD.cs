@@ -1,5 +1,6 @@
 using TMPro;
 using TorreIngenieria.Core;
+using TorreIngenieria.UI;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,15 +13,12 @@ namespace TorreIngenieria.Battle
     /// </summary>
     public class BattleHUD : MonoBehaviour
     {
-        /// <summary>Por debajo de este porcentaje la barra de PS se pinta en rojo.</summary>
-        public const float HpRedThreshold = 0.2f;
-
-        /// <summary>Hasta este porcentaje (incluido) la barra de PS se pinta en amarillo.</summary>
-        public const float HpYellowThreshold = 0.5f;
-
-        public static readonly Color HpGreen = new Color32(0x50, 0xC8, 0x50, 0xFF);
-        public static readonly Color HpYellow = new Color32(0xF8, 0xD0, 0x30, 0xFF);
-        public static readonly Color HpRed = new Color32(0xE0, 0x40, 0x40, 0xFF);
+        // Umbrales y colores compartidos con los menús (ver HpBar).
+        public const float HpRedThreshold = HpBar.RedThreshold;
+        public const float HpYellowThreshold = HpBar.YellowThreshold;
+        public static readonly Color HpGreen = HpBar.Green;
+        public static readonly Color HpYellow = HpBar.Yellow;
+        public static readonly Color HpRed = HpBar.Red;
 
         [SerializeField] TMP_Text nameText;
         [SerializeField] TMP_Text levelText;
@@ -73,35 +71,12 @@ namespace TorreIngenieria.Battle
         }
 
         /// <summary>Fracción de la barra de EXP entre el nivel actual y el siguiente (0 a 1).</summary>
-        public static float ExpRatio(int experience, int level)
-        {
-            int floor = PokemonStats.ExperienceForLevel(level);
-            int next = level >= PokemonStats.MaxLevel
-                ? floor
-                : PokemonStats.ExperienceForLevel(level + 1);
+        public static float ExpRatio(int experience, int level) => HpBar.ExpRatio(experience, level);
 
-            return next > floor
-                ? Mathf.Clamp01((float)(experience - floor) / (next - floor))
-                : 1f;
-        }
-
-        static void SetBar(Image bar, float ratio)
-        {
-            RectTransform fill = bar.rectTransform;
-            fill.anchorMin = Vector2.zero;
-            fill.anchorMax = new Vector2(Mathf.Clamp01(ratio), 1f);
-            fill.offsetMin = Vector2.zero;
-            fill.offsetMax = Vector2.zero;
-        }
+        static void SetBar(Image bar, float ratio) => HpBar.SetFill(bar, ratio);
 
         /// <summary>Color de la barra según el porcentaje de PS restante (0 a 1).</summary>
-        public static Color HpColor(float ratio)
-        {
-            ratio = Mathf.Clamp01(ratio);
-            if (ratio < HpRedThreshold)
-                return HpRed;
-            return ratio <= HpYellowThreshold ? HpYellow : HpGreen;
-        }
+        public static Color HpColor(float ratio) => HpBar.ColorFor(ratio);
 
         public static string StatusLabel(StatusCondition status) => status switch
         {

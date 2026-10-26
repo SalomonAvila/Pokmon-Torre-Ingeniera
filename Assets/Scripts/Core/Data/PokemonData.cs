@@ -28,6 +28,9 @@ namespace TorreIngenieria.Core
 
         public string displayName;
 
+        [Tooltip("Número de la Pokédex nacional (001 Bulbasaur); lo muestran el Resumen y la Pokédex.")]
+        public int dexNumber;
+
         [Header("Tipos")]
         public PokemonType primaryType;
         public bool hasSecondaryType;

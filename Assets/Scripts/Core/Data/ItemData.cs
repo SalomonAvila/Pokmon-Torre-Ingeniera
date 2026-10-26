@@ -36,5 +36,8 @@ namespace TorreIngenieria.Core
 
         [TextArea]
         public string description;
+
+        [Tooltip("Icono de 16×16 px para la Mochila (Assets/Art/UI/Objetos/<id>.png); vacío mientras no exista.")]
+        public Sprite icon;
     }
 }

@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TorreIngenieria.Core.PokemonData
   speciesId: squirtle
   displayName: Squirtle
+  dexNumber: 7
   primaryType: 10
   hasSecondaryType: 0
   secondaryType: 10
@@ -36,7 +37,7 @@ MonoBehaviour:
     moveId: water_gun
   evolvesTo: 
   evolveLevel: 0
-  frontSprite: {fileID: 0}
-  backSprite: {fileID: 0}
-  icon: {fileID: 0}
+  frontSprite: {fileID: 21300000, guid: d4a4393f2543e16fdaec3b8c74ab78e3, type: 3}
+  backSprite: {fileID: 21300000, guid: 50c5beeb580cc836b8f2de753d73c771, type: 3}
+  icon: {fileID: 21300000, guid: 8fe5f275bec449052b220060775f6550, type: 3}
   description: "Se protege con su caparaz\xF3n y dispara agua."

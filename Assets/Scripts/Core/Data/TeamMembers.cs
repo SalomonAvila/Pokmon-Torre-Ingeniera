@@ -32,6 +32,14 @@ namespace TorreIngenieria.Core
         public bool LeveledUp => LevelUps.Count > 0;
     }
 
+    /// <summary>Resultado de usar un objeto curativo fuera de combate (Mochila → Equipo).</summary>
+    public enum HealResult
+    {
+        Healed,
+        NoEffect,
+        Fainted,
+    }
+
     /// <summary>
     /// Única factoría del equipo: convierte especie + nivel en un <see cref="TeamMember"/> con PS,
     /// EXP, movimientos y PP, y repara esos campos derivados al cargar una partida.
@@ -195,6 +203,34 @@ namespace TorreIngenieria.Core
                 team.Add(Create(pokemon));
 
             return team;
+        }
+
+        /// <summary>PS actuales; el centinela <see cref="TeamMember.FullHp"/> (cualquier negativo) es "PS llenos".</summary>
+        public static int CurrentHp(TeamMember member) =>
+            member == null ? 0 : member.hp < 0 ? member.maxHp : Math.Min(member.hp, member.maxHp);
+
+        /// <summary>Debilitado = 0 PS (el centinela negativo es "sin daño", no debilitado).</summary>
+        public static bool IsFainted(TeamMember member) => member != null && member.hp == 0;
+
+        /// <summary>
+        /// Cura <paramref name="amount"/> PS fuera de combate sin pasar del máximo. Un debilitado no se cura
+        /// (eso es la Arepa, que revive) y uno con los PS llenos tampoco: en ambos casos no se gasta el objeto.
+        /// </summary>
+        public static HealResult ApplyHeal(TeamMember member, int amount, out int healed)
+        {
+            healed = 0;
+            if (member == null || amount <= 0)
+                return HealResult.NoEffect;
+            if (IsFainted(member))
+                return HealResult.Fainted;
+
+            int current = CurrentHp(member);
+            if (current >= member.maxHp)
+                return HealResult.NoEffect;
+
+            healed = Math.Min(amount, member.maxHp - current);
+            member.hp = current + healed;
+            return HealResult.Healed;
         }
 
         /// <summary>

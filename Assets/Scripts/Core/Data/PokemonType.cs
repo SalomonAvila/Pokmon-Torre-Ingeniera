@@ -113,6 +113,13 @@ namespace TorreIngenieria.Core
             _ => Dark,
         };
 
+        /// <summary>
+        /// Etiqueta de tipo en texto enriquecido de TextMeshPro: fondo con el color del tipo y texto de
+        /// contraste. La usan el combate y los menús (Resumen).
+        /// </summary>
+        public static string BadgeMarkup(PokemonType type) =>
+            $"<mark={Hex(type)}FF><color={BadgeText(type)}> {PokemonTypeNames.BadgeName(type)} </color></mark>";
+
         /// <summary>Color del texto de la etiqueta (hex) para que contraste con <see cref="Hex"/>.</summary>
         public static string BadgeText(PokemonType type) => Luminance(Hex(type)) < 0.55f ? "#FFFFFF" : "#101010";
 

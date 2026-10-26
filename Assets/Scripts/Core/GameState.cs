@@ -196,6 +196,35 @@ namespace TorreIngenieria.Core
             return member;
         }
 
+        /// <summary>Intercambia dos Pokémon del equipo (CAMBIAR en el menú Equipo). El primero sale a combatir.</summary>
+        public static void SwapTeamMembers(int first, int second)
+        {
+            if (first == second || first < 0 || second < 0 ||
+                first >= Save.team.Count || second >= Save.team.Count)
+                return;
+
+            (Save.team[first], Save.team[second]) = (Save.team[second], Save.team[first]);
+            Commit();
+        }
+
+        /// <summary>
+        /// Usa un objeto curativo de la mochila en un Pokémon del equipo fuera de combate. Solo gasta el
+        /// objeto si cura algo (ver <see cref="TeamMembers.ApplyHeal"/>).
+        /// </summary>
+        public static HealResult UseHealItem(string itemId, int teamIndex, out int healed)
+        {
+            healed = 0;
+            ItemData item = ItemDatabase.Get(itemId);
+            if (item == null || item.category != ItemCategory.Heal || CountItem(itemId) <= 0 ||
+                teamIndex < 0 || teamIndex >= Save.team.Count)
+                return HealResult.NoEffect;
+
+            HealResult result = TeamMembers.ApplyHeal(Save.team[teamIndex], item.healAmount, out healed);
+            if (result == HealResult.Healed)
+                AddItem(itemId, -1); // AddItem ya guarda y avisa
+            return result;
+        }
+
         public static int CountItem(string id)
         {
             InventoryItem item = Save.inventory.Find(i => i.id == id);

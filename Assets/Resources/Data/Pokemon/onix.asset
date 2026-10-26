@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TorreIngenieria.Core.PokemonData
   speciesId: onix
   displayName: Onix
+  dexNumber: 95
   primaryType: 5
   hasSecondaryType: 1
   secondaryType: 4
@@ -36,7 +37,7 @@ MonoBehaviour:
     moveId: rock_slide
   evolvesTo: 
   evolveLevel: 0
-  frontSprite: {fileID: 0}
-  backSprite: {fileID: 0}
-  icon: {fileID: 0}
+  frontSprite: {fileID: 21300000, guid: 9667961d08f8a96b2b3fa93a4d31950b, type: 3}
+  backSprite: {fileID: 21300000, guid: 0ded16143bfe9e82e9f8969513ca1be9, type: 3}
+  icon: {fileID: 21300000, guid: 881e91a24cd8d984680eeec3cf391544, type: 3}
   description: Serpiente de roca; el jefe del piso 3 lo usa.

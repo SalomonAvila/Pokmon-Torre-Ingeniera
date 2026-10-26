@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TorreIngenieria.Core.PokemonData
   speciesId: meowth
   displayName: Meowth
+  dexNumber: 52
   primaryType: 0
   hasSecondaryType: 0
   secondaryType: 0
@@ -34,7 +35,7 @@ MonoBehaviour:
     moveId: body_slam
   evolvesTo: 
   evolveLevel: 0
-  frontSprite: {fileID: 0}
-  backSprite: {fileID: 0}
-  icon: {fileID: 0}
+  frontSprite: {fileID: 21300000, guid: 43b1f106c06c46efc8fe81d5e5dcadee, type: 3}
+  backSprite: {fileID: 21300000, guid: 271039bef0c4584b5a1c6d519a014f31, type: 3}
+  icon: {fileID: 21300000, guid: a0da4867071580ea2bba2f43fc02a7c0, type: 3}
   description: Le encantan los objetos brillantes.

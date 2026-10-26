@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TorreIngenieria.Core.PokemonData
   speciesId: rhyhorn
   displayName: Rhyhorn
+  dexNumber: 111
   primaryType: 4
   hasSecondaryType: 1
   secondaryType: 5
@@ -36,7 +37,7 @@ MonoBehaviour:
     moveId: rock_slide
   evolvesTo: 
   evolveLevel: 0
-  frontSprite: {fileID: 0}
-  backSprite: {fileID: 0}
-  icon: {fileID: 0}
+  frontSprite: {fileID: 21300000, guid: a945892a3462615da9986b8d40ffd235, type: 3}
+  backSprite: {fileID: 21300000, guid: 757fc700517314e73a008ad4535d9b54, type: 3}
+  icon: {fileID: 21300000, guid: f7d41733c615137598ef1ab3623f8470, type: 3}
   description: "Carga en l\xEDnea recta y no recuerda por qu\xE9."

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using TorreIngenieria.Battle;
 using TorreIngenieria.Core;
+using TorreIngenieria.UI;
 using UnityEditor;
 using UnityEngine;
 
@@ -41,6 +42,7 @@ namespace TorreIngenieria.EditorTools
             ValidateBattleEngine();
             ValidateCapture();
             ValidateSwitch();
+            ValidateMenus();
 
             if (checksFailed == 0)
                 Debug.Log("Datos y fórmulas: todo coincide.");
@@ -919,6 +921,52 @@ namespace TorreIngenieria.EditorTools
                     min = Math.Min(min, Building.WildLevelRange(floor).min);
 
             return min == int.MaxValue ? PokemonStats.MinLevel : min;
+        }
+
+        // ---------- Menús (Etapa 4) ----------
+
+        /// <summary>
+        /// Datos que muestran el Equipo, el Resumen y la Mochila: números de la Pokédex nacional y la
+        /// curación fuera de combate (<see cref="TeamMembers.ApplyHeal"/>), sin tocar la partida guardada.
+        /// </summary>
+        static void ValidateMenus()
+        {
+            var dex = new Dictionary<string, int>
+            {
+                { "bulbasaur", 1 }, { "charmander", 4 }, { "squirtle", 7 }, { "pidgey", 16 }, { "rattata", 19 },
+                { "meowth", 52 }, { "geodude", 74 }, { "onix", 95 }, { "rhyhorn", 111 }, { "eevee", 133 },
+                { "omanyte", 138 }, { "kabuto", 140 },
+            };
+            foreach (KeyValuePair<string, int> entry in dex)
+            {
+                PokemonData data = PokemonDatabase.Get(entry.Key);
+                if (data != null)
+                    CheckEqual(data.dexNumber, entry.Value,
+                        $"Número de Pokédex de '{entry.Key}' (vuelve a construir los datos del prototipo).");
+            }
+
+            TeamMember member = TeamMembers.Create("charmander", 5);
+            int max = member.maxHp;
+
+            member.hp = TeamMember.FullHp;
+            CheckEqual(TeamMembers.CurrentHp(member), max, "El centinela de PS llenos debería leerse como el máximo.");
+            Check(TeamMembers.ApplyHeal(member, 20, out _) == HealResult.NoEffect,
+                "Curar con los PS llenos no debería tener efecto.");
+
+            member.hp = max - 5;
+            Check(TeamMembers.ApplyHeal(member, 20, out int healed) == HealResult.Healed,
+                "Curar a un Pokémon herido debería funcionar.");
+            CheckEqual(healed, 5, "El Tinto no debería curar por encima del máximo.");
+            CheckEqual(member.hp, max, "Tras curar, los PS deberían quedar en el máximo.");
+
+            member.hp = 0;
+            Check(TeamMembers.IsFainted(member), "0 PS es debilitado.");
+            Check(TeamMembers.ApplyHeal(member, 20, out _) == HealResult.Fainted,
+                "El Tinto no revive a un Pokémon debilitado.");
+            CheckEqual(member.hp, 0, "Un debilitado no debería recuperar PS con un Tinto.");
+
+            Check(HpBar.ColorFor(0.4f) == BattleHUD.HpYellow,
+                "La barra de PS de los menús debería usar los mismos colores que el combate.");
         }
 
         // ---------- Utilidades ----------

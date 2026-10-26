@@ -19,3 +19,4 @@ MonoBehaviour:
   catchBonus: 1
   price: 250
   description: Bebida caliente de la plazoleta.
+  icon: {fileID: 21300000, guid: d2cc213f7e844653babffd3e52f235b6, type: 3}

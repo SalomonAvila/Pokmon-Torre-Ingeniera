@@ -295,9 +295,7 @@ namespace TorreIngenieria.Battle
         }
 
         /// <summary>Etiqueta de tipo con su color de fondo y el texto de contraste.</summary>
-        static string TypeBadge(PokemonType type) =>
-            $"<mark={PokemonTypeColors.Hex(type)}FF>" +
-            $"<color={PokemonTypeColors.BadgeText(type)}> {PokemonTypeNames.BadgeName(type)} </color></mark>";
+        static string TypeBadge(PokemonType type) => PokemonTypeColors.BadgeMarkup(type);
 
         /// <summary>Barra de PS textual de 8 tramos, con el color que tendría la barra real.</summary>
         static string HpBar(float ratio)

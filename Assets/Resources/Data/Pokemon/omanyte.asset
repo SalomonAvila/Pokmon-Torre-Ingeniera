@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TorreIngenieria.Core.PokemonData
   speciesId: omanyte
   displayName: Omanyte
+  dexNumber: 138
   primaryType: 5
   hasSecondaryType: 1
   secondaryType: 10
@@ -36,7 +37,7 @@ MonoBehaviour:
     moveId: rock_slide
   evolvesTo: 
   evolveLevel: 0
-  frontSprite: {fileID: 0}
-  backSprite: {fileID: 0}
-  icon: {fileID: 0}
+  frontSprite: {fileID: 21300000, guid: e881739bf53f239549b5bfc4b18517d8, type: 3}
+  backSprite: {fileID: 21300000, guid: 7b035cf5ee96aa3b29fe0a21159c10fc, type: 3}
+  icon: {fileID: 21300000, guid: 352d38c879065e244a4b454d5bf92e3d, type: 3}
   description: "F\xF3sil de un antiguo molusco."

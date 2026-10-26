@@ -19,11 +19,17 @@ namespace TorreIngenieria.EditorTools
     /// tipos completa de Gen 3 en <see cref="TypeChart"/> y ~20 movimientos de los tipos del prototipo.
     /// El balance fino se ajusta en la Etapa 9.
     ///
+    /// Arte: si existen, asigna los sprites de cada especie (<c>Assets/Art/Pokemon/&lt;id&gt;_frente.png</c>,
+    /// <c>_espalda.png</c> e <c>_icono.png</c>) y el icono de cada objeto (<c>Assets/Art/UI/Objetos/&lt;id&gt;.png</c>).
+    /// Si un archivo todavía no existe, conserva lo que ya tuviera el asset.
+    ///
     /// Menú: Torre Ingeniería > Datos > Construir datos del prototipo.
     /// </summary>
     public static class PrototypeDataBuilder
     {
         const string Root = "Assets/Resources/Data";
+        const string PokemonArtFolder = "Assets/Art/Pokemon";
+        const string ItemIconFolder = "Assets/Art/UI/Objetos";
         const string PokemonFolder = Root + "/Pokemon";
         const string MoveFolder = Root + "/Moves";
         const string ItemFolder = Root + "/Items";
@@ -113,12 +119,13 @@ namespace TorreIngenieria.EditorTools
             public PokemonType type1;
             public bool hasType2;
             public PokemonType type2;
-            public int hp, atk, def, spa, spd, spe, baseExp, catchRate;
+            public int hp, atk, def, spa, spd, spe, baseExp, catchRate, dex;
 
             public SpeciesRow(string id, string name, PokemonType type1, PokemonType type2,
                 int hp, int atk, int def, int spa, int spd, int spe, int baseExp, int catchRate,
-                string learnset, string description = "")
+                string learnset, string description = "", int dex = 0)
             {
+                this.dex = dex;
                 this.id = id;
                 this.name = name;
                 this.type1 = type1;
@@ -146,44 +153,44 @@ namespace TorreIngenieria.EditorTools
             // Iniciales
             new SpeciesRow("bulbasaur", "Bulbasaur", PokemonType.Grass, PokemonType.Poison,
                 45, 49, 49, 65, 65, 45, 64, 45, "1:tackle,1:growl,7:vine_whip,12:razor_leaf",
-                "Lleva una semilla en el lomo desde que nace."),
+                "Lleva una semilla en el lomo desde que nace.", dex: 1),
             new SpeciesRow("charmander", "Charmander", PokemonType.Fire, PokemonType.Fire,
                 39, 52, 43, 60, 50, 65, 65, 45, "1:scratch,1:growl,7:ember,15:flamethrower",
-                "La llama de su cola indica su estado de ánimo."),
+                "La llama de su cola indica su estado de ánimo.", dex: 4),
             new SpeciesRow("squirtle", "Squirtle", PokemonType.Water, PokemonType.Water,
                 44, 48, 65, 50, 64, 43, 66, 45, "1:tackle,1:tail_whip,7:bubble,13:water_gun",
-                "Se protege con su caparazón y dispara agua."),
+                "Se protege con su caparazón y dispara agua.", dex: 7),
 
             // Plazoleta
             new SpeciesRow("rattata", "Rattata", PokemonType.Normal, PokemonType.Normal,
                 30, 56, 35, 25, 35, 72, 57, 255, "1:tackle,1:tail_whip,7:quick_attack,13:body_slam",
-                "Roedor común de la plazoleta; muerde todo."),
+                "Roedor común de la plazoleta; muerde todo.", dex: 19),
             new SpeciesRow("pidgey", "Pidgey", PokemonType.Normal, PokemonType.Flying,
                 40, 45, 40, 35, 35, 56, 55, 255, "1:tackle,5:sand_attack,9:gust,15:wing_attack",
-                "Ave pequeña que levanta arena al batir las alas."),
+                "Ave pequeña que levanta arena al batir las alas.", dex: 16),
             new SpeciesRow("meowth", "Meowth", PokemonType.Normal, PokemonType.Normal,
                 40, 45, 35, 40, 40, 90, 69, 255, "1:scratch,1:growl,10:body_slam",
-                "Le encantan los objetos brillantes."),
+                "Le encantan los objetos brillantes.", dex: 52),
             new SpeciesRow("eevee", "Eevee", PokemonType.Normal, PokemonType.Normal,
                 55, 55, 50, 45, 65, 55, 92, 45, "1:tackle,1:tail_whip,8:quick_attack,16:body_slam",
-                "Raro en la plazoleta; su código genético es inestable."),
+                "Raro en la plazoleta; su código genético es inestable.", dex: 133),
 
             // Piso 3
             new SpeciesRow("geodude", "Geodude", PokemonType.Rock, PokemonType.Ground,
                 40, 80, 100, 30, 30, 20, 73, 255, "1:tackle,6:rock_throw,11:harden,16:rock_slide",
-                "Se confunde con una piedra; vive en las salas de roca."),
+                "Se confunde con una piedra; vive en las salas de roca.", dex: 74),
             new SpeciesRow("rhyhorn", "Rhyhorn", PokemonType.Ground, PokemonType.Rock,
                 80, 85, 95, 30, 30, 25, 135, 120, "1:tackle,1:tail_whip,10:rock_throw,15:rock_slide",
-                "Carga en línea recta y no recuerda por qué."),
+                "Carga en línea recta y no recuerda por qué.", dex: 111),
             new SpeciesRow("onix", "Onix", PokemonType.Rock, PokemonType.Ground,
                 35, 45, 160, 30, 45, 70, 108, 45, "1:tackle,1:harden,8:rock_throw,14:rock_slide",
-                "Serpiente de roca; el jefe del piso 3 lo usa."),
+                "Serpiente de roca; el jefe del piso 3 lo usa.", dex: 95),
             new SpeciesRow("kabuto", "Kabuto", PokemonType.Rock, PokemonType.Water,
                 30, 80, 90, 55, 45, 55, 119, 45, "1:scratch,1:harden,10:bubble,15:rock_slide",
-                "Fósil revivido; se protege con su caparazón."),
+                "Fósil revivido; se protege con su caparazón.", dex: 140),
             new SpeciesRow("omanyte", "Omanyte", PokemonType.Rock, PokemonType.Water,
                 35, 40, 100, 90, 55, 35, 120, 45, "1:tackle,1:harden,10:water_gun,15:rock_slide",
-                "Fósil de un antiguo molusco."),
+                "Fósil de un antiguo molusco.", dex: 138),
         };
 
         // ---------- Tabla de objetos ----------
@@ -333,6 +340,7 @@ namespace TorreIngenieria.EditorTools
             PokemonData asset = GetOrCreate<PokemonData>($"{PokemonFolder}/{row.id}.asset");
             asset.speciesId = row.id;
             asset.displayName = row.name;
+            asset.dexNumber = row.dex;
             asset.primaryType = row.type1;
             asset.hasSecondaryType = row.hasType2;
             asset.secondaryType = row.type2;
@@ -345,6 +353,9 @@ namespace TorreIngenieria.EditorTools
             asset.baseExp = row.baseExp;
             asset.catchRate = row.catchRate;
             asset.description = row.description;
+            asset.frontSprite = LoadArt($"{PokemonArtFolder}/{row.id}_frente.png") ?? asset.frontSprite;
+            asset.backSprite = LoadArt($"{PokemonArtFolder}/{row.id}_espalda.png") ?? asset.backSprite;
+            asset.icon = LoadArt($"{PokemonArtFolder}/{row.id}_icono.png") ?? asset.icon;
 
             asset.learnset.Clear();
             foreach (string entry in row.learnset.Split(',', StringSplitOptions.RemoveEmptyEntries))
@@ -371,6 +382,7 @@ namespace TorreIngenieria.EditorTools
             asset.catchBonus = row.catchBonus;
             asset.price = row.price;
             asset.description = row.description;
+            asset.icon = LoadArt($"{ItemIconFolder}/{row.id}.png") ?? asset.icon;
             EditorUtility.SetDirty(asset);
         }
 
@@ -395,6 +407,30 @@ namespace TorreIngenieria.EditorTools
                     moveIds = new List<string>(monster.moveIds),
                 });
             EditorUtility.SetDirty(asset);
+        }
+
+        /// <summary>
+        /// Carga un PNG de pixel art como sprite (filtro Point, sin compresión ni mipmaps) o devuelve
+        /// <c>null</c> si el archivo todavía no existe.
+        /// </summary>
+        static Sprite LoadArt(string path)
+        {
+            if (AssetImporter.GetAtPath(path) is not TextureImporter importer)
+                return null;
+
+            if (importer.textureType != TextureImporterType.Sprite || importer.filterMode != FilterMode.Point ||
+                importer.textureCompression != TextureImporterCompression.Uncompressed)
+            {
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.alphaIsTransparency = true;
+                importer.mipmapEnabled = false;
+                importer.filterMode = FilterMode.Point;
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.SaveAndReimport();
+            }
+
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
         }
 
         static T GetOrCreate<T>(string path) where T : ScriptableObject

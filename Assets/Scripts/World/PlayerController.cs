@@ -125,7 +125,7 @@ namespace TorreIngenieria.World
         {
             // Mientras hay texto, opciones, un fundido o un paso en curso, el jugador no se mueve ni interactúa.
             if (moving || SceneTransition.IsTransitioning ||
-                WorldMessage.IsOpen || DialogueBox.IsOpen || ChoiceBox.IsChoosing)
+                WorldMessage.IsOpen || DialogueBox.IsOpen || ChoiceBox.IsChoosing || GameMenu.IsOpen)
                 return;
 
             if (interactAction.WasPressedThisFrame())
@@ -134,12 +134,14 @@ namespace TorreIngenieria.World
                 return;
             }
 
-            // Etapa 7: el menú de pausa y el mapa del edificio abrirán sus pantallas.
+            // Menú del juego (Equipo y Mochila en la Etapa 4; el resto de opciones llega en la Etapa 7).
             if (menuAction.WasPressedThisFrame())
             {
-                WorldMessage.Show("El menú de pausa todavía está en construcción.");
+                if (!GameMenu.Open())
+                    WorldMessage.Show("El menú todavía no está generado (Torre Ingeniería > Construir menú del juego).");
                 return;
             }
+            // Etapa 7: el mapa del edificio abrirá su pantalla.
             if (mapAction.WasPressedThisFrame())
             {
                 WorldMessage.Show("El mapa del edificio todavía está en construcción.");

@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TorreIngenieria.Core.PokemonData
   speciesId: eevee
   displayName: Eevee
+  dexNumber: 133
   primaryType: 0
   hasSecondaryType: 0
   secondaryType: 0
@@ -36,7 +37,7 @@ MonoBehaviour:
     moveId: body_slam
   evolvesTo: 
   evolveLevel: 0
-  frontSprite: {fileID: 0}
-  backSprite: {fileID: 0}
-  icon: {fileID: 0}
+  frontSprite: {fileID: 21300000, guid: cd0943774bf8f7a24b26f84819bded43, type: 3}
+  backSprite: {fileID: 21300000, guid: cd8a627c98f4a6f09be79a5ecf8a6a58, type: 3}
+  icon: {fileID: 21300000, guid: 6af1fb7eace2b6131907e0ec2983ecc0, type: 3}
   description: "Raro en la plazoleta; su c\xF3digo gen\xE9tico es inestable."

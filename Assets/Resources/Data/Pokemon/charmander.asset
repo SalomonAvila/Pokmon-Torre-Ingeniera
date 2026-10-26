@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TorreIngenieria.Core.PokemonData
   speciesId: charmander
   displayName: Charmander
+  dexNumber: 4
   primaryType: 9
   hasSecondaryType: 0
   secondaryType: 9
@@ -36,7 +37,7 @@ MonoBehaviour:
     moveId: flamethrower
   evolvesTo: 
   evolveLevel: 0
-  frontSprite: {fileID: 0}
-  backSprite: {fileID: 0}
-  icon: {fileID: 0}
+  frontSprite: {fileID: 21300000, guid: b185a04362a23b9d18cf105d8b594df3, type: 3}
+  backSprite: {fileID: 21300000, guid: 7d20411bc90c05b62a361a705d4e9152, type: 3}
+  icon: {fileID: 21300000, guid: 9d8d8795acb2ad9148935e3c51d07085, type: 3}
   description: "La llama de su cola indica su estado de \xE1nimo."

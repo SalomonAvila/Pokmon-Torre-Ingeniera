@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TorreIngenieria.Core.PokemonData
   speciesId: pidgey
   displayName: Pidgey
+  dexNumber: 16
   primaryType: 0
   hasSecondaryType: 1
   secondaryType: 2
@@ -36,7 +37,7 @@ MonoBehaviour:
     moveId: wing_attack
   evolvesTo: 
   evolveLevel: 0
-  frontSprite: {fileID: 0}
-  backSprite: {fileID: 0}
-  icon: {fileID: 0}
+  frontSprite: {fileID: 21300000, guid: d63f62e2edd5e4896bdc21c4c8f77156, type: 3}
+  backSprite: {fileID: 21300000, guid: f5f21a1a20566f50aab535e4f2fe5568, type: 3}
+  icon: {fileID: 21300000, guid: 8d553bc7d3759f699a74c5c413ab9629, type: 3}
   description: "Ave peque\xF1a que levanta arena al batir las alas."

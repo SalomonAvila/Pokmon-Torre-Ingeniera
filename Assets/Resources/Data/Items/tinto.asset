@@ -19,3 +19,4 @@ MonoBehaviour:
   catchBonus: 1
   price: 100
   description: "Caf\xE9 tinto bien cargado."
+  icon: {fileID: 21300000, guid: 54c1976dc7420a24ea7bf9f110ec7217, type: 3}
