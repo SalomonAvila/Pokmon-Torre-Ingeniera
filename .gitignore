@@ -113,9 +113,6 @@ InitTestScene*.unity*
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
 
-# --- Reglas del proyecto ---
-# Documento de diseño: local, no se sube al repositorio.
-/Docs/
 
 # Archivos de sistema operativo
 [Tt]humbs.db
