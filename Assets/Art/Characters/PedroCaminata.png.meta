@@ -84,7 +84,7 @@ TextureImporter:
   spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 128
+  spritePixelsToUnits: 16
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -189,11 +189,11 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 768
-        width: 192
-        height: 256
+        y: 96
+        width: 16
+        height: 32
       alignment: 9
-      pivot: {x: 0.5, y: 0.03125}
+      pivot: {x: 0.5, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -210,12 +210,12 @@ TextureImporter:
       name: Pedro_Abajo_PasoA
       rect:
         serializedVersion: 2
-        x: 192
-        y: 768
-        width: 192
-        height: 256
+        x: 16
+        y: 96
+        width: 16
+        height: 32
       alignment: 9
-      pivot: {x: 0.5, y: 0.03125}
+      pivot: {x: 0.5, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -232,12 +232,12 @@ TextureImporter:
       name: Pedro_Abajo_PasoB
       rect:
         serializedVersion: 2
-        x: 384
-        y: 768
-        width: 192
-        height: 256
+        x: 48
+        y: 96
+        width: 16
+        height: 32
       alignment: 9
-      pivot: {x: 0.5, y: 0.03125}
+      pivot: {x: 0.5, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -255,11 +255,11 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 512
-        width: 192
-        height: 256
+        y: 64
+        width: 16
+        height: 32
       alignment: 9
-      pivot: {x: 0.5, y: 0.03125}
+      pivot: {x: 0.5, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -276,12 +276,12 @@ TextureImporter:
       name: Pedro_Arriba_PasoA
       rect:
         serializedVersion: 2
-        x: 192
-        y: 512
-        width: 192
-        height: 256
+        x: 16
+        y: 64
+        width: 16
+        height: 32
       alignment: 9
-      pivot: {x: 0.5, y: 0.03125}
+      pivot: {x: 0.5, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -298,12 +298,12 @@ TextureImporter:
       name: Pedro_Arriba_PasoB
       rect:
         serializedVersion: 2
-        x: 384
-        y: 512
-        width: 192
-        height: 256
+        x: 48
+        y: 64
+        width: 16
+        height: 32
       alignment: 9
-      pivot: {x: 0.5, y: 0.03125}
+      pivot: {x: 0.5, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -321,11 +321,11 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 256
-        width: 192
-        height: 256
+        y: 32
+        width: 16
+        height: 32
       alignment: 9
-      pivot: {x: 0.5, y: 0.03125}
+      pivot: {x: 0.5, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -342,12 +342,12 @@ TextureImporter:
       name: Pedro_Izquierda_PasoA
       rect:
         serializedVersion: 2
-        x: 192
-        y: 256
-        width: 192
-        height: 256
+        x: 16
+        y: 32
+        width: 16
+        height: 32
       alignment: 9
-      pivot: {x: 0.5, y: 0.03125}
+      pivot: {x: 0.5, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -364,12 +364,12 @@ TextureImporter:
       name: Pedro_Izquierda_PasoB
       rect:
         serializedVersion: 2
-        x: 384
-        y: 256
-        width: 192
-        height: 256
+        x: 48
+        y: 32
+        width: 16
+        height: 32
       alignment: 9
-      pivot: {x: 0.5, y: 0.03125}
+      pivot: {x: 0.5, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -388,10 +388,10 @@ TextureImporter:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 192
-        height: 256
+        width: 16
+        height: 32
       alignment: 9
-      pivot: {x: 0.5, y: 0.03125}
+      pivot: {x: 0.5, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -408,12 +408,12 @@ TextureImporter:
       name: Pedro_Derecha_PasoA
       rect:
         serializedVersion: 2
-        x: 192
+        x: 16
         y: 0
-        width: 192
-        height: 256
+        width: 16
+        height: 32
       alignment: 9
-      pivot: {x: 0.5, y: 0.03125}
+      pivot: {x: 0.5, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -430,12 +430,12 @@ TextureImporter:
       name: Pedro_Derecha_PasoB
       rect:
         serializedVersion: 2
-        x: 384
+        x: 48
         y: 0
-        width: 192
-        height: 256
+        width: 16
+        height: 32
       alignment: 9
-      pivot: {x: 0.5, y: 0.03125}
+      pivot: {x: 0.5, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -444,6 +444,182 @@ TextureImporter:
       bones: []
       spriteID: 514b37ce00549aa5c9b0637796c5ff1f
       internalID: -1036857692
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Pedro_Abajo_PasoA2
+      rect:
+        serializedVersion: 2
+        x: 32
+        y: 96
+        width: 16
+        height: 32
+      alignment: 9
+      pivot: {x: 0.5, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c28d171742669001cb7f8fc12d8978ac
+      internalID: 445617254
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Pedro_Abajo_PasoB2
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 96
+        width: 16
+        height: 32
+      alignment: 9
+      pivot: {x: 0.5, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 61988c53dc1fbae63bca735bf83f0834
+      internalID: -1729453509
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Pedro_Arriba_PasoA2
+      rect:
+        serializedVersion: 2
+        x: 32
+        y: 64
+        width: 16
+        height: 32
+      alignment: 9
+      pivot: {x: 0.5, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0d241723ac8f56301ac9d3b020a056f4
+      internalID: 657521685
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Pedro_Arriba_PasoB2
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 64
+        width: 16
+        height: 32
+      alignment: 9
+      pivot: {x: 0.5, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cf6aab7f963b53bdab2ec0c336ace5b5
+      internalID: 2091904892
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Pedro_Izquierda_PasoA2
+      rect:
+        serializedVersion: 2
+        x: 32
+        y: 32
+        width: 16
+        height: 32
+      alignment: 9
+      pivot: {x: 0.5, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2ba01f97e10592f03b879645f0da9c9f
+      internalID: -258784828
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Pedro_Izquierda_PasoB2
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 32
+        width: 16
+        height: 32
+      alignment: 9
+      pivot: {x: 0.5, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e1c8c9803b4807d4e85c7c25c4bb2d6e
+      internalID: 364046975
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Pedro_Derecha_PasoA2
+      rect:
+        serializedVersion: 2
+        x: 32
+        y: 0
+        width: 16
+        height: 32
+      alignment: 9
+      pivot: {x: 0.5, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4f722ca030f6e53c39b2bdfaf7de0acd
+      internalID: -2074198665
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Pedro_Derecha_PasoB2
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 0
+        width: 16
+        height: 32
+      alignment: 9
+      pivot: {x: 0.5, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 89c8647c405c057fe8be5a1801525ba5
+      internalID: -520682486
       vertices: []
       indices: 
       edges: []
@@ -463,16 +639,24 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       Pedro_Abajo_PasoA: 667786569
+      Pedro_Abajo_PasoA2: 445617254
       Pedro_Abajo_PasoB: 1361534804
+      Pedro_Abajo_PasoB2: -1729453509
       Pedro_Abajo_Quieto: -274463165
       Pedro_Arriba_PasoA: 1874966887
+      Pedro_Arriba_PasoA2: 657521685
       Pedro_Arriba_PasoB: 441728735
+      Pedro_Arriba_PasoB2: 2091904892
       Pedro_Arriba_Quieto: -1357642322
       Pedro_Derecha_PasoA: -707115775
+      Pedro_Derecha_PasoA2: -2074198665
       Pedro_Derecha_PasoB: -1036857692
+      Pedro_Derecha_PasoB2: -520682486
       Pedro_Derecha_Quieto: -706671721
       Pedro_Izquierda_PasoA: 650447928
+      Pedro_Izquierda_PasoA2: -258784828
       Pedro_Izquierda_PasoB: -189705272
+      Pedro_Izquierda_PasoB2: 364046975
       Pedro_Izquierda_Quieto: 998938343
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0

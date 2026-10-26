@@ -10,28 +10,57 @@ namespace TorreIngenieria.EditorTools
     /// Corta las hojas de caminata de los personajes en cuadros con nombre (Personaje_Direccion_Pose),
     /// igual que si se hiciera a mano en el Sprite Editor.
     ///
-    /// Formato de la hoja: celdas de 192x256 px; filas de arriba hacia abajo Abajo, Arriba, Izquierda, Derecha;
-    /// columnas Quieto, PasoA, PasoB. Los pies quedan a 8 px del borde inferior de cada celda.
+    /// Formato de la hoja (Doc §5, sprite de 16x32 px como en FireRed): celdas de 16x32 px; filas de arriba
+    /// hacia abajo Abajo, Arriba, Izquierda, Derecha; columnas Quieto, PasoA (pie izquierdo adelante),
+    /// PasoA2 (piernas pasando), PasoB (pie derecho adelante) y PasoB2 (piernas pasando). Los pies apoyan en
+    /// la última fila de píxeles de cada celda.
+    ///
+    /// Los nombres Quieto, PasoA y PasoB son los de la hoja anterior de 3 columnas: así las escenas guardadas
+    /// conservan sus referencias hasta que se regeneren los mapas.
     /// </summary>
     public static class CharacterSpriteSlicer
     {
-        const int CellWidth = 192;
-        const int CellHeight = 256;
-        const int FootMargin = 8;
-        // 128 px = 1 unidad = 1 casilla del mapa, así el personaje mide unas 2 casillas (como 16x32 en GBA).
-        const float PixelsPerUnit = 128f;
+        public const string PedroSheet = "Assets/Art/Characters/PedroCaminata.png";
+        public const string GabrielSheet = "Assets/Art/Characters/GabrielCaminata.png";
+        public const string GuardSheet = "Assets/Art/Characters/VigilanteCaminata.png";
+
+        const int CellWidth = 16;
+        const int CellHeight = 32;
+        const int FootMargin = 0;
+        // 16 px = 1 unidad = 1 casilla del mapa, igual que los tiles: la cámara Pixel Perfect no reescala al
+        // personaje y la caminata no "baila". Mide 1×2 casillas, como en GBA.
+        const float PixelsPerUnit = 16f;
 
         public static readonly string[] Directions = { "Abajo", "Arriba", "Izquierda", "Derecha" };
-        public static readonly string[] Poses = { "Quieto", "PasoA", "PasoB" };
+        public static readonly string[] Poses = { "Quieto", "PasoA", "PasoA2", "PasoB", "PasoB2" };
 
-        [MenuItem("Torre Ingeniería/Cortar hoja de caminata de Pedro")]
-        static void SlicePedro() => SliceWalkSheet("Assets/Art/Characters/PedroCaminata.png", "Pedro");
+        [MenuItem("Torre Ingeniería/Cortar hojas de caminata (Pedro, Gabriel y Vigilante)")]
+        static void SliceAll() => SliceCharacters();
+
+        /// <summary>Corta las hojas de los personajes que existan (Pedro siempre; Gabriel y el Vigilante si ya están).</summary>
+        public static void SliceCharacters()
+        {
+            SliceWalkSheet(PedroSheet, "Pedro");
+            if (AssetImporter.GetAtPath(GabrielSheet) != null)
+                SliceWalkSheet(GabrielSheet, "Gabriel");
+            if (AssetImporter.GetAtPath(GuardSheet) != null)
+                SliceWalkSheet(GuardSheet, "Vigilante");
+        }
 
         public static void SliceWalkSheet(string path, string characterName)
         {
             if (AssetImporter.GetAtPath(path) is not TextureImporter importer)
             {
                 EditorUtility.DisplayDialog("Cortar hoja", $"No se encontró {path}.", "OK");
+                return;
+            }
+
+            importer.GetSourceTextureWidthAndHeight(out int width, out int height);
+            if (width != CellWidth * Poses.Length || height != CellHeight * Directions.Length)
+            {
+                Debug.LogError($"{path} mide {width}x{height}; la hoja de caminata debe medir " +
+                               $"{CellWidth * Poses.Length}x{CellHeight * Directions.Length} " +
+                               $"({Poses.Length} cuadros de {CellWidth}x{CellHeight} por dirección).");
                 return;
             }
 

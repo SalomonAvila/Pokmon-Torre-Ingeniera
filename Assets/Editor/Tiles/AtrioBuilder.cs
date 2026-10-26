@@ -161,6 +161,17 @@ namespace TorreIngenieria.EditorTools
                                "El vigilante Gómez deja entrar solo con inicial elegido y un Pokémon capturado.");
             ProvisionalMap.AddSpawn(SpawnFromElevators, 9, 2, height, PlayerController.Direction.Down);
 
+            // Vigilante Gómez (Doc §8 y §10): cuida la puerta desde el último escalón, al lado de la llegada
+            // desde los ascensores. Sus líneas son las del documento más el consejo del tutorial.
+            ProvisionalMap.CreateNpc("VigilanteGomez", 10, 2, height,
+                new[]
+                {
+                    "¡Alto ahí, joven! El edificio está cerrado, hay criaturas sueltas.",
+                    "Si va a entrar, lleve compañía.",
+                    "Necesita un POKÉMON propio y haber capturado al menos uno en las jardineras.",
+                },
+                character: ProvisionalMap.Character.Vigilante);
+
             // Contenido de prueba de la Etapa 2: un NPC con elección y un Tinto en el suelo.
             ProvisionalMap.CreateNpc("NpcPrueba", 7, 21, height,
                 new[] { "¡Cuidado, mijo! El edificio está lleno de criaturas.", "¿Vas a subir?" },

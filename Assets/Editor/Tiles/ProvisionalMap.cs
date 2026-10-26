@@ -24,7 +24,7 @@ namespace TorreIngenieria.EditorTools
     public static class ProvisionalMap
     {
         const string UtilitiesPath = "Assets/Art/Tilesets/Utilidades/Utilidades.png";
-        const string PedroSheetPath = "Assets/Art/Characters/PedroCaminata.png";
+        const string PedroSheetPath = CharacterSpriteSlicer.PedroSheet;
         const string ControlsPath = "Assets/Input/ControlesJuego.inputactions";
 
         /// <summary>Prepara los recursos comunes. Llamar antes de crear la escena.</summary>
@@ -33,7 +33,7 @@ namespace TorreIngenieria.EditorTools
             foreach (string path in tilesetPaths)
                 TilesetTools.Prepare(path);
             TilesetTools.Prepare(UtilitiesPath);
-            CharacterSpriteSlicer.SliceWalkSheet(PedroSheetPath, "Pedro");
+            CharacterSpriteSlicer.SliceCharacters(); // Pedro, y Gabriel y el Vigilante si ya existen
             MainMenuSceneBuilder.PrepareDialogueAssets();
         }
 
@@ -156,26 +156,23 @@ namespace TorreIngenieria.EditorTools
 
         const string PickupTilePath = "Assets/Tiles/AtrioProvisional/AtrioProvisional_8.asset";
 
+        /// <summary>Personajes con hoja de caminata propia (ver <see cref="CharacterSpriteSlicer"/>).</summary>
+        public enum Character { Pedro, Gabriel, Vigilante }
+
         /// <summary>
-        /// NPC de prueba centrado en la casilla; habla con el jugador (Interactable).
-        /// Usa un cuadro de la hoja de caminata de Pedro teñido de verde: el retrato de Gabriel
-        /// es una ilustración de 1024 px y no encaja a escala del mapa.
+        /// NPC centrado en la casilla; habla con el jugador (Interactable). Con <paramref name="character"/>
+        /// usa la hoja de ese personaje; sin él, la de Pedro teñida de verde (NPC genérico de prueba).
         /// </summary>
         public static Interactable CreateNpc(string name, int col, int row, int height, string[] lines,
-            string[] options = null, string[] acceptedLines = null, string[] rejectedLines = null)
+            string[] options = null, string[] acceptedLines = null, string[] rejectedLines = null,
+            Character character = Character.Pedro,
+            PlayerController.Direction facing = PlayerController.Direction.Down)
         {
             var go = new GameObject(name);
             go.transform.position = CellCenter(col, row, height);
-
-            var spriteObject = new GameObject("Sprite");
-            spriteObject.transform.SetParent(go.transform, false);
-            spriteObject.transform.localPosition = new Vector3(0, -0.45f, 0);
-
-            var sprite = spriteObject.AddComponent<SpriteRenderer>();
-            sprite.sortingOrder = MapSceneBuilder.CharacterSortingOrder;
-            sprite.color = new Color(0.72f, 1f, 0.78f); // tinte para distinguirlo de Pedro
-            sprite.sprite = AssetDatabase.LoadAllAssetsAtPath(PedroSheetPath).OfType<Sprite>()
-                .FirstOrDefault(s => s.name == "Pedro_Abajo_Quieto");
+            SpriteRenderer sprite = AddCharacterSprite(go, character, facing);
+            if (character == Character.Pedro)
+                sprite.color = new Color(0.72f, 1f, 0.78f); // tinte para distinguirlo de Pedro
 
             var interactable = go.AddComponent<Interactable>();
             ConfigureInteractable(interactable, Interactable.Kind.Npc, lines, options, 0,
@@ -194,29 +191,47 @@ namespace TorreIngenieria.EditorTools
         {
             var go = new GameObject(name);
             go.transform.position = CellCenter(col, row, height);
-
-            var spriteObject = new GameObject("Sprite");
-            spriteObject.transform.SetParent(go.transform, false);
-            spriteObject.transform.localPosition = new Vector3(0, -0.45f, 0);
-
-            string pose = facing switch
-            {
-                PlayerController.Direction.Up => "Pedro_Arriba_Quieto",
-                PlayerController.Direction.Left => "Pedro_Izquierda_Quieto",
-                PlayerController.Direction.Right => "Pedro_Derecha_Quieto",
-                _ => "Pedro_Abajo_Quieto",
-            };
-
-            var sprite = spriteObject.AddComponent<SpriteRenderer>();
-            sprite.sortingOrder = MapSceneBuilder.CharacterSortingOrder;
+            SpriteRenderer sprite = AddCharacterSprite(go, Character.Pedro, facing);
             sprite.color = new Color(1f, 0.78f, 0.72f); // tinte para distinguirlo de Pedro y del NPC
-            sprite.sprite = AssetDatabase.LoadAllAssetsAtPath(PedroSheetPath).OfType<Sprite>()
-                .FirstOrDefault(s => s.name == pose);
 
             var interactable = go.AddComponent<Interactable>();
             ConfigureInteractable(interactable, Interactable.Kind.Trainer, lines, null, 0,
                 null, null, null, 0, null, trainerId);
             return interactable;
+        }
+
+        /// <summary>
+        /// Sprite hijo con el cuadro Quieto del personaje en la orientación pedida. El pivote está en los pies:
+        /// se baja casi media casilla para que pise el borde inferior, igual que Pedro.
+        /// </summary>
+        static SpriteRenderer AddCharacterSprite(GameObject owner, Character character,
+            PlayerController.Direction facing)
+        {
+            var spriteObject = new GameObject("Sprite");
+            spriteObject.transform.SetParent(owner.transform, false);
+            spriteObject.transform.localPosition = new Vector3(0, -0.45f, 0);
+
+            string sheet = character switch
+            {
+                Character.Gabriel => CharacterSpriteSlicer.GabrielSheet,
+                Character.Vigilante => CharacterSpriteSlicer.GuardSheet,
+                _ => PedroSheetPath,
+            };
+            string direction = facing switch
+            {
+                PlayerController.Direction.Up => "Arriba",
+                PlayerController.Direction.Left => "Izquierda",
+                PlayerController.Direction.Right => "Derecha",
+                _ => "Abajo",
+            };
+
+            var sprite = spriteObject.AddComponent<SpriteRenderer>();
+            sprite.sortingOrder = MapSceneBuilder.CharacterSortingOrder;
+            sprite.sprite = AssetDatabase.LoadAllAssetsAtPath(sheet).OfType<Sprite>()
+                .FirstOrDefault(s => s.name == $"{character}_{direction}_Quieto");
+            if (sprite.sprite == null)
+                Debug.LogError($"No se encontró {character}_{direction}_Quieto en {sheet}: corta las hojas de caminata.");
+            return sprite;
         }
 
         /// <summary>Objeto recogible en el suelo; usa el sprite de un tile provisional.</summary>

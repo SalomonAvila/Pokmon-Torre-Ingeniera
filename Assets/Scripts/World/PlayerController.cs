@@ -11,7 +11,8 @@ namespace TorreIngenieria.World
     /// Movimiento por casillas en 4 direcciones, como en Pokémon FireRed (documento de diseño, secciones 7 y 9):
     /// - Un toque breve solo gira al personaje; mantener la tecla lo hace avanzar casilla por casilla.
     /// - Shift corre. Contra una pared camina en el sitio.
-    /// - Cada paso alterna pie (PasoA / PasoB) y vuelve a Quieto a mitad de casilla.
+    /// - Cada paso alterna pie: PasoA → PasoA2 en una casilla y PasoB → PasoB2 en la siguiente (4 cuadros de
+    ///   caminata, Doc §5). Con una hoja antigua de 3 cuadros, la segunda mitad del paso vuelve a Quieto.
     /// El objeto se mantiene en el centro de la casilla; el sprite hijo tiene el pivote en los pies.
     /// </summary>
     public class PlayerController : MonoBehaviour
@@ -21,12 +22,12 @@ namespace TorreIngenieria.World
         [Header("Entrada")]
         [SerializeField] InputActionAsset controls;
 
-        [Header("Sprites (Quieto, PasoA, PasoB)")]
+        [Header("Sprites (Quieto, PasoA, PasoA2, PasoB, PasoB2)")]
         [SerializeField] SpriteRenderer spriteRenderer;
-        [SerializeField] Sprite[] down = new Sprite[3];
-        [SerializeField] Sprite[] up = new Sprite[3];
-        [SerializeField] Sprite[] left = new Sprite[3];
-        [SerializeField] Sprite[] right = new Sprite[3];
+        [SerializeField] Sprite[] down = new Sprite[5];
+        [SerializeField] Sprite[] up = new Sprite[5];
+        [SerializeField] Sprite[] left = new Sprite[5];
+        [SerializeField] Sprite[] right = new Sprite[5];
 
         [Header("Movimiento")]
         [SerializeField, Tooltip("Casillas por segundo al caminar.")] float walkSpeed = 4f;
@@ -207,13 +208,13 @@ namespace TorreIngenieria.World
             }
 
             float duration = 1f / (runAction.IsPressed() ? runSpeed : walkSpeed);
-            int stepFrame = nextStepIsA ? 1 : 2;
+            (int firstHalf, int secondHalf) = StepFrames(nextStepIsA);
             nextStepIsA = !nextStepIsA;
 
             for (float t = 0f; t < duration; t += Time.deltaTime)
             {
                 transform.position = Vector3.Lerp(start, target, t / duration);
-                ShowFrame(t < duration / 2f ? stepFrame : 0);
+                ShowFrame(t < duration / 2f ? firstHalf : secondHalf);
                 yield return null;
             }
 
@@ -237,6 +238,17 @@ namespace TorreIngenieria.World
             // NPC, letreros, objetos y entrenadores también ocupan su casilla. Los objetos recogidos
             // se desactivan, así que la casilla vuelve a quedar libre sin tocar el tilemap.
             return Interactable.At(cellCenter) != null;
+        }
+
+        /// <summary>
+        /// Cuadros de cada mitad del paso. Hoja de 5 cuadros: PasoA → PasoA2 o PasoB → PasoB2. Hoja antigua de
+        /// 3 cuadros (escenas sin regenerar): PasoA o PasoB y luego Quieto.
+        /// </summary>
+        (int firstHalf, int secondHalf) StepFrames(bool stepA)
+        {
+            if (down.Length >= 5)
+                return stepA ? (1, 2) : (3, 4);
+            return (stepA ? 1 : 2, 0);
         }
 
         void ShowFrame(int index)
