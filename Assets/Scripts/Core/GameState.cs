@@ -289,6 +289,8 @@ namespace TorreIngenieria.Core
         /// <summary>
         /// Fija el inicial elegido y lo registra como especie conocida del Pokédex (los iniciales se eligen,
         /// no se capturan, pero cuentan para el Pokédex total). La puerta del edificio no lo cuenta como captura.
+        /// También lo entrega al equipo al nivel <see cref="GameRules.StarterLevel"/> si todavía no está,
+        /// para que los encuentros salvajes y el combate funcionen desde el primer momento.
         /// </summary>
         public static void SetStarter(string speciesId)
         {
@@ -298,7 +300,25 @@ namespace TorreIngenieria.Core
             Save.starterId = speciesId;
             if (!Save.pokedex.Contains(speciesId))
                 Save.pokedex.Add(speciesId);
+
+            // El inicial se entrega una sola vez: si ya está en el equipo (por ejemplo, al inferirlo en
+            // EnsureStarterFromTeam) no se duplica.
+            if (CanAddToTeam && !HasSpeciesInTeam(speciesId))
+                Save.team.Add(TeamMembers.Create(speciesId, GameRules.StarterLevel));
+
             Commit();
+        }
+
+        /// <summary>¿El equipo ya trae un Pokémon de esa especie? (el inicial no se duplica al fijarlo).</summary>
+        public static bool HasSpeciesInTeam(string speciesId)
+        {
+            if (Save.team == null || string.IsNullOrEmpty(speciesId))
+                return false;
+
+            foreach (TeamMember member in Save.team)
+                if (member != null && member.speciesId == speciesId)
+                    return true;
+            return false;
         }
 
         public static void SetGabrielChoice(GabrielChoice choice)

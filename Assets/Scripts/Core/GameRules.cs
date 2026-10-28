@@ -19,6 +19,9 @@ namespace TorreIngenieria.Core
         /// <summary>Pokémon máximos en el equipo.</summary>
         public const int MaxTeamSize = 6;
 
+        /// <summary>Nivel con el que se entrega el inicial en la plazoleta (Doc §8).</summary>
+        public const int StarterLevel = 5;
+
         /// <summary>Sellos del juego: uno por jefe; el último lo da Montoya.</summary>
         public const int TotalSeals = 13;
 

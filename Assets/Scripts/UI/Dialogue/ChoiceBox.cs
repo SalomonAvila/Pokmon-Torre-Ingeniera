@@ -3,6 +3,7 @@ using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 namespace TorreIngenieria.UI
 {
@@ -34,6 +35,14 @@ namespace TorreIngenieria.UI
         {
             submitAction ??= controls.FindAction("UI/Submit", true);
             navigateAction ??= controls.FindAction("UI/Navigate", true);
+
+            // El cuadro se adapta al número de opciones: tres (iniciales) necesita más alto y ancho.
+            bool tall = options.Length > 2;
+            var box = (RectTransform)transform;
+            box.sizeDelta = new Vector2(tall ? 480f : 400f, tall ? 220f : 160f);
+            if (TryGetComponent<VerticalLayoutGroup>(out VerticalLayoutGroup layout))
+                layout.padding = new RectOffset(layout.padding.left, layout.padding.right,
+                    tall ? 24 : 40, tall ? 24 : 40);
 
             for (int i = 0; i < optionLabels.Length; i++)
             {
