@@ -72,8 +72,12 @@ namespace TorreIngenieria.World
             return null;
         }
 
-        /// <summary>Habla con el objeto. Lo llama <see cref="PlayerController"/> al pulsar Interact.</summary>
-        public void Interact()
+        /// <summary>
+        /// Habla con el objeto. Lo llama <see cref="PlayerController"/> al pulsar Interact.
+        /// Es virtual para que los NPC de historia (Gabriel, el Vigilante) puedan decidir su
+        /// diálogo según el progreso de la partida.
+        /// </summary>
+        public virtual void Interact()
         {
             if (WorldMessage.IsOpen)
                 return;

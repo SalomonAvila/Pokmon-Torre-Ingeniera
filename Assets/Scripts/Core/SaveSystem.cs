@@ -120,7 +120,7 @@ namespace TorreIngenieria.Core
 
         public GabrielChoice gabrielChoice = GabrielChoice.Undecided;
 
-        /// <summary>Tutorial con Gabriel superado (lobby); no abre la puerta del edificio.</summary>
+        /// <summary>Tutorial con Gabriel superado (lobby); abre la escalera del piso 3, no la puerta del edificio.</summary>
         public bool tutorialDone;
 
         public List<string> defeatedTrainers = new List<string>();

@@ -1,3 +1,4 @@
+using TorreIngenieria.Core;
 using UnityEngine;
 
 namespace TorreIngenieria.Battle
@@ -30,6 +31,13 @@ namespace TorreIngenieria.Battle
         public static string ReturnScene { get; private set; }
         public static Vector3 ReturnPosition { get; private set; }
         public static int ReturnFacing { get; private set; }
+
+        /// <summary>
+        /// ¿Es el combate tutorial de Gabriel? No da EXP ni permite objetos ni huida (Doc §8); al
+        /// ganar, <see cref="GameState.CompleteTutorial"/> abre la escalera del lobby.
+        /// </summary>
+        public static bool IsTutorial =>
+            Kind == BattleKind.Trainer && TrainerId == GameRules.TutorialTrainerId;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatics() => Clear();

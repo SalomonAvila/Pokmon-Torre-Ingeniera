@@ -123,6 +123,12 @@ namespace TorreIngenieria.EditorTools
         const string BlockingObjects = "|VMPpRCL";
         static readonly Vector2Int PlayerStart = new Vector2Int(5, 21); // columna, fila
 
+        /// <summary>
+        /// Primera fila de la jardinera inferior, la única con encuentros salvajes. La jardinera de arriba
+        /// es el paso obligatorio a la puerta y al Vigilante, así que se deja libre de combates.
+        /// </summary>
+        const int JardineraInferior = 29;
+
         [MenuItem("Torre Ingeniería/Mapas/Construir atrio provisional")]
         public static void Build()
         {
@@ -144,42 +150,34 @@ namespace TorreIngenieria.EditorTools
             ProvisionalMap.AddHud();
             ProvisionalMap.AddEncounterZone();
 
-            // Zonas de encuentro provisionales de la plazoleta (Doc §7): un parche de jardineras junto al
-            // kiosco. Las jardineras definitivas llegan con el contenido del piso en la Etapa 8; por ahora
-            // bastan para probar los encuentros salvajes (niveles 2 a 5).
+            // Zonas de encuentro provisionales de la plazoleta (Doc §7): solo la jardinera de abajo (la de
+            // junto al kiosco). La de arriba es el camino obligatorio a la puerta y al Vigilante, así que
+            // queda libre de salvajes. Se saltan el muro verde y los objetos sólidos. La capa se oculta al
+            // jugar (HideOnPlay), así que la zona de encuentro se ve en el editor, no en el juego.
+            // Las jardineras definitivas llegan con el contenido del piso en la Etapa 8.
             TileBase encounterMarker = ProvisionalMap.LoadTiles(TilesetName, 16)[TileA];
             Tilemap encounters = MapSceneBuilder.Layer("Encuentros");
-            for (int row = 24; row <= 26; row++)
-                for (int col = 10; col <= 12; col++)
-                    encounters.SetTile(ProvisionalMap.Cell(col, row, height), encounterMarker);
+            for (int row = JardineraInferior; row < Floor.Length; row++)
+                for (int col = 0; col < Floor[row].Length; col++)
+                    if (Floor[row][col] == 'g' && BlockingObjects.IndexOf(Objects[row][col]) < 0)
+                        encounters.SetTile(ProvisionalMap.Cell(col, row, height), encounterMarker);
 
             // Último escalón de las gradas superiores (entre las barandas) → pasillo de los ascensores.
             // Es la puerta del edificio: el Vigilante Gómez solo deja pasar con inicial y un Pokémon capturado.
             ProvisionalMap.AddWarp("SubidaAscensores", 2, 16, 1, 1, height, SceneNames.Ascensores, AscensoresBuilder.SpawnFromAtrium,
                 needsBuildingAccess: true,
                 lockedMessage: "—Alto. El edificio está en emergencia.\n" +
-                               "El vigilante Gómez deja entrar solo con inicial elegido y un Pokémon capturado.");
+                               "El vigilante Gómez le dirá qué le falta para entrar.");
             ProvisionalMap.AddSpawn(SpawnFromElevators, 9, 2, height, PlayerController.Direction.Down);
 
-            // Vigilante Gómez (Doc §8 y §10): cuida la puerta desde el último escalón, al lado de la llegada
-            // desde los ascensores. Sus líneas son las del documento más el consejo del tutorial.
-            ProvisionalMap.CreateNpc("VigilanteGomez", 10, 2, height,
-                new[]
-                {
-                    "¡Alto ahí, joven! El edificio está cerrado, hay criaturas sueltas.",
-                    "Si va a entrar, lleve compañía.",
-                    "Necesita un POKÉMON propio y haber capturado al menos uno en las jardineras.",
-                },
-                character: ProvisionalMap.Character.Vigilante);
+            // Gabriel (Doc §8 y §10): en la plazoleta, junto a la fuente. Entrega el inicial y, si el
+            // jugador acepta su ayuda, 5 Pokébolas antes de la puerta del Vigilante. Sus diálogos cambian
+            // según el progreso (ver GabrielNpc).
+            ProvisionalMap.CreateGabriel(11, 18, height);
 
-            // Contenido de prueba de la Etapa 2: un NPC con elección y un Tinto en el suelo.
-            ProvisionalMap.CreateNpc("NpcPrueba", 7, 21, height,
-                new[] { "¡Cuidado, mijo! El edificio está lleno de criaturas.", "¿Vas a subir?" },
-                new[] { "SÍ", "NO" },
-                new[] { "¡Ánimo! El vigilante Gómez te deja pasar con un Pokémon capturado." },
-                new[] { "Entonces descansa un rato en el atrio." });
-            ProvisionalMap.CreatePickup("TintoPrueba", 9, 21, height, "atrio_tinto_prueba", "tinto", 1,
-                new[] { "Encontraste un Tinto.", "Restaura 20 PS de un Pokémon." });
+            // Vigilante Gómez (Doc §8 y §10): cuida la puerta desde el último escalón, al lado de la llegada
+            // desde los ascensores. Su diálogo cambia según el progreso (ver VigilanteNpc).
+            ProvisionalMap.CreateVigilante(10, 2, height);
 
             // Entrenador de práctica del kiosco (Doc §10): primer combate de entrenador y primera fuente
             // de créditos. Queda junto al mostrador, mirando al camino; el combate real llega en la Etapa 6.

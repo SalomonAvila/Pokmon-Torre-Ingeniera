@@ -90,6 +90,8 @@ namespace TorreIngenieria.Battle
             var intro = new List<string>();
             if (BattleRequest.Kind == BattleKind.Wild)
                 intro.Add($"¡Ha aparecido un {engine.EnemyActive.DisplayName} salvaje!");
+            if (BattleRequest.IsTutorial)
+                intro.Add("¡Gabriel quiere comprobar lo que aprendiste!");
             intro.Add($"¡Adelante, {engine.PlayerActive.DisplayName}!");
             yield return ui.Messages(intro);
 
@@ -152,9 +154,16 @@ namespace TorreIngenieria.Battle
 
             // Doc §7: al ganar, el Pokémon activo recibe base × nivel del rival / 7. La captura y la
             // huida no dan EXP. El prototipo no reparte EXP entre los que participaron antes de un cambio:
-            // la recibe el que quedó activo al terminar.
-            if (engine.PlayerWon)
+            // la recibe el que quedó activo al terminar. El tutorial de Gabriel no da EXP (Doc §8).
+            if (engine.PlayerWon && !BattleRequest.IsTutorial)
                 yield return AwardExperience(engine, slots);
+
+            // El tutorial abre la escalera del lobby en cuanto se gana (GameState.TutorialDone).
+            if (BattleRequest.IsTutorial && engine.PlayerWon)
+            {
+                GameState.CompleteTutorial();
+                yield return ui.Messages(new[] { "¡Superaste la prueba de Gabriel!" });
+            }
 
             GameState.NotifyTeamChanged();
             yield return null;
@@ -203,11 +212,38 @@ namespace TorreIngenieria.Battle
                     break;
 
                 case BattleKind.Trainer:
-                    // Los combates de entrenador y jefe llegan en la segunda mitad de la etapa.
-                    Debug.LogWarning("Combate de entrenador aún no implementado.");
+                    if (BattleRequest.IsTutorial)
+                        team.AddRange(BuildTutorialTeam());
+                    else
+                        // Los combates de entrenador y jefe llegan en la segunda mitad de la etapa.
+                        Debug.LogWarning("Combate de entrenador aún no implementado.");
                     break;
             }
 
+            return team;
+        }
+
+        /// <summary>
+        /// Rival del tutorial (Doc §8): el inicial con ventaja de tipo sobre el del jugador (el que gana
+        /// a su tipo), a nivel 5 (4 si hubiera dicho "Puedo solo"), con el learnset de ese nivel. A nivel 5
+        /// los iniciales todavía no tienen su movimiento de tipo, así que el combate es una prueba de
+        /// equipo (el jugador ya trae al menos una captura) y no una derrota anunciada.
+        /// </summary>
+        static List<BattlePokemon> BuildTutorialTeam()
+        {
+            string counter = GameRules.CounterStarter(GameState.StarterId);
+            if (string.IsNullOrEmpty(counter))
+            {
+                Debug.LogWarning("Tutorial de Gabriel sin inicial identificable; se usa Charmander.");
+                counter = "charmander";
+            }
+
+            int level = GameRules.TutorialRivalLevelFor(GameState.Save.gabrielChoice);
+            TeamMember member = TeamMembers.Create(counter, level);
+            PokemonData species = PokemonDatabase.Get(counter);
+            var team = new List<BattlePokemon>(1);
+            if (species != null)
+                team.Add(BattlePokemon.FromTeamMember(member, species));
             return team;
         }
 

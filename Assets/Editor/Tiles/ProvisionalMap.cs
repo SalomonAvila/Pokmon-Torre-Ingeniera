@@ -181,6 +181,45 @@ namespace TorreIngenieria.EditorTools
         }
 
         /// <summary>
+        /// Gabriel de la plazoleta: NPC de historia que entrega el inicial y las Pokébolas (ver
+        /// <see cref="GabrielNpc"/>). Usa su hoja de caminata y no necesita líneas fijas.
+        /// </summary>
+        public static GabrielNpc CreateGabriel(int col, int row, int height,
+            PlayerController.Direction facing = PlayerController.Direction.Down)
+        {
+            var go = new GameObject("Gabriel");
+            go.transform.position = CellCenter(col, row, height);
+            AddCharacterSprite(go, Character.Gabriel, facing);
+            return go.AddComponent<GabrielNpc>();
+        }
+
+        /// <summary>
+        /// Vigilante Gómez de la plazoleta: NPC de historia que explica qué falta para entrar al edificio
+        /// (ver <see cref="VigilanteNpc"/>). Usa su hoja de caminata y no necesita líneas fijas.
+        /// </summary>
+        public static VigilanteNpc CreateVigilante(int col, int row, int height,
+            PlayerController.Direction facing = PlayerController.Direction.Down)
+        {
+            var go = new GameObject("VigilanteGomez");
+            go.transform.position = CellCenter(col, row, height);
+            AddCharacterSprite(go, Character.Vigilante, facing);
+            return go.AddComponent<VigilanteNpc>();
+        }
+
+        /// <summary>
+        /// Gabriel del lobby: reta al jugador al combate tutorial antes de la escalera al piso 3
+        /// (ver <see cref="TutorialGabrielNpc"/>). Usa su hoja de caminata y no necesita líneas fijas.
+        /// </summary>
+        public static TutorialGabrielNpc CreateTutorialGabriel(int col, int row, int height,
+            PlayerController.Direction facing = PlayerController.Direction.Down)
+        {
+            var go = new GameObject("GabrielTutorial");
+            go.transform.position = CellCenter(col, row, height);
+            AddCharacterSprite(go, Character.Gabriel, facing);
+            return go.AddComponent<TutorialGabrielNpc>();
+        }
+
+        /// <summary>
         /// Entrenador de prueba centrado en la casilla, con el cuadro de caminata de Pedro y otro tinte.
         /// El combate de entrenadores llega en la Etapa 6; hasta entonces <see cref="Interactable"/> lo
         /// marca como vencido al hablar (comportamiento provisional). La orientación se usa para el

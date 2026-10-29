@@ -103,6 +103,18 @@ namespace TorreIngenieria.Core
             Commit();
         }
 
+        /// <summary>
+        /// Guarda el piso actual en <see cref="SaveData.location"/> para que «Continuar» cargue la
+        /// escena correcta. Lo llama FloorInfo al cargar cada escena de piso.
+        /// </summary>
+        public static void SetLocation(string floor)
+        {
+            if (!Building.IsValid(floor) || Save.location == floor)
+                return;
+            Save.location = floor;
+            Commit();
+        }
+
         // ---------- Sellos y notas de jefes ----------
 
         public static int SealCount => Save.sealIds.Count;
@@ -170,6 +182,44 @@ namespace TorreIngenieria.Core
         /// gastados no se pierden al volver al mundo.
         /// </summary>
         public static void NotifyTeamChanged() => Commit();
+
+        /// <summary>
+        /// Cura por completo al equipo (PS y PP) y revive a los debilitados. Es el punto de curación de la
+        /// plazoleta: Gabriel lo ofrece al hablar con él, antes de que exista Don Chucho tras la puerta.
+        /// Devuelve true si cambió algo.
+        /// </summary>
+        public static bool HealTeam()
+        {
+            bool healed = false;
+            foreach (TeamMember member in Save.team)
+            {
+                if (member == null)
+                    continue;
+
+                // El centinela negativo significa "sin daño"; 0 es debilitado y sí se cura.
+                if (member.hp >= 0 && member.hp < member.maxHp)
+                {
+                    member.hp = member.maxHp;
+                    healed = true;
+                }
+
+                if (member.moves == null)
+                    continue;
+
+                foreach (MoveSlot move in member.moves)
+                {
+                    if (move != null && move.pp < move.maxPp)
+                    {
+                        move.pp = move.maxPp;
+                        healed = true;
+                    }
+                }
+            }
+
+            if (healed)
+                Commit();
+            return healed;
+        }
 
         /// <summary>
         /// Crea el Pokémon capturado con sus PS, EXP, movimientos y PP, y lo suma al equipo si hay sitio.
@@ -289,6 +339,8 @@ namespace TorreIngenieria.Core
         /// <summary>
         /// Fija el inicial elegido y lo registra como especie conocida del Pokédex (los iniciales se eligen,
         /// no se capturan, pero cuentan para el Pokédex total). La puerta del edificio no lo cuenta como captura.
+        /// También lo entrega al equipo al nivel <see cref="GameRules.StarterLevel"/> si todavía no está,
+        /// para que los encuentros salvajes y el combate funcionen desde el primer momento.
         /// </summary>
         public static void SetStarter(string speciesId)
         {
@@ -298,7 +350,25 @@ namespace TorreIngenieria.Core
             Save.starterId = speciesId;
             if (!Save.pokedex.Contains(speciesId))
                 Save.pokedex.Add(speciesId);
+
+            // El inicial se entrega una sola vez: si ya está en el equipo (por ejemplo, al inferirlo en
+            // EnsureStarterFromTeam) no se duplica.
+            if (CanAddToTeam && !HasSpeciesInTeam(speciesId))
+                Save.team.Add(TeamMembers.Create(speciesId, GameRules.StarterLevel));
+
             Commit();
+        }
+
+        /// <summary>¿El equipo ya trae un Pokémon de esa especie? (el inicial no se duplica al fijarlo).</summary>
+        public static bool HasSpeciesInTeam(string speciesId)
+        {
+            if (Save.team == null || string.IsNullOrEmpty(speciesId))
+                return false;
+
+            foreach (TeamMember member in Save.team)
+                if (member != null && member.speciesId == speciesId)
+                    return true;
+            return false;
         }
 
         public static void SetGabrielChoice(GabrielChoice choice)
@@ -307,7 +377,7 @@ namespace TorreIngenieria.Core
             Commit();
         }
 
-        /// <summary>Marca el combate tutorial con Gabriel como superado (no abre la puerta del edificio).</summary>
+        /// <summary>Marca el combate tutorial con Gabriel como superado (abre la escalera del lobby al piso 3).</summary>
         public static void CompleteTutorial()
         {
             if (Save.tutorialDone)
@@ -316,8 +386,18 @@ namespace TorreIngenieria.Core
             Commit();
         }
 
-        /// <summary>Tutorial superado (combate con Gabriel en el lobby); todavía no lo consume nadie.</summary>
+        /// <summary>Tutorial superado (combate con Gabriel en el lobby); lo consultan la escalera, el Vigilante y Gabriel.</summary>
         public static bool TutorialDone => Save.tutorialDone;
+
+        /// <summary>
+        /// Inicial de la partida: el fijado por <see cref="SetStarter"/> o, en partidas de prueba, el
+        /// primero que traiga el equipo (ver <see cref="EnsureStarterFromTeam"/>).
+        /// </summary>
+        public static string StarterId =>
+            !string.IsNullOrEmpty(Save.starterId) ? Save.starterId : StarterInTeam();
+
+        /// <summary>¿La partida ya tiene inicial? Lo consultan el Vigilante y el tutorial de Gabriel.</summary>
+        public static bool HasStarter => !string.IsNullOrEmpty(StarterId);
 
         /// <summary>
         /// El Vigilante Gómez deja entrar al edificio con el inicial elegido y al menos un Pokémon capturado
@@ -332,10 +412,7 @@ namespace TorreIngenieria.Core
         {
             get
             {
-                string starterId = string.IsNullOrEmpty(Save.starterId)
-                    ? StarterInTeam()
-                    : Save.starterId;
-
+                string starterId = StarterId;
                 if (string.IsNullOrEmpty(starterId))
                     return false;
 
@@ -345,6 +422,15 @@ namespace TorreIngenieria.Core
                 return false;
             }
         }
+
+        /// <summary>
+        /// ¿Salen salvajes en el piso actual? En la plazoleta los encuentros son la zona de tutorial: en
+        /// cuanto el jugador logra la captura que abre la puerta (<see cref="PassesBuildingDoor"/>), las
+        /// jardineras se calman y no vuelven a salir. En el resto de pisos siempre hay encuentros, porque
+        /// alimentan el Pokédex del piso (Doc §8).
+        /// </summary>
+        public static bool AllowWildEncounters =>
+            CurrentFloor != Building.Floors[0] || !PassesBuildingDoor;
 
         /// <summary>
         /// (propuesta) Fija como inicial el primer Pokémon inicial del equipo si la partida aún no tiene

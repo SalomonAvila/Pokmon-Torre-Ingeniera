@@ -29,6 +29,11 @@ namespace TorreIngenieria.World
             GameObject layer = GameObject.Find("Grid/Encuentros");
             encounters = layer != null ? layer.GetComponent<Tilemap>() : null;
             player = FindAnyObjectByType<PlayerController>();
+
+            // Si la capa no se encuentra (escena antigua o renombrada) no habría encuentros y no se
+            // notaría hasta caminar: se avisa una vez al cargar el mapa.
+            if (encounters == null)
+                Debug.LogWarning("EncounterZone: no se encontró la capa 'Grid/Encuentros'; no habrá encuentros salvajes.");
         }
 
         void OnEnable() => PlayerController.Stepped += OnStepped;
@@ -37,6 +42,10 @@ namespace TorreIngenieria.World
         void OnStepped(Vector3 position)
         {
             if (busy || encounters == null || player == null || SceneTransition.IsTransitioning)
+                return;
+
+            // En la plazoleta los salvajes se apagan cuando ya se logró la captura de la puerta.
+            if (!GameState.AllowWildEncounters)
                 return;
 
             // Una casilla de cambio de escena manda: no se pisa para sacar un combate encima.
@@ -72,6 +81,7 @@ namespace TorreIngenieria.World
 
         void StartBattle(string speciesId, int level)
         {
+            Debug.Log($"Encuentro salvaje: {speciesId} nv {level} en {GameState.CurrentFloor}.");
             busy = true;
             BattleRequest.StartWild(speciesId, level, SceneManager.GetActiveScene().name,
                 player.transform.position, (int)player.Facing);

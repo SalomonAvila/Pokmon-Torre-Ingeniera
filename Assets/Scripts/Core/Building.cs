@@ -27,6 +27,12 @@ namespace TorreIngenieria.Core
         /// <summary>SpawnPoint de cada piso al llegar bajando por la escalera (desde el piso de arriba).</summary>
         public const string SpawnFromStairsAbove = "DesdeEscaleraArriba";
 
+        /// <summary>
+        /// SpawnPoint fijo del lobby para reaparecer tras un desmayo (junto al futuro puesto de
+        /// Don Chucho). Lo usará el flujo de desmayo de la Etapa 7.
+        /// </summary>
+        public const string SpawnFromFaint = "Desmayo";
+
         public static bool IsValid(string floor) => Array.IndexOf(Floors, floor) >= 0;
 
         /// <summary>Piso de arriba, o null si es el último.</summary>
