@@ -172,6 +172,44 @@ namespace TorreIngenieria.Core
         public static void NotifyTeamChanged() => Commit();
 
         /// <summary>
+        /// Cura por completo al equipo (PS y PP) y revive a los debilitados. Es el punto de curación de la
+        /// plazoleta: Gabriel lo ofrece al hablar con él, antes de que exista Don Chucho tras la puerta.
+        /// Devuelve true si cambió algo.
+        /// </summary>
+        public static bool HealTeam()
+        {
+            bool healed = false;
+            foreach (TeamMember member in Save.team)
+            {
+                if (member == null)
+                    continue;
+
+                // El centinela negativo significa "sin daño"; 0 es debilitado y sí se cura.
+                if (member.hp >= 0 && member.hp < member.maxHp)
+                {
+                    member.hp = member.maxHp;
+                    healed = true;
+                }
+
+                if (member.moves == null)
+                    continue;
+
+                foreach (MoveSlot move in member.moves)
+                {
+                    if (move != null && move.pp < move.maxPp)
+                    {
+                        move.pp = move.maxPp;
+                        healed = true;
+                    }
+                }
+            }
+
+            if (healed)
+                Commit();
+            return healed;
+        }
+
+        /// <summary>
         /// Crea el Pokémon capturado con sus PS, EXP, movimientos y PP, y lo suma al equipo si hay sitio.
         /// La captura siempre cuenta para el Pokédex, aunque el equipo esté lleno (el prototipo no tiene PC).
         /// Devuelve el miembro creado para que el combate pueda mostrar su ficha.
@@ -336,8 +374,16 @@ namespace TorreIngenieria.Core
             Commit();
         }
 
-        /// <summary>Tutorial superado (combate con Gabriel en el lobby); todavía no lo consume nadie.</summary>
+        /// <summary>Tutorial superado (combate con Gabriel en el lobby); lo consulta el Vigilante del Atrio.</summary>
         public static bool TutorialDone => Save.tutorialDone;
+
+        /// <summary>
+        /// ¿La partida ya tiene inicial? Lo normal es que lo fije <see cref="SetStarter"/>; si la partida
+        /// viene de las herramientas de prueba, se usa el primer inicial del equipo (ver
+        /// <see cref="EnsureStarterFromTeam"/>). Lo consulta el diálogo del Vigilante.
+        /// </summary>
+        public static bool HasStarter =>
+            !string.IsNullOrEmpty(Save.starterId) || !string.IsNullOrEmpty(StarterInTeam());
 
         /// <summary>
         /// El Vigilante Gómez deja entrar al edificio con el inicial elegido y al menos un Pokémon capturado
@@ -365,6 +411,15 @@ namespace TorreIngenieria.Core
                 return false;
             }
         }
+
+        /// <summary>
+        /// ¿Salen salvajes en el piso actual? En la plazoleta los encuentros son la zona de tutorial: en
+        /// cuanto el jugador logra la captura que abre la puerta (<see cref="PassesBuildingDoor"/>), las
+        /// jardineras se calman y no vuelven a salir. En el resto de pisos siempre hay encuentros, porque
+        /// alimentan el Pokédex del piso (Doc §8).
+        /// </summary>
+        public static bool AllowWildEncounters =>
+            CurrentFloor != Building.Floors[0] || !PassesBuildingDoor;
 
         /// <summary>
         /// (propuesta) Fija como inicial el primer Pokémon inicial del equipo si la partida aún no tiene

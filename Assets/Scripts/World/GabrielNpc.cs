@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TorreIngenieria.Core;
 using UnityEngine;
 
@@ -11,7 +12,8 @@ namespace TorreIngenieria.World
     /// <list type="bullet">
     /// <item>Sin inicial: presenta la situación y abre la elección de Bulbasaur, Charmander o Squirtle.</item>
     /// <item>Con inicial y sin decisión de ayuda: la ofrece y, si el jugador dice "Puedo solo", insiste.</item>
-    /// <item>Con ayuda aceptada: recuerda capturar en las jardineras (y, tras el tutorial, felicita).</item>
+    /// <item>Con ayuda aceptada: recuerda capturar en las jardineras de abajo y cura al equipo al hablar
+    /// (es el punto de curación de la plazoleta; tras el tutorial, felicita).</item>
     /// </list>
     ///
     /// Hereda de <see cref="Interactable"/> para que <see cref="PlayerController"/> lo encuentre y bloquee
@@ -50,13 +52,20 @@ namespace TorreIngenieria.World
             }
 
             if (GameState.TutorialDone)
-                WorldMessage.Show(
+                ShowHealed(
                     "¡Bien hecho, Pedro! Ya puedes subir al piso 3.",
+                    "Si tu POKÉMON está herido, habla conmigo: te lo curo.",
                     "Nos vemos arriba.");
+            else if (GameState.PassesBuildingDoor)
+                ShowHealed(
+                    "Ya capturaste lo que el vigilante Gómez pide.",
+                    "Puedes pasar al lobby cuando quieras.",
+                    "Si tu POKÉMON está herido, habla conmigo: te lo curo.");
             else
-                WorldMessage.Show(
-                    "Captura al menos un POKÉMON en las jardineras.",
+                ShowHealed(
+                    "Captura al menos un POKÉMON en las jardineras de abajo, junto al kiosco.",
                     "Con eso, el vigilante Gómez te dejará pasar al lobby.",
+                    "Si tu POKÉMON está herido, habla conmigo: te lo curo.",
                     "Allí te espero para una última prueba.");
         }
 
@@ -124,7 +133,24 @@ namespace TorreIngenieria.World
             GameState.AddItem("pokeball", 5);
             WorldMessage.Show(
                 "Toma estas 5 POKÉBOLAS.",
-                "Captura un POKÉMON en las jardineras y el vigilante te dejará pasar.");
+                "Captura un POKÉMON en las jardineras de abajo y el vigilante te dejará pasar.",
+                "Si tu POKÉMON está herido, habla conmigo: te lo curo.");
+        }
+
+        /// <summary>
+        /// Muestra las líneas y, si el equipo tenía PS o PP gastados, añade el aviso de la curación.
+        /// Gabriel es el punto de curación de la plazoleta mientras Don Chucho está tras la puerta.
+        /// </summary>
+        static void ShowHealed(params string[] lines)
+        {
+            if (!GameState.HealTeam())
+            {
+                WorldMessage.Show(lines);
+                return;
+            }
+
+            var allLines = new List<string>(lines) { "Gabriel curó a tus POKÉMON." };
+            WorldMessage.Show(allLines.ToArray());
         }
 
         static string DisplayName(string speciesId)

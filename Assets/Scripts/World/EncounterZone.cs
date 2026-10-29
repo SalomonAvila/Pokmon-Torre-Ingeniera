@@ -44,6 +44,10 @@ namespace TorreIngenieria.World
             if (busy || encounters == null || player == null || SceneTransition.IsTransitioning)
                 return;
 
+            // En la plazoleta los salvajes se apagan cuando ya se logró la captura de la puerta.
+            if (!GameState.AllowWildEncounters)
+                return;
+
             // Una casilla de cambio de escena manda: no se pisa para sacar un combate encima.
             if (WarpZone.At(position) != null)
                 return;

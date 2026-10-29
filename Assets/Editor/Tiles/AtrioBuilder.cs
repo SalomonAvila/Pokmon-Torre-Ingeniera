@@ -123,6 +123,12 @@ namespace TorreIngenieria.EditorTools
         const string BlockingObjects = "|VMPpRCL";
         static readonly Vector2Int PlayerStart = new Vector2Int(5, 21); // columna, fila
 
+        /// <summary>
+        /// Primera fila de la jardinera inferior, la única con encuentros salvajes. La jardinera de arriba
+        /// es el paso obligatorio a la puerta y al Vigilante, así que se deja libre de combates.
+        /// </summary>
+        const int JardineraInferior = 29;
+
         [MenuItem("Torre Ingeniería/Mapas/Construir atrio provisional")]
         public static void Build()
         {
@@ -144,14 +150,14 @@ namespace TorreIngenieria.EditorTools
             ProvisionalMap.AddHud();
             ProvisionalMap.AddEncounterZone();
 
-            // Zonas de encuentro provisionales de la plazoleta (Doc §7): las jardineras, que en el mapa
-            // provisional son las zonas verdes ('g'). Se pinta la capa Encuentros sobre cada casilla verde
-            // que se pueda pisar (se saltan el muro verde y los objetos sólidos). La capa se oculta al jugar
-            // (HideOnPlay), así que la zona de encuentro se ve en el editor, no en el juego.
+            // Zonas de encuentro provisionales de la plazoleta (Doc §7): solo la jardinera de abajo (la de
+            // junto al kiosco). La de arriba es el camino obligatorio a la puerta y al Vigilante, así que
+            // queda libre de salvajes. Se saltan el muro verde y los objetos sólidos. La capa se oculta al
+            // jugar (HideOnPlay), así que la zona de encuentro se ve en el editor, no en el juego.
             // Las jardineras definitivas llegan con el contenido del piso en la Etapa 8.
             TileBase encounterMarker = ProvisionalMap.LoadTiles(TilesetName, 16)[TileA];
             Tilemap encounters = MapSceneBuilder.Layer("Encuentros");
-            for (int row = 0; row < Floor.Length; row++)
+            for (int row = JardineraInferior; row < Floor.Length; row++)
                 for (int col = 0; col < Floor[row].Length; col++)
                     if (Floor[row][col] == 'g' && BlockingObjects.IndexOf(Objects[row][col]) < 0)
                         encounters.SetTile(ProvisionalMap.Cell(col, row, height), encounterMarker);
@@ -161,7 +167,7 @@ namespace TorreIngenieria.EditorTools
             ProvisionalMap.AddWarp("SubidaAscensores", 2, 16, 1, 1, height, SceneNames.Ascensores, AscensoresBuilder.SpawnFromAtrium,
                 needsBuildingAccess: true,
                 lockedMessage: "—Alto. El edificio está en emergencia.\n" +
-                               "El vigilante Gómez deja entrar solo con inicial elegido y un Pokémon capturado.");
+                               "El vigilante Gómez le dirá qué le falta para entrar.");
             ProvisionalMap.AddSpawn(SpawnFromElevators, 9, 2, height, PlayerController.Direction.Down);
 
             // Gabriel (Doc §8 y §10): en la plazoleta, junto a la fuente. Entrega el inicial y, si el
@@ -170,15 +176,8 @@ namespace TorreIngenieria.EditorTools
             ProvisionalMap.CreateGabriel(11, 18, height);
 
             // Vigilante Gómez (Doc §8 y §10): cuida la puerta desde el último escalón, al lado de la llegada
-            // desde los ascensores. Sus líneas son las del documento más el consejo del tutorial.
-            ProvisionalMap.CreateNpc("VigilanteGomez", 10, 2, height,
-                new[]
-                {
-                    "¡Alto ahí, joven! El edificio está cerrado, hay criaturas sueltas.",
-                    "Si va a entrar, lleve compañía.",
-                    "Necesita un POKÉMON propio y haber capturado al menos uno en las jardineras.",
-                },
-                character: ProvisionalMap.Character.Vigilante);
+            // desde los ascensores. Su diálogo cambia según el progreso (ver VigilanteNpc).
+            ProvisionalMap.CreateVigilante(10, 2, height);
 
             // Entrenador de práctica del kiosco (Doc §10): primer combate de entrenador y primera fuente
             // de créditos. Queda junto al mostrador, mirando al camino; el combate real llega en la Etapa 6.
