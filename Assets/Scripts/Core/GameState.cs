@@ -365,7 +365,7 @@ namespace TorreIngenieria.Core
             Commit();
         }
 
-        /// <summary>Marca el combate tutorial con Gabriel como superado (no abre la puerta del edificio).</summary>
+        /// <summary>Marca el combate tutorial con Gabriel como superado (abre la escalera del lobby al piso 3).</summary>
         public static void CompleteTutorial()
         {
             if (Save.tutorialDone)
@@ -374,16 +374,18 @@ namespace TorreIngenieria.Core
             Commit();
         }
 
-        /// <summary>Tutorial superado (combate con Gabriel en el lobby); lo consulta el Vigilante del Atrio.</summary>
+        /// <summary>Tutorial superado (combate con Gabriel en el lobby); lo consultan la escalera, el Vigilante y Gabriel.</summary>
         public static bool TutorialDone => Save.tutorialDone;
 
         /// <summary>
-        /// ¿La partida ya tiene inicial? Lo normal es que lo fije <see cref="SetStarter"/>; si la partida
-        /// viene de las herramientas de prueba, se usa el primer inicial del equipo (ver
-        /// <see cref="EnsureStarterFromTeam"/>). Lo consulta el diálogo del Vigilante.
+        /// Inicial de la partida: el fijado por <see cref="SetStarter"/> o, en partidas de prueba, el
+        /// primero que traiga el equipo (ver <see cref="EnsureStarterFromTeam"/>).
         /// </summary>
-        public static bool HasStarter =>
-            !string.IsNullOrEmpty(Save.starterId) || !string.IsNullOrEmpty(StarterInTeam());
+        public static string StarterId =>
+            !string.IsNullOrEmpty(Save.starterId) ? Save.starterId : StarterInTeam();
+
+        /// <summary>¿La partida ya tiene inicial? Lo consultan el Vigilante y el tutorial de Gabriel.</summary>
+        public static bool HasStarter => !string.IsNullOrEmpty(StarterId);
 
         /// <summary>
         /// El Vigilante Gómez deja entrar al edificio con el inicial elegido y al menos un Pokémon capturado
@@ -398,10 +400,7 @@ namespace TorreIngenieria.Core
         {
             get
             {
-                string starterId = string.IsNullOrEmpty(Save.starterId)
-                    ? StarterInTeam()
-                    : Save.starterId;
-
+                string starterId = StarterId;
                 if (string.IsNullOrEmpty(starterId))
                     return false;
 

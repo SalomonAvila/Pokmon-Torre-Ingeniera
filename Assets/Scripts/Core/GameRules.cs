@@ -46,6 +46,31 @@ namespace TorreIngenieria.Core
 
         // ---------- Entrenadores y jefes (Doc §7, §8) ----------
 
+        /// <summary>Id del combate tutorial del lobby (Gabriel, Doc §8).</summary>
+        public const string TutorialTrainerId = "gabriel";
+
+        /// <summary>Nivel del rival de Gabriel en el tutorial (Doc §8).</summary>
+        public const int TutorialRivalLevel = 5;
+
+        /// <summary>
+        /// Inicial con ventaja de tipo sobre el del jugador: el rival del tutorial usa el inicial que
+        /// gana a ese tipo (Doc §8). Devuelve null si el inicial no es uno de los tres.
+        /// </summary>
+        public static string CounterStarter(string starterId) => starterId switch
+        {
+            "bulbasaur" => "charmander",
+            "charmander" => "squirtle",
+            "squirtle" => "bulbasaur",
+            _ => null,
+        };
+
+        /// <summary>
+        /// Nivel del rival del tutorial: 5 si el jugador aceptó la ayuda de Gabriel y uno menos si dijo
+        /// "Puedo solo" (Doc §8). En el prototipo la rama "Puedo solo" no llega a guardarse.
+        /// </summary>
+        public static int TutorialRivalLevelFor(GabrielChoice choice) =>
+            choice == GabrielChoice.Yes ? TutorialRivalLevel : TutorialRivalLevel - 1;
+
         /// <summary>Casillas de visión de un entrenador, en línea recta.</summary>
         public const int TrainerSightRange = 3;
 

@@ -94,7 +94,12 @@ namespace TorreIngenieria.EditorTools
             ProvisionalMap.AddHud();
 
             // Escalera de la izquierda → escalera en zigzag hacia el piso 3. Al volver, se llega a su lado.
-            ProvisionalMap.AddWarp("SubidaPiso3", 0, 0, 2, 5, height, SceneNames.Escalera, StairwellController.SpawnFromBelow);
+            // La escalera no se abre hasta superar el combate tutorial de Gabriel (Doc §8).
+            WarpZone stairs = ProvisionalMap.AddWarp("SubidaPiso3", 0, 0, 2, 5, height,
+                SceneNames.Escalera, StairwellController.SpawnFromBelow);
+            stairs.SetTutorialGate(true,
+                "—Protocolo de evaluación: nadie sube sin la prueba de Gabriel.\n" +
+                "Gabriel te espera en el pasillo.");
             ProvisionalMap.AddSpawn(Building.SpawnFromStairsAbove, 2, 3, height, PlayerController.Direction.Right);
 
             // Llegada desde el atrio: arriba de la escalera, mirando hacia el pasillo.
@@ -102,6 +107,9 @@ namespace TorreIngenieria.EditorTools
             // Último escalón de la escalera (entre las barandas) → gradas superiores del atrio.
             // Bajar siempre está permitido: esta salida no lleva la guarda de la puerta del edificio.
             ProvisionalMap.AddWarp("BajadaAtrio", 17, 23, 9, 9, height, SceneNames.Atrio, AtrioBuilder.SpawnFromElevators);
+
+            // Gabriel espera en el pasillo para el combate tutorial antes de la escalera al piso 3 (Doc §8).
+            ProvisionalMap.CreateTutorialGabriel(8, 2, height, PlayerController.Direction.Right);
 
             // Si se prueba esta escena directamente, Pedro empieza donde llega desde el atrio.
             GameObject pedro = ProvisionalMap.CreatePlayer(ProvisionalMap.CellCenter(20, 6, height));

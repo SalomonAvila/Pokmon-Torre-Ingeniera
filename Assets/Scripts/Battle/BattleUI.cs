@@ -152,13 +152,24 @@ namespace TorreIngenieria.Battle
                 ? new[] { "LUCHAR", "MOCHILA", "POKÉMON", "HUIR" }
                 : new[] { "LUCHAR", "MOCHILA", "POKÉMON" };
 
+            // El tutorial de Gabriel no permite objetos (Doc §8): la Mochila se ve atenuada y el
+            // cursor la salta.
+            bool[] enabled = null;
+            if (BattleRequest.IsTutorial)
+            {
+                enabled = new bool[options.Length];
+                for (int i = 0; i < enabled.Length; i++)
+                    enabled[i] = true;
+                enabled[1] = false;
+            }
+
             while (true)
             {
                 // El menú principal ocupa la mitad derecha; el mensaje queda a la izquierda.
                 message.SetPanel(DialogueBox.PanelSide.Left);
 
                 int choice = -1;
-                yield return menu.Choose(options, null, 2, value => choice = value);
+                yield return menu.Choose(options, null, 2, value => choice = value, enabled: enabled);
 
                 // Cancelar en el menú principal no elige acción: se vuelve a abrir.
                 if (choice < 0)
