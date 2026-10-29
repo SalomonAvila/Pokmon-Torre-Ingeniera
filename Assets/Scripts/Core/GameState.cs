@@ -103,6 +103,18 @@ namespace TorreIngenieria.Core
             Commit();
         }
 
+        /// <summary>
+        /// Guarda el piso actual en <see cref="SaveData.location"/> para que «Continuar» cargue la
+        /// escena correcta. Lo llama FloorInfo al cargar cada escena de piso.
+        /// </summary>
+        public static void SetLocation(string floor)
+        {
+            if (!Building.IsValid(floor) || Save.location == floor)
+                return;
+            Save.location = floor;
+            Commit();
+        }
+
         // ---------- Sellos y notas de jefes ----------
 
         public static int SealCount => Save.sealIds.Count;

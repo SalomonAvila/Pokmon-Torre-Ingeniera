@@ -40,8 +40,7 @@ namespace TorreIngenieria.UI
                     yield return dialogue.Say("Cargando partida...");
                     // (propuesta) Partidas de prueba antiguas sin inicial fijado: se toma el inicial del equipo.
                     GameState.EnsureStarterFromTeam();
-                    // TODO: cargar la ubicación guardada; por ahora siempre el atrio.
-                    LoadWorld();
+                    LoadWorld(Building.SceneFor(GameState.Save.location), SceneNames.Atrio);
                     yield break;
                 }
 
@@ -68,13 +67,19 @@ namespace TorreIngenieria.UI
             yield return IntroducePlayer(data);
             yield return dialogue.Say($"¡Listo, {data.playerName}! Tu aventura en la Torre de Ingeniería está por comenzar.");
 
-            LoadWorld();
+            // La partida nueva pasa por la introducción narrada antes de la plazoleta.
+            LoadWorld(SceneNames.Intro, SceneNames.Atrio);
         }
 
-        static void LoadWorld()
+        static void LoadWorld(string scene, string fallback)
         {
-            if (!SceneTransition.Go(SceneNames.Atrio, null))
-                Debug.Log($"Falta la escena '{SceneNames.Atrio}': usa Torre Ingeniería > Mapas > Construir atrio provisional.");
+            if (SceneTransition.Go(scene, null))
+                return;
+
+            if (!string.IsNullOrEmpty(fallback))
+                SceneTransition.Go(fallback, null);
+            else
+                Debug.Log($"Falta la escena '{scene}': ejecuta su builder (por ejemplo, Torre Ingeniería > Construir escena Intro).");
         }
 
         /// <summary>Presentación del protagonista según su biografía en el documento de diseño.</summary>

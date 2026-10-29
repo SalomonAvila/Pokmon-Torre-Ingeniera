@@ -21,6 +21,7 @@ namespace TorreIngenieria.EditorTools
     public static class MainMenuSceneBuilder
     {
         const string ScenePath = "Assets/Scenes/" + SceneNames.MainMenu + ".unity";
+        const string IntroScenePath = "Assets/Scenes/" + SceneNames.Intro + ".unity";
         const string ControlsPath = "Assets/Input/ControlesJuego.inputactions";
         const string TitleImagePath = "Assets/Art/UI/PantallaTitulo.png";
         const string MontoyaPath = "Assets/Art/Characters/AurelioMontoya.png";
@@ -128,6 +129,55 @@ namespace TorreIngenieria.EditorTools
             EditorSceneManager.SaveScene(scene, ScenePath);
             AddSceneToBuildFirst(ScenePath);
             Debug.Log($"Escena creada en {ScenePath} y agregada como primera escena del build.");
+        }
+
+        /// <summary>
+        /// Genera la escena de introducción narrada (Doc §7, pantalla 3): fondo negro, cuadro de texto
+        /// y el controlador que cuenta la historia y pasa al Atrio. Se registra después del título.
+        /// </summary>
+        [MenuItem("Torre Ingeniería/Construir escena Intro")]
+        public static void BuildIntro()
+        {
+            if (Resources.Load<TMP_Settings>("TMP Settings") == null)
+            {
+                TMP_PackageResourceImporter.ImportResources(true, false, false);
+                EditorUtility.DisplayDialog("TextMeshPro",
+                    "Se están importando los recursos esenciales de TextMeshPro. " +
+                    "Cuando termine, vuelve a ejecutar Torre Ingeniería > Construir escena Intro.", "OK");
+                return;
+            }
+
+            var missing = new[] { ControlsPath, DialogBoxPath, ContinueArrowPath, PixelFontPath }
+                .Where(path => AssetDatabase.LoadMainAssetAtPath(path) == null).ToArray();
+            if (missing.Length > 0)
+            {
+                EditorUtility.DisplayDialog("Introducción", "Faltan recursos:\n" + string.Join("\n", missing), "OK");
+                return;
+            }
+
+            PrepareDialogueAssets();
+
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                return;
+
+            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+            var controls = AssetDatabase.LoadAssetAtPath<InputActionAsset>(ControlsPath);
+            var dialogBoxSprite = AssetDatabase.LoadAssetAtPath<Sprite>(DialogBoxPath);
+            var arrowSprite = AssetDatabase.LoadAssetAtPath<Sprite>(ContinueArrowPath);
+            var pixelFont = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(PixelFontAssetPath);
+
+            CreateCamera();
+            Transform canvas = CreateCanvas();
+            CreateOverlay(canvas, "Fondo", Color.black, 1f);
+            DialogueBox dialogue = CreateDialogueBox(canvas, controls, dialogBoxSprite, arrowSprite, pixelFont);
+
+            var controller = new GameObject("IntroController").AddComponent<IntroController>();
+            Assign(controller, ("controls", controls), ("dialogue", dialogue));
+
+            EditorSceneManager.SaveScene(scene, IntroScenePath);
+            BuildScenes.Register(IntroScenePath);
+            Debug.Log($"Escena de introducción creada en {IntroScenePath}.");
         }
 
         // ---------- Cuadro de texto para los mapas ----------

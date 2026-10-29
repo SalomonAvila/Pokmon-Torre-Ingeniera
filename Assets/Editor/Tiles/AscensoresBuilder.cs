@@ -104,6 +104,8 @@ namespace TorreIngenieria.EditorTools
 
             // Llegada desde el atrio: arriba de la escalera, mirando hacia el pasillo.
             ProvisionalMap.AddSpawn(SpawnFromAtrium, 20, 6, height, PlayerController.Direction.Up);
+            // Reaparición tras un desmayo, junto al futuro puesto de Don Chucho (lo usa la Etapa 7).
+            ProvisionalMap.AddSpawn(Building.SpawnFromFaint, 9, 6, height, PlayerController.Direction.Down);
             // Último escalón de la escalera (entre las barandas) → gradas superiores del atrio.
             // Bajar siempre está permitido: esta salida no lleva la guarda de la puerta del edificio.
             ProvisionalMap.AddWarp("BajadaAtrio", 17, 23, 9, 9, height, SceneNames.Atrio, AtrioBuilder.SpawnFromElevators);
