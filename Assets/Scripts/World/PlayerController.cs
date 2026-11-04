@@ -38,7 +38,7 @@ namespace TorreIngenieria.World
 
         [Header("Indicadores de diálogo")]
         [SerializeField, Min(0.1f), Tooltip("Radio en casillas para ver la burbuja de NPCs con diálogo nuevo.")]
-        float indicatorRadius = 4f;
+        float indicatorRadius = 8f;
 
         // NonSerialized: si Unity recarga los scripts durante el Play, se vuelven a buscar en Awake/OnEnable
         // en lugar de quedar como acciones vacías.
@@ -79,8 +79,10 @@ namespace TorreIngenieria.World
             cancelAction = controls.FindAction("Juego/Cancel", true);
             menuAction = controls.FindAction("Juego/Menu", true);
             mapAction = controls.FindAction("Juego/Map", true);
-            if (indicatorRadius <= 0f)
-                indicatorRadius = 4f;
+            // Las escenas ya generadas guardaron el radio anterior (4); el nuevo mínimo es 8.
+            // Al regenerar los mapas, el builder escribirá 8 directamente.
+            if (indicatorRadius < 8f)
+                indicatorRadius = 8f;
             transform.position = CellCenter(transform.position);
             ShowFrame(0);
         }
