@@ -18,6 +18,21 @@ namespace TorreIngenieria.World
     /// </summary>
     public class VigilanteNpc : Interactable
     {
+        /// <summary>El diálogo cambia con el inicial, la captura y el tutorial.</summary>
+        public override string DialogueKey
+        {
+            get
+            {
+                if (!GameState.HasStarter)
+                    return "no-starter";
+                if (!GameState.PassesBuildingDoor)
+                    return "capture";
+                if (GameState.TutorialDone)
+                    return "done";
+                return "enter";
+            }
+        }
+
         public override void Interact()
         {
             if (WorldMessage.IsOpen)
@@ -25,6 +40,7 @@ namespace TorreIngenieria.World
 
             if (!GameState.HasStarter)
             {
+                MarkDialogueSeen();
                 WorldMessage.Show(
                     "¡Alto ahí, joven! El edificio está cerrado, hay criaturas sueltas.",
                     "Primero hable con Gabriel, junto a la pantalla: él le dará un POKÉMON.");
@@ -33,6 +49,7 @@ namespace TorreIngenieria.World
 
             if (!GameState.PassesBuildingDoor)
             {
+                MarkDialogueSeen();
                 WorldMessage.Show(
                     "Ya tiene compañero, pero así no puede entrar.",
                     "Capture al menos un POKÉMON en las jardineras de abajo y vuelva.");
@@ -41,12 +58,14 @@ namespace TorreIngenieria.World
 
             if (GameState.TutorialDone)
             {
+                MarkDialogueSeen();
                 WorldMessage.Show(
                     "Ya superó la prueba con Gabriel.",
                     "La escalera del lobby lo lleva al piso 3. ¡Buen viaje!");
                 return;
             }
 
+            MarkDialogueSeen();
             WorldMessage.Show(
                 "Adelante. Don Chucho lo espera en el lobby.",
                 "El ascensor no funciona; la escalera del fondo lleva al piso 3.");

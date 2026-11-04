@@ -26,6 +26,9 @@ namespace TorreIngenieria.World
 
         static readonly string[] Options = { "SÍ", "NO" };
 
+        /// <summary>Antes del tutorial reta; después solo recuerda la escalera y cura.</summary>
+        public override string DialogueKey => GameState.TutorialDone ? "done" : "challenge";
+
         public override void Interact()
         {
             if (WorldMessage.IsOpen || SceneTransition.IsTransitioning)
@@ -33,6 +36,7 @@ namespace TorreIngenieria.World
 
             if (GameState.TutorialDone)
             {
+                MarkDialogueSeen();
                 bool healed = GameState.HealTeam();
                 WorldMessage.Show(healed
                     ? new[]
@@ -56,6 +60,7 @@ namespace TorreIngenieria.World
                 lines.Add("Gabriel curó a tus POKÉMON.");
             lines.AddRange(ChallengeLines);
 
+            MarkDialogueSeen();
             WorldMessage.Show(lines.ToArray(), Options, answer =>
             {
                 if (answer < 0)

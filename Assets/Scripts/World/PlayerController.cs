@@ -36,6 +36,10 @@ namespace TorreIngenieria.World
         [SerializeField, Tooltip("Capas del mapa que bloquean el paso.")]
         string[] blockingLayerNames = { "Paredes", "Colisiones", "Bloqueo" };
 
+        [Header("Indicadores de diálogo")]
+        [SerializeField, Min(0.1f), Tooltip("Radio en casillas para ver la burbuja de NPCs con diálogo nuevo.")]
+        float indicatorRadius = 4f;
+
         // NonSerialized: si Unity recarga los scripts durante el Play, se vuelven a buscar en Awake/OnEnable
         // en lugar de quedar como acciones vacías.
         [System.NonSerialized] InputAction moveAction;
@@ -49,6 +53,7 @@ namespace TorreIngenieria.World
         bool moving;
         bool nextStepIsA = true;
         float turnTimer;
+        Interactable[] interactables;
 
         /// <summary>Se invoca al chocar con una casilla bloqueada (posición del centro de esa casilla).</summary>
         public static event Action<Vector3> Bumped;
@@ -74,6 +79,8 @@ namespace TorreIngenieria.World
             cancelAction = controls.FindAction("Juego/Cancel", true);
             menuAction = controls.FindAction("Juego/Menu", true);
             mapAction = controls.FindAction("Juego/Map", true);
+            if (indicatorRadius <= 0f)
+                indicatorRadius = 4f;
             transform.position = CellCenter(transform.position);
             ShowFrame(0);
         }
@@ -89,6 +96,11 @@ namespace TorreIngenieria.World
             menuAction ??= controls.FindAction("Juego/Menu", true);
             mapAction ??= controls.FindAction("Juego/Map", true);
             moveAction.actionMap.Enable();
+
+            // Al recargar scripts durante el Play se pierde la lista cacheada; Start la vuelve a
+            // calcular tras colocar al jugador, pero aquí se recupera antes del primer fotograma.
+            CacheInteractables();
+            RefreshDialogueMarkers();
         }
 
         void Start()
@@ -120,10 +132,19 @@ namespace TorreIngenieria.World
             {
                 Debug.LogWarning($"No hay un SpawnPoint con id '{spawnId}' en esta escena.");
             }
+
+            // La orientación puede venir del SpawnPoint o de la vuelta de un combate: hay que
+            // señalar a los NPC cercanos desde el primer fotograma, sin esperar a moverse.
+            CacheInteractables();
+            RefreshDialogueMarkers();
         }
 
         void Update()
         {
+            // La lista de interactuables está cacheada: recorrerla cada fotograma es barato y permite
+            // que la burbuja siga al jugador, desaparezca al ver el diálogo y cambie con el progreso.
+            RefreshDialogueMarkers();
+
             // Mientras hay texto, opciones, un fundido o un paso en curso, el jugador no se mueve ni interactúa.
             if (moving || SceneTransition.IsTransitioning ||
                 WorldMessage.IsOpen || DialogueBox.IsOpen || ChoiceBox.IsChoosing || GameMenu.IsOpen)
@@ -165,6 +186,7 @@ namespace TorreIngenieria.World
                 facing = input.Value;
                 turnTimer = turnDelay;
                 ShowFrame(0);
+                RefreshDialogueMarkers();
                 return;
             }
 
@@ -180,8 +202,59 @@ namespace TorreIngenieria.World
         /// <summary>Habla con el objeto de la casilla que tiene delante (NPC, letrero, ítem o entrenador).</summary>
         void Interact()
         {
-            Vector3 target = transform.position + (Vector3)ToVector(facing);
-            Interactable.At(target)?.Interact();
+            TargetInFront()?.Interact();
+            // La conversación se marca como vista dentro de Interact; refrescar aquí oculta la
+            // burbuja en el mismo fotograma, incluso si el personaje sigue delante.
+            RefreshDialogueMarkers();
+        }
+
+        /// <summary>Objeto de la casilla a la que mira; la misma que usa <see cref="Interact"/>.</summary>
+        Interactable TargetInFront()
+        {
+            Vector3 cell = transform.position + (Vector3)ToVector(facing);
+            return Interactable.At(cell);
+        }
+
+        void CacheInteractables()
+        {
+            // Se incluyen los inactivos (entrenadores vencidos, objetos recogidos) para no tener que
+            // volver a buscar cuando cambie la escena o se recarguen los scripts.
+            interactables = FindObjectsByType<Interactable>(FindObjectsInactive.Include);
+        }
+
+        /// <summary>
+        /// Muestra la burbuja de cada NPC o entrenador con diálogo nuevo dentro del radio. La del
+        /// personaje que está en la casilla de enfrente se marca como lista (rebote y opacidad completa).
+        /// No oculta la burbuja por caminar: es una guía para descubrir a los NPC.
+        /// </summary>
+        void RefreshDialogueMarkers()
+        {
+            if (interactables == null)
+                return;
+
+            bool blocked = SceneTransition.IsTransitioning ||
+                           WorldMessage.IsOpen || DialogueBox.IsOpen || ChoiceBox.IsChoosing || GameMenu.IsOpen;
+            Vector3 currentCell = CellCenter(transform.position);
+            Vector3 facingCell = currentCell + (Vector3)ToVector(facing);
+            float radiusSquared = indicatorRadius * indicatorRadius;
+
+            foreach (Interactable interactable in interactables)
+            {
+                if (interactable == null)
+                    continue;
+
+                bool show = false;
+                if (!blocked && interactable.isActiveAndEnabled && interactable.CanShowIndicator)
+                {
+                    Vector3 offset = interactable.transform.position - currentCell;
+                    show = offset.sqrMagnitude <= radiusSquared && interactable.HasUnseenDialogue;
+                }
+
+                bool ready = show &&
+                             (interactable.transform.position - facingCell).sqrMagnitude < 0.0625f;
+                interactable.SetIndicatorVisible(show);
+                interactable.SetIndicatorReady(ready);
+            }
         }
 
         /// <summary>Dirección pulsada; sin diagonales (gana el eje con más fuerza).</summary>
@@ -227,6 +300,9 @@ namespace TorreIngenieria.World
                 WarpZone.At(transform.position)?.Trigger();
                 Stepped?.Invoke(transform.position);
             }
+
+            // Actualiza el radio y el objetivo listo al terminar el paso (también tras chocar con un NPC).
+            RefreshDialogueMarkers();
         }
 
         bool IsBlocked(Vector3 cellCenter)

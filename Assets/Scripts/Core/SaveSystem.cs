@@ -16,6 +16,17 @@ namespace TorreIngenieria.Core
         public float note;
     }
 
+    /// <summary>
+    /// Conversación ya vista de un NPC: el id identifica al personaje y la clave, su diálogo actual.
+    /// Cuando el id cambia de clave (por progreso o por editar las líneas), el indicador vuelve a salir.
+    /// </summary>
+    [Serializable]
+    public class SeenDialogue
+    {
+        public string id;
+        public string key;
+    }
+
     /// <summary>Movimiento aprendido con sus PP (v4).</summary>
     [Serializable]
     public class MoveSlot
@@ -80,7 +91,7 @@ namespace TorreIngenieria.Core
     public class SaveData
     {
         /// <summary>Versión actual del archivo. Al añadir campos se sube; los ausentes arrancan con su valor inicial.</summary>
-        public const int CurrentVersion = 4;
+        public const int CurrentVersion = 5;
 
         /// <summary>
         /// El 1 es el valor antiguo: si el JSON no trae 'version' (formato anterior al campo) se trata como v1
@@ -125,6 +136,9 @@ namespace TorreIngenieria.Core
 
         public List<string> defeatedTrainers = new List<string>();
         public List<string> collectedItems = new List<string>();
+
+        /// <summary>Última conversación vista por NPC: id del personaje y clave de su diálogo actual.</summary>
+        public List<SeenDialogue> seenDialogues = new List<SeenDialogue>();
 
         /// <summary>Jefe de la racha de derrotas actual.</summary>
         public string lastBossFloor = "";
@@ -185,6 +199,7 @@ namespace TorreIngenieria.Core
         /// v1 → v2: se añadieron equipo, inventario, sellos por id, notas de jefes, Pokédex, pisos visitados
         /// y banderas. v2 → v3: se retiró pokedexByFloor (el Pokédex por piso se deriva de SpeciesCatalog).
         /// v3 → v4: el equipo guarda PS, EXP y movimientos con PP.
+        /// v4 → v5: se guardan las conversaciones ya vistas por NPC (id + clave del diálogo).
         /// JsonUtility deja los campos nuevos con su valor inicial e ignora las claves viejas que ya no existen;
         /// la v4 necesita además el centinela de PS para no dejar debilitados a los Pokémon de partidas viejas.
         /// Al final, <see cref="TeamMembers.RecalculateOnLoad"/> completa PS, EXP, movimientos y PP con los
@@ -244,6 +259,11 @@ namespace TorreIngenieria.Core
             if (data.defeatedTrainers == null) data.defeatedTrainers = new List<string>();
             if (data.collectedItems == null) data.collectedItems = new List<string>();
             if (data.completedFloors == null) data.completedFloors = new List<string>();
+            if (data.seenDialogues == null)
+                data.seenDialogues = new List<SeenDialogue>();
+            else
+                data.seenDialogues.RemoveAll(entry =>
+                    entry == null || string.IsNullOrEmpty(entry.id) || string.IsNullOrEmpty(entry.key));
         }
 
         /// <summary>

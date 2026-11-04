@@ -32,6 +32,26 @@ namespace TorreIngenieria.World
         static readonly string[] ConfirmOptions = { "SÍ", "NO" };
         static readonly string[] HelpOptions = { "Sí, ayúdame", "Puedo solo" };
 
+        /// <summary>
+        /// La conversación cambia con el progreso: sin inicial, oferta de ayuda, captura, paso al
+        /// lobby y tutorial superado. La curación no entra en la clave (no es un diálogo nuevo).
+        /// </summary>
+        public override string DialogueKey
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(GameState.Save.starterId))
+                    return "no-starter";
+                if (GameState.Save.gabrielChoice != GabrielChoice.Yes)
+                    return "help";
+                if (GameState.TutorialDone)
+                    return "done";
+                if (GameState.PassesBuildingDoor)
+                    return "enter";
+                return "capture";
+            }
+        }
+
         public override void Interact()
         {
             if (WorldMessage.IsOpen)
@@ -40,6 +60,7 @@ namespace TorreIngenieria.World
             // Sin inicial: presentación → elección → confirmación → entrega.
             if (string.IsNullOrEmpty(GameState.Save.starterId))
             {
+                MarkDialogueSeen();
                 WorldMessage.Show(IntroLines, null, _ => ChooseStarter());
                 return;
             }
@@ -106,6 +127,7 @@ namespace TorreIngenieria.World
 
         void AskForHelp()
         {
+            MarkDialogueSeen();
             WorldMessage.Show(
                 new[] { "¿Quieres que te acompañe en tu aventura?" },
                 HelpOptions,
@@ -131,6 +153,7 @@ namespace TorreIngenieria.World
         void GivePokeballs()
         {
             GameState.AddItem("pokeball", 5);
+            MarkDialogueSeen();
             WorldMessage.Show(
                 "Toma estas 5 POKÉBOLAS.",
                 "Captura un POKÉMON en las jardineras de abajo y el vigilante te dejará pasar.",
@@ -141,8 +164,9 @@ namespace TorreIngenieria.World
         /// Muestra las líneas y, si el equipo tenía PS o PP gastados, añade el aviso de la curación.
         /// Gabriel es el punto de curación de la plazoleta mientras Don Chucho está tras la puerta.
         /// </summary>
-        static void ShowHealed(params string[] lines)
+        void ShowHealed(params string[] lines)
         {
+            MarkDialogueSeen();
             if (!GameState.HealTeam())
             {
                 WorldMessage.Show(lines);

@@ -70,7 +70,7 @@ namespace TorreIngenieria.EditorTools
             VerifyBuildingDoor();
 
             if (checksFailed == 0)
-                Debug.Log("Guardado y carga: verificado (v1 y v2 migran, la partida vuelve igual y la puerta exige captura).");
+                Debug.Log("Guardado y carga: verificado (v1 y v2 migran, la partida vuelve igual —incluidas las conversaciones vistas— y la puerta exige captura).");
             else
                 Debug.LogError($"Guardado y carga: {checksFailed} problema(s).");
         }
@@ -104,8 +104,9 @@ namespace TorreIngenieria.EditorTools
                     "Se perdió la lista de pisos completados.");
                 Check(data.sealIds.Count == 0, "Los sellos deben arrancar vacíos (el 'seals' numérico viejo se ignora).");
                 Check(data.team.Count == 0 && data.inventory.Count == 0 && data.pokedex.Count == 0 &&
-                      data.visitedFloors.Count == 0 && data.bossNotes.Count == 0,
-                    "Las listas nuevas (equipo, mochila, Pokédex, visitados, notas) deben arrancar vacías.");
+                      data.visitedFloors.Count == 0 && data.bossNotes.Count == 0 &&
+                      data.seenDialogues.Count == 0,
+                    "Las listas nuevas (equipo, mochila, Pokédex, visitados, notas, diálogos vistos) deben arrancar vacías.");
                 Check(data.starterId == "" && !data.accessCard && !data.tutorialDone &&
                       data.gabrielChoice == GabrielChoice.Undecided &&
                       data.lastBossFloor == "" && data.consecutiveBossLosses == 0,
@@ -146,6 +147,8 @@ namespace TorreIngenieria.EditorTools
                 "Se perdieron las notas de jefes de la partida v2.");
             Check(data.inventory.Count == 1 && data.inventory[0].id == "tinto" && data.inventory[0].amount == 2,
                 "Se perdió la mochila de la partida v2.");
+            Check(data.seenDialogues != null && data.seenDialogues.Count == 0,
+                "La lista de conversaciones vistas debe arrancar vacía en una partida v2.");
 
             Check(data.team.Count == 1 && data.team[0].speciesId == "bulbasaur" && data.team[0].level == 8,
                 "Se perdió el equipo de la partida v2.");
@@ -211,6 +214,10 @@ namespace TorreIngenieria.EditorTools
                 Check(loaded.inventory.Count == 1 && loaded.inventory[0].amount == 3 &&
                       loaded.defeatedTrainers.Count == 1 && loaded.collectedItems.Count == 1,
                     "Se perdió la mochila, los entrenadores derrotados o los ítems recogidos.");
+                Check(loaded.seenDialogues.Count == 1 &&
+                      loaded.seenDialogues[0].id == "Atrio/Gabriel" &&
+                      loaded.seenDialogues[0].key == "help",
+                    "Se perdió la conversación vista al releer la partida.");
                 Check(loaded.accessCard && loaded.tutorialDone && loaded.gabrielChoice == GabrielChoice.Yes &&
                       loaded.lastBossFloor == "3" && loaded.consecutiveBossLosses == 2,
                     "Se perdieron banderas o la racha contra el jefe.");
@@ -284,7 +291,7 @@ namespace TorreIngenieria.EditorTools
             }
         }
 
-        /// <summary>Partida v4 con todos los campos para que la comparación campo por campo cubra el formato entero.</summary>
+        /// <summary>Partida v5 con todos los campos para que la comparación campo por campo cubra el formato entero.</summary>
         static SaveData CreateCurrentSave()
         {
             var data = new SaveData
@@ -377,6 +384,7 @@ namespace TorreIngenieria.EditorTools
             data.defeatedTrainers.Add("entrenador-1");
             data.collectedItems.Add("apuntes-3");
             data.completedFloors.Add("3");
+            data.seenDialogues.Add(new SeenDialogue { id = "Atrio/Gabriel", key = "help" });
             return data;
         }
 
