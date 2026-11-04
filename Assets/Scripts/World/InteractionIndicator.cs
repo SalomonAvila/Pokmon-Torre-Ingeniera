@@ -18,6 +18,8 @@ namespace TorreIngenieria.World
         float nearbyAlpha = 0.55f;
         [SerializeField, Range(0f, 1f), Tooltip("Opacidad cuando el NPC está en la casilla de enfrente.")]
         float readyAlpha = 1f;
+        [SerializeField, Tooltip("Desplazamiento vertical extra para dejar la burbuja justo sobre la cabeza.")]
+        float heightOffset = 0.25f;
 
         SpriteRenderer spriteRenderer;
         Vector3 basePosition;
@@ -26,14 +28,18 @@ namespace TorreIngenieria.World
         void Awake()
         {
             spriteRenderer = GetComponent<SpriteRenderer>();
-            basePosition = transform.localPosition;
 
             // Por si una escena antigua no trae serializados los campos nuevos.
             if (nearbyAlpha <= 0f)
                 nearbyAlpha = 0.55f;
             if (readyAlpha <= 0f)
                 readyAlpha = 1f;
+            if (heightOffset <= 0f)
+                heightOffset = 0.25f;
 
+            // La posición base del builder es la del ancla; este desplazamiento deja la burbuja
+            // por encima de la cabeza sin tener que regenerar las escenas ya creadas.
+            basePosition = transform.localPosition + Vector3.up * heightOffset;
             ApplyAlpha();
         }
 
