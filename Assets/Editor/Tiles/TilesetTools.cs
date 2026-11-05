@@ -41,7 +41,11 @@ namespace TorreIngenieria.EditorTools
                 Prepare(AssetDatabase.GUIDToAssetPath(guid));
         }
 
-        public static void Prepare(string path)
+        /// <summary>
+        /// Prepara una hoja de 16x16. Con <paramref name="createTiles"/> en false solo deja los
+        /// sprites (útil para arte de interfaz, como la flecha de guía, que no va a Tile Palette).
+        /// </summary>
+        public static void Prepare(string path, bool createTiles = true)
         {
             if (AssetImporter.GetAtPath(path) is not TextureImporter importer)
                 return;
@@ -56,6 +60,13 @@ namespace TorreIngenieria.EditorTools
             ConfigureImporter(importer);
             List<SpriteRect> rects = Slice(importer, sheetName, pixels, columns, rows);
             Object.DestroyImmediate(pixels);
+
+            if (!createTiles)
+            {
+                AssetDatabase.SaveAssets();
+                Debug.Log($"Hoja '{sheetName}': {rects.Count} sprites preparados (sin tiles).");
+                return;
+            }
 
             Dictionary<string, Sprite> sprites = AssetDatabase.LoadAllAssetsAtPath(path).OfType<Sprite>().ToDictionary(s => s.name);
             var tilesByCell = new Dictionary<Vector2Int, TileBase>();

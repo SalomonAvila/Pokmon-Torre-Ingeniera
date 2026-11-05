@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using TorreIngenieria.Core;
 using UnityEditor;
 using UnityEngine;
@@ -79,10 +80,68 @@ namespace TorreIngenieria.EditorTools
                     Check(id == id.ToLowerInvariant(), $"{floor}: el id '{id}' debe ir en minúscula.");
             }
 
+            ValidateGuidance();
+
             if (checksFailed == 0)
-                Debug.Log($"Reglas del documento: todo coincide ({ChallengeFloors.Length} pisos con reto + plazoleta).");
+                Debug.Log($"Reglas del documento y guía: todo coincide ({ChallengeFloors.Length} pisos con reto + plazoleta).");
             else
-                Debug.LogError($"Reglas del documento: {checksFailed} discrepancia(s) por revisar.");
+                Debug.LogError($"Reglas del documento y guía: {checksFailed} discrepancia(s) por revisar.");
+        }
+
+        /// <summary>
+        /// Tabla de la guía de onboarding. <c>Guidance.Resolve</c> es pura, así que se prueba con
+        /// estados inventados sin tocar la partida guardada.
+        /// </summary>
+        static void ValidateGuidance()
+        {
+            string[] ids =
+            {
+                Guidance.GabrielAtrio,
+                Guidance.JardineraInferior,
+                Guidance.PuertaEdificio,
+                Guidance.GabrielTutorial,
+                Guidance.EscaleraPiso3,
+            };
+
+            Check(ids.Distinct().Count() == ids.Length, "Guía: los ids de destino deben ser únicos.");
+            foreach (string id in ids)
+                Check(!string.IsNullOrWhiteSpace(id) && id == id.ToLowerInvariant(),
+                    $"Guía: el id '{id}' debe ir en minúscula.");
+
+            CheckTarget(Guidance.Resolve(SceneNames.Atrio, false, false, false, false, false),
+                Guidance.GabrielAtrio, "Atrio sin inicial");
+            CheckTarget(Guidance.Resolve(SceneNames.Atrio, true, false, false, false, false),
+                Guidance.GabrielAtrio, "Atrio con inicial y sin ayuda");
+            CheckTarget(Guidance.Resolve(SceneNames.Atrio, true, false, true, false, false),
+                Guidance.JardineraInferior, "Atrio con ayuda y sin captura");
+            CheckTarget(Guidance.Resolve(SceneNames.Atrio, true, true, true, false, false),
+                Guidance.PuertaEdificio, "Atrio con captura");
+            CheckTarget(Guidance.Resolve(SceneNames.Atrio, true, true, true, true, false),
+                Guidance.PuertaEdificio, "Atrio tras el tutorial");
+            CheckTarget(Guidance.Resolve(SceneNames.Atrio, true, true, true, true, true),
+                null, "Atrio con el piso 3 visitado");
+
+            CheckTarget(Guidance.Resolve(SceneNames.Ascensores, true, true, true, false, false),
+                Guidance.GabrielTutorial, "Ascensores sin tutorial");
+            CheckTarget(Guidance.Resolve(SceneNames.Ascensores, true, true, true, true, false),
+                Guidance.EscaleraPiso3, "Ascensores tras el tutorial");
+            CheckTarget(Guidance.Resolve(SceneNames.Ascensores, true, true, true, true, true),
+                null, "Ascensores con el piso 3 visitado");
+
+            CheckTarget(Guidance.Resolve(SceneNames.Escalera, true, true, true, true, false),
+                null, "Escalera sin guía");
+        }
+
+        static void CheckTarget(GuidanceInfo? info, string expected, string label)
+        {
+            if (expected == null)
+            {
+                Check(!info.HasValue, $"Guía ({label}): no debería haber objetivo y hay '{info?.TargetId}'.");
+                return;
+            }
+
+            Check(info.HasValue && info.Value.TargetId == expected,
+                $"Guía ({label}): se esperaba '{expected}' y hay '{info?.TargetId ?? "ninguno"}'.");
         }
 
         /// <summary>Tamaño del equipo del jefe tal como lo lista el documento, copiado a mano para comparar.</summary>

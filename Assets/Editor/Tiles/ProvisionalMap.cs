@@ -33,8 +33,30 @@ namespace TorreIngenieria.EditorTools
             foreach (string path in tilesetPaths)
                 TilesetTools.Prepare(path);
             TilesetTools.Prepare(UtilitiesPath);
+            GuidanceArt.PrepareAll(); // flecha de borde, resaltado y pictogramas de la guía
             CharacterSpriteSlicer.SliceCharacters(); // Pedro, y Gabriel y el Vigilante si ya existen
             MainMenuSceneBuilder.PrepareDialogueAssets();
+        }
+
+        /// <summary>
+        /// Marca un objeto existente como destino de la guía. El id debe ser una constante de
+        /// <c>Guidance</c> para que la tabla y el builder no se desincronicen.
+        /// </summary>
+        public static GuidanceTarget AttachGuidanceTarget(GameObject go, string id)
+        {
+            var target = go.AddComponent<GuidanceTarget>();
+            var serialized = new SerializedObject(target);
+            serialized.FindProperty("id").stringValue = id;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            return target;
+        }
+
+        /// <summary>Crea un destino invisible en el centro de una casilla.</summary>
+        public static GuidanceTarget AddGuidanceTarget(string name, string id, int col, int row, int height)
+        {
+            var go = new GameObject(name);
+            go.transform.position = CellCenter(col, row, height);
+            return AttachGuidanceTarget(go, id);
         }
 
         /// <summary>Indica a qué piso del edificio pertenece la escena (ver Building.Floors).</summary>
