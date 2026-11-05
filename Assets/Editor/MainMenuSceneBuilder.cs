@@ -53,6 +53,10 @@ namespace TorreIngenieria.EditorTools
         static readonly Color HudBarColor = new Color32(0x0A, 0x1F, 0x3A, 0xE6);
         static readonly Color HudTextColor = new Color32(0xF8, 0xD0, 0x30, 0xFF);
 
+        // Franja de objetivo: un tono más oscuro que la barra del HUD para separarlas.
+        const float GuidanceStripHeight = 32f;
+        static readonly Color GuidanceStripColor = new Color32(0x06, 0x16, 0x2A, 0xE6);
+
         [MenuItem("Torre Ingeniería/Construir escena Menú Principal")]
         public static void Build()
         {
@@ -239,7 +243,61 @@ namespace TorreIngenieria.EditorTools
 
             var hud = bar.gameObject.AddComponent<HUD>();
             Assign(hud, ("floorText", floor), ("sealsText", seals), ("creditsText", credits));
+
+            CreateGuidance(parent, font);
             return hud;
+        }
+
+        /// <summary>
+        /// Franja "OBJETIVO: ..." bajo la barra y flecha de borde. La franja se oculta con su
+        /// CanvasGroup cuando no hay guía; la flecha se activa solo cuando el destino queda fuera
+        /// de cámara (lo decide <see cref="GuidanceArrow"/> en Play).
+        /// </summary>
+        static void CreateGuidance(Transform parent, TMP_FontAsset font)
+        {
+            RectTransform strip = CreateImage(parent, "FranjaObjetivo", GuidanceStripColor);
+            strip.anchorMin = new Vector2(0, 1);
+            strip.anchorMax = Vector2.one;
+            strip.pivot = new Vector2(0.5f, 1f);
+            strip.offsetMin = new Vector2(0, -HudBarHeight - GuidanceStripHeight);
+            strip.offsetMax = new Vector2(0, -HudBarHeight);
+            strip.GetComponent<Image>().raycastTarget = false;
+
+            var group = strip.gameObject.AddComponent<CanvasGroup>();
+            group.interactable = false;
+            group.blocksRaycasts = false;
+
+            TextMeshProUGUI label = CreateText(strip, "TextoObjetivo", string.Empty, 14, HudTextColor);
+            label.font = font;
+            label.fontStyle = FontStyles.Bold;
+            label.alignment = TextAlignmentOptions.MidlineLeft;
+            label.overflowMode = TextOverflowModes.Ellipsis;
+            label.rectTransform.anchorMin = Vector2.zero;
+            label.rectTransform.anchorMax = Vector2.one;
+            label.rectTransform.offsetMin = new Vector2(24, 0);
+            label.rectTransform.offsetMax = new Vector2(-24, 0);
+
+            var hud = strip.gameObject.AddComponent<GuidanceHud>();
+            Assign(hud, ("group", group), ("label", label));
+
+            Sprite[] arrows = AssetDatabase.LoadAllAssetsAtPath(GuidanceArt.ArrowSheet)
+                .OfType<Sprite>()
+                .OrderBy(sprite => sprite.rect.x)
+                .ToArray();
+            if (arrows.Length != 8)
+                Debug.LogWarning($"La flecha de guía necesita 8 sprites y hay {arrows.Length}. Revisa {GuidanceArt.ArrowSheet}.");
+
+            RectTransform arrow = CreateImage(parent, "FlechaGuia", Color.white);
+            arrow.anchorMin = arrow.anchorMax = arrow.pivot = new Vector2(0.5f, 0.5f);
+            arrow.sizeDelta = new Vector2(64, 64);
+            var arrowImage = arrow.GetComponent<Image>();
+            arrowImage.preserveAspect = true;
+            arrowImage.raycastTarget = false;
+            arrowImage.enabled = false;
+
+            var behavior = arrow.gameObject.AddComponent<GuidanceArrow>();
+            Assign(behavior, ("image", arrowImage));
+            AssignArray(behavior, "directions", arrows.Cast<Object>().ToArray());
         }
 
         static TextMeshProUGUI CreateHudText(Transform parent, string name, string text, TMP_FontAsset font,

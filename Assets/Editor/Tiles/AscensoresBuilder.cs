@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Tilemaps;
 
 namespace TorreIngenieria.EditorTools
 {
@@ -88,6 +89,7 @@ namespace TorreIngenieria.EditorTools
             ProvisionalMap.Paint(Floor, Objects, ProvisionalMap.LoadTiles(TilesetName, 16),
                 (symbol, col, row) => symbol == '.' ? ((col / 2 + row / 2) % 2 == 0 ? TileA : TileB) : FloorIndex[symbol],
                 ObjectIndex, BlockingFloors, BlockingObjects);
+            PaintGuidance(height);
 
             ProvisionalMap.AddFloorInfo("2");
             ProvisionalMap.AddMessageBox();
@@ -111,7 +113,10 @@ namespace TorreIngenieria.EditorTools
             ProvisionalMap.AddWarp("BajadaAtrio", 17, 23, 9, 9, height, SceneNames.Atrio, AtrioBuilder.SpawnFromElevators);
 
             // Gabriel espera en el pasillo para el combate tutorial antes de la escalera al piso 3 (Doc §8).
-            ProvisionalMap.CreateTutorialGabriel(8, 2, height, PlayerController.Direction.Right);
+            TutorialGabrielNpc gabriel = ProvisionalMap.CreateTutorialGabriel(8, 2, height,
+                PlayerController.Direction.Right);
+            ProvisionalMap.AttachGuidanceTarget(gabriel.gameObject, Guidance.GabrielTutorial);
+            ProvisionalMap.AddGuidanceTarget("DestinoEscaleraPiso3", Guidance.EscaleraPiso3, 1, 4, height);
 
             // Si se prueba esta escena directamente, Pedro empieza donde llega desde el atrio.
             GameObject pedro = ProvisionalMap.CreatePlayer(ProvisionalMap.CellCenter(20, 6, height));
@@ -119,6 +124,18 @@ namespace TorreIngenieria.EditorTools
 
             string path = ProvisionalMap.Save(scene, SceneNames.Ascensores);
             Debug.Log($"Pasillo de ascensores creado en {path}.");
+        }
+
+        /// <summary>
+        /// Escalera hacia el piso 3 y flecha de bajada al Atrio. No hay pictograma de Gabriel:
+        /// lo señalan la franja, la flecha de borde y su indicador de interacción.
+        /// </summary>
+        static void PaintGuidance(int height)
+        {
+            TileBase[] pictograms = ProvisionalMap.LoadTiles("PictogramasGuia", 5);
+            Tilemap decoration = MapSceneBuilder.Layer("Decoracion");
+            decoration.SetTile(ProvisionalMap.Cell(2, 4, height), pictograms[GuidanceArt.PictogramStairs]);
+            decoration.SetTile(ProvisionalMap.Cell(20, 9, height), pictograms[GuidanceArt.PictogramDown]);
         }
     }
 }

@@ -129,6 +129,12 @@ namespace TorreIngenieria.EditorTools
         /// </summary>
         const int JardineraInferior = 29;
 
+        // Perímetro del resaltado: filas 29 a 34, las mismas que pinta la capa Encuentros.
+        const int JardineraIzquierda = 1;
+        const int JardineraDerecha = 13;
+        const int JardineraBordeSuperior = JardineraInferior; // 29
+        const int JardineraBordeInferior = JardineraInferior + 5; // 34
+
         [MenuItem("Torre Ingeniería/Mapas/Construir atrio provisional")]
         public static void Build()
         {
@@ -144,6 +150,7 @@ namespace TorreIngenieria.EditorTools
             ProvisionalMap.Paint(Floor, Objects, ProvisionalMap.LoadTiles(TilesetName, 16),
                 (symbol, col, row) => symbol == '.' ? ((col / 2 + row / 2) % 2 == 0 ? TileA : TileB) : FloorIndex[symbol],
                 ObjectIndex, BlockingFloors, BlockingObjects);
+            PaintGuidance(height);
 
             ProvisionalMap.AddFloorInfo("1");
             ProvisionalMap.AddMessageBox();
@@ -173,7 +180,10 @@ namespace TorreIngenieria.EditorTools
             // Gabriel (Doc §8 y §10): en la plazoleta, junto a la fuente. Entrega el inicial y, si el
             // jugador acepta su ayuda, 5 Pokébolas antes de la puerta del Vigilante. Sus diálogos cambian
             // según el progreso (ver GabrielNpc).
-            ProvisionalMap.CreateGabriel(11, 18, height);
+            GabrielNpc gabriel = ProvisionalMap.CreateGabriel(11, 18, height);
+            ProvisionalMap.AttachGuidanceTarget(gabriel.gameObject, Guidance.GabrielAtrio);
+            ProvisionalMap.AddGuidanceTarget("DestinoJardinera", Guidance.JardineraInferior, 7, 31, height);
+            ProvisionalMap.AddGuidanceTarget("DestinoPuerta", Guidance.PuertaEdificio, 9, 1, height);
 
             // Vigilante Gómez (Doc §8 y §10): cuida la puerta desde el último escalón, al lado de la llegada
             // desde los ascensores. Su diálogo cambia según el progreso (ver VigilanteNpc).
@@ -190,6 +200,48 @@ namespace TorreIngenieria.EditorTools
 
             string path = ProvisionalMap.Save(scene, SceneNames.Atrio);
             Debug.Log($"Atrio provisional creado en {path}. Dale Play y muévete con WASD/flechas (Shift para correr).");
+        }
+
+        /// <summary>
+        /// Pictogramas del entorno y borde amarillo de la jardinera. Los pictogramas van en
+        /// Decoracion (no en Resaltado) para que sigan visibles cuando el borde se apague.
+        /// </summary>
+        static void PaintGuidance(int height)
+        {
+            TileBase[] pictograms = ProvisionalMap.LoadTiles("PictogramasGuia", 5);
+            Tilemap decoration = MapSceneBuilder.Layer("Decoracion");
+            decoration.SetTile(ProvisionalMap.Cell(7, 31, height), pictograms[GuidanceArt.PictogramPlant]);
+            decoration.SetTile(ProvisionalMap.Cell(10, 2, height), pictograms[GuidanceArt.PictogramDoor]);
+            decoration.SetTile(ProvisionalMap.Cell(9, 15, height), pictograms[GuidanceArt.PictogramUp]);
+
+            Tilemap highlight = MapSceneBuilder.Layer("Resaltado");
+            TileBase[] border = ProvisionalMap.LoadTiles("ResaltadoJardinera", 8);
+
+            highlight.SetTile(ProvisionalMap.Cell(JardineraIzquierda, JardineraBordeSuperior, height),
+                border[GuidanceArt.BorderTopLeft]);
+            for (int col = JardineraIzquierda + 1; col < JardineraDerecha; col++)
+                highlight.SetTile(ProvisionalMap.Cell(col, JardineraBordeSuperior, height),
+                    border[GuidanceArt.BorderTop]);
+            highlight.SetTile(ProvisionalMap.Cell(JardineraDerecha, JardineraBordeSuperior, height),
+                border[GuidanceArt.BorderTopRight]);
+
+            for (int row = JardineraBordeSuperior + 1; row < JardineraBordeInferior; row++)
+            {
+                highlight.SetTile(ProvisionalMap.Cell(JardineraIzquierda, row, height),
+                    border[GuidanceArt.BorderLeft]);
+                highlight.SetTile(ProvisionalMap.Cell(JardineraDerecha, row, height),
+                    border[GuidanceArt.BorderRight]);
+            }
+
+            highlight.SetTile(ProvisionalMap.Cell(JardineraIzquierda, JardineraBordeInferior, height),
+                border[GuidanceArt.BorderBottomLeft]);
+            for (int col = JardineraIzquierda + 1; col < JardineraDerecha; col++)
+                highlight.SetTile(ProvisionalMap.Cell(col, JardineraBordeInferior, height),
+                    border[GuidanceArt.BorderBottom]);
+            highlight.SetTile(ProvisionalMap.Cell(JardineraDerecha, JardineraBordeInferior, height),
+                border[GuidanceArt.BorderBottomRight]);
+
+            highlight.gameObject.AddComponent<GuidancePlanterHighlight>();
         }
     }
 }
