@@ -2,7 +2,7 @@ namespace TorreIngenieria.EditorTools
 {
     /// <summary>
     /// Rutas e índices del arte de la guía. La flecha es arte de interfaz (solo sprites); el
-    /// resaltado y los pictogramas son hojas de tiles de 16x16.
+    /// resaltado usa tiles de 16x16 y los pictogramas de 24x24 (1,5 casillas a 16 PPU).
     /// </summary>
     public static class GuidanceArt
     {
@@ -10,10 +10,15 @@ namespace TorreIngenieria.EditorTools
         public const string PlanterSheet = "Assets/Art/Tilesets/Propios/ResaltadoJardinera.png";
         public const string PictogramSheet = "Assets/Art/Tilesets/Propios/PictogramasGuia.png";
 
+        // La hoja de pictogramas usa iconos de 24x24: 1,5 casillas a 16 PPU.
+        public const int PictogramTileSize = 24;
+        public const int PictogramCount = 5;
+
         // Orden de PictogramasGuia.png.
         public const int PictogramUp = 0;
         public const int PictogramDown = 1;
         public const int PictogramStairs = 2;
+        // La puerta no se pinta en el Atrio: el Vigilante ocupa esa casilla y la guía ya la marca.
         public const int PictogramDoor = 3;
         public const int PictogramPlant = 4;
 
@@ -31,7 +36,7 @@ namespace TorreIngenieria.EditorTools
         public static void PrepareAll()
         {
             TilesetTools.Prepare(PlanterSheet);
-            TilesetTools.Prepare(PictogramSheet);
+            TilesetTools.Prepare(PictogramSheet, PictogramTileSize);
             TilesetTools.Prepare(ArrowSheet, createTiles: false);
         }
     }

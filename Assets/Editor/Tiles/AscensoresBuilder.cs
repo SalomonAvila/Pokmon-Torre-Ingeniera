@@ -132,9 +132,9 @@ namespace TorreIngenieria.EditorTools
         /// </summary>
         static void PaintGuidance(int height)
         {
-            TileBase[] pictograms = ProvisionalMap.LoadTiles("PictogramasGuia", 5);
+            TileBase[] pictograms = ProvisionalMap.LoadTiles("PictogramasGuia", GuidanceArt.PictogramCount);
             Tilemap decoration = MapSceneBuilder.Layer("Decoracion");
-            decoration.SetTile(ProvisionalMap.Cell(2, 4, height), pictograms[GuidanceArt.PictogramStairs]);
+            decoration.SetTile(ProvisionalMap.Cell(2, 7, height), pictograms[GuidanceArt.PictogramStairs]);
             decoration.SetTile(ProvisionalMap.Cell(20, 9, height), pictograms[GuidanceArt.PictogramDown]);
         }
     }
