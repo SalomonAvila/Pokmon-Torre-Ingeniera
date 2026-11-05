@@ -37,7 +37,7 @@ namespace TorreIngenieria.UI
             "Registro de los POKÉMON vistos y capturados.",
             "Revisa a los POKÉMON de tu equipo.",
             "Revisa los objetos de tu mochila.",
-            "Mira el mapa del edificio.",
+            "Consulta tu objetivo actual.",
             "Revisa tu carné estudiantil.",
             "Guarda tu progreso.",
             "Ajusta el volumen y otras opciones.",
@@ -46,6 +46,7 @@ namespace TorreIngenieria.UI
 
         const int TeamOption = 1;
         const int BagOption = 2;
+        const int MapOption = 3;
         const int SaveOption = 5;
         const int CloseOption = 7;
 
@@ -132,6 +133,8 @@ namespace TorreIngenieria.UI
                 }
                 else if (chosen == SaveOption)
                     yield return SaveGame();
+                else if (chosen == MapOption)
+                    yield return Say(Guidance.MessageText());
                 else
                     yield return Say("Esta opción todavía está en construcción.");
             }

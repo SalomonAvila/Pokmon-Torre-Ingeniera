@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using TorreIngenieria.Core;
 using TorreIngenieria.UI;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -165,10 +166,10 @@ namespace TorreIngenieria.World
                     WorldMessage.Show("El menú todavía no está generado (Torre Ingeniería > Construir menú del juego).");
                 return;
             }
-            // Etapa 7: el mapa del edificio abrirá su pantalla.
+            // Mientras no exista la pantalla de mapa, M recuerda el objetivo actual.
             if (mapAction.WasPressedThisFrame())
             {
-                WorldMessage.Show("El mapa del edificio todavía está en construcción.");
+                WorldMessage.Show(Guidance.MessageText());
                 return;
             }
             if (cancelAction.WasPressedThisFrame())
