@@ -33,8 +33,30 @@ namespace TorreIngenieria.EditorTools
             foreach (string path in tilesetPaths)
                 TilesetTools.Prepare(path);
             TilesetTools.Prepare(UtilitiesPath);
+            GuidanceArt.PrepareAll(); // flecha de borde, resaltado y pictogramas de la guía
             CharacterSpriteSlicer.SliceCharacters(); // Pedro, y Gabriel y el Vigilante si ya existen
             MainMenuSceneBuilder.PrepareDialogueAssets();
+        }
+
+        /// <summary>
+        /// Marca un objeto existente como destino de la guía. El id debe ser una constante de
+        /// <c>Guidance</c> para que la tabla y el builder no se desincronicen.
+        /// </summary>
+        public static GuidanceTarget AttachGuidanceTarget(GameObject go, string id)
+        {
+            var target = go.AddComponent<GuidanceTarget>();
+            var serialized = new SerializedObject(target);
+            serialized.FindProperty("id").stringValue = id;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            return target;
+        }
+
+        /// <summary>Crea un destino invisible en el centro de una casilla.</summary>
+        public static GuidanceTarget AddGuidanceTarget(string name, string id, int col, int row, int height)
+        {
+            var go = new GameObject(name);
+            go.transform.position = CellCenter(col, row, height);
+            return AttachGuidanceTarget(go, id);
         }
 
         /// <summary>Indica a qué piso del edificio pertenece la escena (ver Building.Floors).</summary>
@@ -155,6 +177,7 @@ namespace TorreIngenieria.EditorTools
         }
 
         const string PickupTilePath = "Assets/Tiles/AtrioProvisional/AtrioProvisional_8.asset";
+        const string IndicatorPath = "Assets/Art/UI/IndicadorInteraccion.png";
 
         /// <summary>Personajes con hoja de caminata propia (ver <see cref="CharacterSpriteSlicer"/>).</summary>
         public enum Character { Pedro, Gabriel, Vigilante }
@@ -174,6 +197,7 @@ namespace TorreIngenieria.EditorTools
             if (character == Character.Pedro)
                 sprite.color = new Color(0.72f, 1f, 0.78f); // tinte para distinguirlo de Pedro
 
+            AddInteractionIndicator(go);
             var interactable = go.AddComponent<Interactable>();
             ConfigureInteractable(interactable, Interactable.Kind.Npc, lines, options, 0,
                 acceptedLines, rejectedLines, null, 0, null, null);
@@ -190,7 +214,10 @@ namespace TorreIngenieria.EditorTools
             var go = new GameObject("Gabriel");
             go.transform.position = CellCenter(col, row, height);
             AddCharacterSprite(go, Character.Gabriel, facing);
-            return go.AddComponent<GabrielNpc>();
+            AddInteractionIndicator(go);
+            var gabriel = go.AddComponent<GabrielNpc>();
+            SetDialogueId(gabriel, "gabriel");
+            return gabriel;
         }
 
         /// <summary>
@@ -203,7 +230,10 @@ namespace TorreIngenieria.EditorTools
             var go = new GameObject("VigilanteGomez");
             go.transform.position = CellCenter(col, row, height);
             AddCharacterSprite(go, Character.Vigilante, facing);
-            return go.AddComponent<VigilanteNpc>();
+            AddInteractionIndicator(go);
+            var vigilante = go.AddComponent<VigilanteNpc>();
+            SetDialogueId(vigilante, "vigilante");
+            return vigilante;
         }
 
         /// <summary>
@@ -216,7 +246,10 @@ namespace TorreIngenieria.EditorTools
             var go = new GameObject("GabrielTutorial");
             go.transform.position = CellCenter(col, row, height);
             AddCharacterSprite(go, Character.Gabriel, facing);
-            return go.AddComponent<TutorialGabrielNpc>();
+            AddInteractionIndicator(go);
+            var gabriel = go.AddComponent<TutorialGabrielNpc>();
+            SetDialogueId(gabriel, "tutorial_gabriel");
+            return gabriel;
         }
 
         /// <summary>
@@ -233,9 +266,11 @@ namespace TorreIngenieria.EditorTools
             SpriteRenderer sprite = AddCharacterSprite(go, Character.Pedro, facing);
             sprite.color = new Color(1f, 0.78f, 0.72f); // tinte para distinguirlo de Pedro y del NPC
 
+            AddInteractionIndicator(go);
             var interactable = go.AddComponent<Interactable>();
             ConfigureInteractable(interactable, Interactable.Kind.Trainer, lines, null, 0,
                 null, null, null, 0, null, trainerId);
+            SetDialogueId(interactable, trainerId);
             return interactable;
         }
 
@@ -273,6 +308,67 @@ namespace TorreIngenieria.EditorTools
             return sprite;
         }
 
+        /// <summary>
+        /// Burbuja de interacción sobre la cabeza del personaje. Nace oculta; <see cref="Interactable"/>
+        /// la encuentra al arrancar y <see cref="PlayerController"/> la muestra al mirar al NPC.
+        /// </summary>
+        static void AddInteractionIndicator(GameObject owner)
+        {
+            var indicatorObject = new GameObject("IndicadorInteraccion");
+            indicatorObject.transform.SetParent(owner.transform, false);
+            indicatorObject.transform.localPosition = new Vector3(0f, 0.75f, 0f);
+
+            var spriteRenderer = indicatorObject.AddComponent<SpriteRenderer>();
+            spriteRenderer.sprite = LoadInteractionIndicatorSprite();
+            spriteRenderer.sortingOrder = MapSceneBuilder.CharacterSortingOrder + 2;
+            indicatorObject.AddComponent<InteractionIndicator>();
+
+            // Interactable.Awake la busca con includeInactive para poder mostrarla después.
+            indicatorObject.SetActive(false);
+        }
+
+        /// <summary>Importa la burbuja como pixel art de 16 px por unidad (una sola vez).</summary>
+        static Sprite LoadInteractionIndicatorSprite()
+        {
+            // Al cambiar de rama el PNG puede no estar importado todavía: forzar la importación
+            // antes de leer su TextureImporter evita indicadores sin sprite.
+            if (AssetImporter.GetAtPath(IndicatorPath) == null)
+                AssetDatabase.ImportAsset(IndicatorPath, ImportAssetOptions.ForceSynchronousImport);
+
+            if (AssetImporter.GetAtPath(IndicatorPath) is TextureImporter importer)
+            {
+                bool needsImport = importer.textureType != TextureImporterType.Sprite ||
+                                   importer.spriteImportMode != SpriteImportMode.Single ||
+                                   !Mathf.Approximately(importer.spritePixelsPerUnit, TilesetTools.TileSize) ||
+                                   importer.filterMode != FilterMode.Point ||
+                                   importer.textureCompression != TextureImporterCompression.Uncompressed;
+                if (needsImport)
+                {
+                    importer.textureType = TextureImporterType.Sprite;
+                    importer.spriteImportMode = SpriteImportMode.Single;
+                    importer.spritePixelsPerUnit = TilesetTools.TileSize;
+                    importer.filterMode = FilterMode.Point;
+                    importer.wrapMode = TextureWrapMode.Clamp;
+                    importer.mipmapEnabled = false;
+                    importer.alphaIsTransparency = true;
+                    importer.textureCompression = TextureImporterCompression.Uncompressed;
+                    importer.maxTextureSize = 2048;
+
+                    var settings = new TextureImporterSettings();
+                    importer.ReadTextureSettings(settings);
+                    settings.spriteMeshType = SpriteMeshType.FullRect;
+                    settings.spriteExtrude = 0;
+                    importer.SetTextureSettings(settings);
+                    importer.SaveAndReimport();
+                }
+            }
+
+            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(IndicatorPath);
+            if (sprite == null)
+                Debug.LogError($"No se encontró el sprite {IndicatorPath} para el indicador de interacción.");
+            return sprite;
+        }
+
         /// <summary>Objeto recogible en el suelo; usa el sprite de un tile provisional.</summary>
         public static Interactable CreatePickup(string name, int col, int row, int height,
             string pickupId, string itemId, int amount, string[] lines)
@@ -307,6 +403,24 @@ namespace TorreIngenieria.EditorTools
             serialized.FindProperty("itemAmount").intValue = itemAmount;
             serialized.FindProperty("pickupId").stringValue = pickupId ?? "";
             serialized.FindProperty("trainerId").stringValue = trainerId ?? "";
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>Fija un id estable para recordar la conversación vista (los genéricos usan escena/nombre).</summary>
+        static void SetDialogueId(Interactable target, string id)
+        {
+            if (string.IsNullOrEmpty(id))
+                return;
+
+            var serialized = new SerializedObject(target);
+            SerializedProperty property = serialized.FindProperty("dialogueId");
+            if (property == null)
+            {
+                Debug.LogError($"No se encontró el campo dialogueId en {target.name}.");
+                return;
+            }
+
+            property.stringValue = id;
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 

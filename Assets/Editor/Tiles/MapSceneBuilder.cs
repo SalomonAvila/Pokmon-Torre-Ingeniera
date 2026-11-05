@@ -12,8 +12,8 @@ namespace TorreIngenieria.EditorTools
 {
     /// <summary>
     /// Crea una escena de mapa lista para pintar con el Tile Palette: cámara Pixel Perfect estilo GBA (240x160)
-    /// con Cinemachine y las capas de Tilemap del juego (Suelo, Paredes, Decoracion, SobreJugador, Colisiones
-    /// y Encuentros). La cámara virtual que sigue al jugador la crea <see cref="ProvisionalMap.SetupCamera"/>.
+    /// con Cinemachine y las capas de Tilemap del juego (Suelo, Paredes, Decoracion, Resaltado, SobreJugador,
+    /// Colisiones y Encuentros). La cámara virtual que sigue al jugador la crea <see cref="ProvisionalMap.SetupCamera"/>.
     /// Menú: Torre Ingeniería > Mapas > Crear escena de mapa.
     /// </summary>
     public static class MapSceneBuilder
@@ -52,7 +52,7 @@ namespace TorreIngenieria.EditorTools
             return scene;
         }
 
-        /// <summary>Busca una capa del mapa (Suelo, Paredes, Decoracion, SobreJugador, Colisiones, Encuentros).</summary>
+        /// <summary>Busca una capa del mapa (Suelo, Paredes, Decoracion, Resaltado, SobreJugador, Colisiones, Encuentros).</summary>
         public static Tilemap Layer(string name) => GameObject.Find($"Grid/{name}").GetComponent<Tilemap>();
 
         public static string MapPath(string sceneName) => $"{MapsFolder}/{sceneName}.unity";
@@ -97,6 +97,7 @@ namespace TorreIngenieria.EditorTools
             Tilemap walls = CreateLayer(grid.transform, "Paredes", -5);
             AddCollision(walls.gameObject);
             CreateLayer(grid.transform, "Decoracion", 0);
+            CreateLayer(grid.transform, "Resaltado", 1); // borde de la jardinera, debajo del personaje
             CreateLayer(grid.transform, "SobreJugador", 10);
 
             Tilemap collisions = CreateLayer(grid.transform, "Colisiones", 20);

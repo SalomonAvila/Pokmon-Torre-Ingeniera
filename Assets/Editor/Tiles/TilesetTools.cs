@@ -28,7 +28,7 @@ namespace TorreIngenieria.EditorTools
         {
             string[] paths = Selection.objects.OfType<Texture2D>().Select(AssetDatabase.GetAssetPath).ToArray();
             foreach (string path in paths)
-                Prepare(path);
+                Prepare(path, TileSizeFor(path));
         }
 
         [MenuItem("Torre Ingeniería/Tiles/Preparar tileset seleccionado", true)]
@@ -38,24 +38,52 @@ namespace TorreIngenieria.EditorTools
         static void PrepareAll()
         {
             foreach (string guid in AssetDatabase.FindAssets("t:Texture2D", new[] { "Assets/Art/Tilesets" }))
-                Prepare(AssetDatabase.GUIDToAssetPath(guid));
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                Prepare(path, TileSizeFor(path));
+            }
         }
 
-        public static void Prepare(string path)
+        /// <summary>
+        /// Tamaño de corte de una hoja. La flecha de guía y los tiles del mapa usan 16x16;
+        /// los pictogramas se dibujan a 24x24 para que ocupen 1,5 casillas en el mapa.
+        /// </summary>
+        static int TileSizeFor(string path) =>
+            path == GuidanceArt.PictogramSheet ? GuidanceArt.PictogramTileSize : TileSize;
+
+        /// <summary>
+        /// Prepara una hoja de 16x16. Con <paramref name="createTiles"/> en false solo deja los
+        /// sprites (útil para arte de interfaz, como la flecha de guía, que no va a Tile Palette).
+        /// </summary>
+        public static void Prepare(string path, bool createTiles = true) =>
+            Prepare(path, TileSize, createTiles);
+
+        /// <summary>
+        /// Prepara una hoja con celdas de <paramref name="tileSize"/> píxeles. Los sprites
+        /// conservan 16 PPU: un icono de 24x24 se dibuja a 1,5 unidades (1,5 casillas).
+        /// </summary>
+        public static void Prepare(string path, int tileSize, bool createTiles = true)
         {
             if (AssetImporter.GetAtPath(path) is not TextureImporter importer)
                 return;
 
             string sheetName = Path.GetFileNameWithoutExtension(path);
             Texture2D pixels = ReadPixels(path);
-            int columns = pixels.width / TileSize;
-            int rows = pixels.height / TileSize;
-            if (pixels.width % TileSize != 0 || pixels.height % TileSize != 0)
-                Debug.LogWarning($"{path}: {pixels.width}x{pixels.height} no es múltiplo de {TileSize}; se ignoran los bordes sobrantes.");
+            int columns = pixels.width / tileSize;
+            int rows = pixels.height / tileSize;
+            if (pixels.width % tileSize != 0 || pixels.height % tileSize != 0)
+                Debug.LogWarning($"{path}: {pixels.width}x{pixels.height} no es múltiplo de {tileSize}; se ignoran los bordes sobrantes.");
 
             ConfigureImporter(importer);
-            List<SpriteRect> rects = Slice(importer, sheetName, pixels, columns, rows);
+            List<SpriteRect> rects = Slice(importer, sheetName, pixels, columns, rows, tileSize);
             Object.DestroyImmediate(pixels);
+
+            if (!createTiles)
+            {
+                AssetDatabase.SaveAssets();
+                Debug.Log($"Hoja '{sheetName}': {rects.Count} sprites preparados (sin tiles).");
+                return;
+            }
 
             Dictionary<string, Sprite> sprites = AssetDatabase.LoadAllAssetsAtPath(path).OfType<Sprite>().ToDictionary(s => s.name);
             var tilesByCell = new Dictionary<Vector2Int, TileBase>();
@@ -64,7 +92,7 @@ namespace TorreIngenieria.EditorTools
             {
                 if (!sprites.TryGetValue(rect.name, out Sprite sprite))
                     continue;
-                var cell = new Vector2Int((int)rect.rect.x / TileSize, rows - 1 - (int)rect.rect.y / TileSize);
+                var cell = new Vector2Int((int)rect.rect.x / tileSize, rows - 1 - (int)rect.rect.y / tileSize);
                 tilesByCell[cell] = CreateOrUpdateTile($"{tileFolder}/{rect.name}.asset", sprite);
             }
 
@@ -101,7 +129,8 @@ namespace TorreIngenieria.EditorTools
             importer.SaveAndReimport();
         }
 
-        static List<SpriteRect> Slice(TextureImporter importer, string sheetName, Texture2D pixels, int columns, int rows)
+        static List<SpriteRect> Slice(TextureImporter importer, string sheetName, Texture2D pixels, int columns,
+            int rows, int tileSize)
         {
             var factory = new SpriteDataProviderFactories();
             factory.Init();
@@ -115,16 +144,16 @@ namespace TorreIngenieria.EditorTools
             {
                 for (int col = 0; col < columns; col++)
                 {
-                    int x = col * TileSize;
-                    int y = (rows - 1 - row) * TileSize;  // el Sprite Editor cuenta desde abajo
-                    if (IsEmpty(colors, pixels.width, x, y))
+                    int x = col * tileSize;
+                    int y = (rows - 1 - row) * tileSize;  // el Sprite Editor cuenta desde abajo
+                    if (IsEmpty(colors, pixels.width, x, y, tileSize))
                         continue;
 
                     string name = $"{sheetName}_{row * columns + col}";
                     rects.Add(new SpriteRect
                     {
                         name = name,
-                        rect = new Rect(x, y, TileSize, TileSize),
+                        rect = new Rect(x, y, tileSize, tileSize),
                         alignment = SpriteAlignment.Center,
                         pivot = new Vector2(0.5f, 0.5f),
                         spriteID = previousIds.TryGetValue(name, out GUID id) ? id : GUID.Generate(),
@@ -140,10 +169,10 @@ namespace TorreIngenieria.EditorTools
             return rects;
         }
 
-        static bool IsEmpty(Color32[] colors, int width, int x, int y)
+        static bool IsEmpty(Color32[] colors, int width, int x, int y, int tileSize)
         {
-            for (int dy = 0; dy < TileSize; dy++)
-                for (int dx = 0; dx < TileSize; dx++)
+            for (int dy = 0; dy < tileSize; dy++)
+                for (int dx = 0; dx < tileSize; dx++)
                     if (colors[(y + dy) * width + x + dx].a > 0)
                         return false;
             return true;

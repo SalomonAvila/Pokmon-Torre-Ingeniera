@@ -470,6 +470,39 @@ namespace TorreIngenieria.Core
             Commit();
         }
 
+        // ---------- Conversaciones vistas ----------
+
+        /// <summary>¿El jugador ya vio esta versión del diálogo de ese NPC?</summary>
+        public static bool HasSeenDialogue(string npcId, string key)
+        {
+            if (string.IsNullOrEmpty(npcId) || string.IsNullOrEmpty(key) || Save.seenDialogues == null)
+                return false;
+
+            foreach (SeenDialogue entry in Save.seenDialogues)
+                if (entry != null && entry.id == npcId && entry.key == key)
+                    return true;
+            return false;
+        }
+
+        /// <summary>
+        /// Marca como vista la conversación actual del NPC. Solo guarda una clave por NPC: al cambiar
+        /// el diálogo se reemplaza la anterior, así el indicador vuelve a aparecer con la nueva.
+        /// </summary>
+        public static void MarkDialogueSeen(string npcId, string key)
+        {
+            if (string.IsNullOrEmpty(npcId) || string.IsNullOrEmpty(key))
+                return;
+
+            if (Save.seenDialogues == null)
+                Save.seenDialogues = new List<SeenDialogue>();
+            if (HasSeenDialogue(npcId, key))
+                return;
+
+            Save.seenDialogues.RemoveAll(entry => entry != null && entry.id == npcId);
+            Save.seenDialogues.Add(new SeenDialogue { id = npcId, key = key });
+            Commit();
+        }
+
         // ---------- Entrenadores e ítems del mundo ----------
 
         public static bool HasDefeatedTrainer(string trainerId) => Save.defeatedTrainers.Contains(trainerId);
