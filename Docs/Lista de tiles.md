@@ -99,11 +99,14 @@ Cada escena de mapa (menú **Torre Ingeniería → Mapas → Crear escena de map
 |---|---|
 | `Suelo` | Piso, pasto, caminos |
 | `Paredes` | Muros y bordes (bloquean el paso) |
-| `Decoracion` | Muebles, objetos, letreros |
+| `Decoracion` | Muebles, objetos, letreros y pictogramas de guía |
+| `Resaltado` | Borde amarillo de la jardinera de encuentros (orden 1, decorativo, no bloquea) |
 | *(jugador)* | Pedro y los NPC se dibujan aquí |
 | `SobreJugador` | Lo que tapa al jugador: copas de árboles, marcos de puertas, barandas |
 | `Colisiones` | Tile rojo de *Utilidades*: casillas no caminables extra (se oculta al jugar) |
 | `Encuentros` | Tile verde de *Utilidades*: zonas de Pokémon salvajes (se oculta al jugar) |
+
+- **Pictogramas de guía**: `PictogramasGuia.png` usa iconos de **24×24** (1,5 casillas a 16 PPU) y se pinta en `Decoracion`; `ResaltadoJardinera.png` usa tiles de 16×16 en la capa `Resaltado`.
 
 ## Herramientas para crear tiles propios
 

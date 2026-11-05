@@ -3,7 +3,7 @@
 Plan de desarrollo del prototipo (vertical slice, Doc §6): plazoleta (`Atrio`), lobby (`Ascensores`) y piso 3.
 Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partida de prueba y un commit "Avance: ...".
 
-Última revisión: 25 de octubre de 2026. Etapas 0, 1, 2 y 3 **cerradas** (la 3 en el commit `c5a5db9` "Avance: cambio de Pokemon y cierre de etapa 3", PR #2 `combate-nucleo` fusionado en `main` el 22 oct). Etapa 4 **cerrada** (menús probados en Play el 25 oct). Se integra el trabajo de **menús** (maquetas A–L) en las Etapas 4, 7 y 9. Siguiente: Etapa 5 (inicio y tutorial).
+Última revisión: 5 de noviembre de 2026. Etapas 0 a 5 **cerradas**; la 5 incluye el flujo de inicio, el tutorial de Gabriel, el indicador de diálogos nuevos y la guía de objetivos. Siguiente: Etapa 6 (entrenadores y jefe del piso 3). El trabajo de **menús** (maquetas A–L) se reparte entre las Etapas 4, 7 y 9.
 
 > **Nota del 25 oct:** el avance de la Etapa 4 se actualizó revisando el código, no con una prueba en Play.
 
@@ -99,7 +99,7 @@ Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partid
 **Hecho en esta sesión (21 oct 2026, rama `interaccion-dialogo`):**
 - `Interactable` (`Assets/Scripts/World/Interactable.cs`): tipos `Npc`, `Sign`, `Item` y `Trainer`. El jugador interactúa con la casilla de enfrente (`Interact`). Los NPC/letreros muestran diálogo y opciones SÍ/NO (`WorldMessage.Show(lines, options, onChosen)`); los objetos usan `GameState.AddItem` + `GameState.CollectItem` (con `itemId` y `pickupId` separados para varios objetos iguales en un piso) y se ocultan al recargar (`Awake`); los entrenadores registran `GameState.DefeatTrainer` (provisional hasta la Etapa 6).
 - `HUD` (`Assets/Scripts/UI/HUD/HUD.cs`): barra superior con piso, sellos y créditos. `Building.HudTitle` arma el texto con el nombre corto del área del Doc §2 (`PISO 3 – CIVIL`, `PISO 4 – MECÁNICA`, …; el PT se muestra solo como `PISO TÉCNICO`). Se actualiza con `GameState.StateChanged`/`ProgressChanged` y se crea por escena con `ProvisionalMap.AddHud`.
-- `PlayerController`: se conectaron las acciones `Interact`, `Cancel`, `Menu` y `Map`. `Interact` habla con la casilla de enfrente; `Menu` y `Map` muestran un aviso provisional (Etapa 7) y `Cancel` queda reservado a menús. El movimiento se bloquea con `WorldMessage.IsOpen`, `DialogueBox.IsOpen` y `ChoiceBox.IsChoosing`.
+- `PlayerController`: se conectaron las acciones `Interact`, `Cancel`, `Menu` y `Map`. `Interact` habla con la casilla de enfrente; `Menu` abre el menú y `Map` muestra el objetivo de la guía (o el aviso de mapa en construcción desde la Etapa 5); `Cancel` queda reservado a menús. El movimiento se bloquea con `WorldMessage.IsOpen`, `DialogueBox.IsOpen` y `ChoiceBox.IsChoosing`.
 - `WorldMessage` ahora acepta opciones (`ChoiceBox`) y `ProvisionalMap.AddMessageBox` crea el `CuadroOpciones` en `CanvasMensajes`.
 - Contenido de prueba en `Atrio` (temporal): `NpcPrueba` (diálogo + SÍ/NO) y `TintoPrueba` (recogible, `pickupId = atrio_tinto_prueba`), creados desde `AtrioBuilder` con `ProvisionalMap.CreateNpc`/`CreatePickup`. **Retirados en la Etapa 5** (28 oct 2026) al cerrar la Fase A.
 
@@ -151,7 +151,7 @@ Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partid
 - Componentes compartidos: `HpBar` (`UI/Common`, extraída de `BattleHUD`, que ahora delega en ella), `PokemonTypeColors.BadgeMarkup` (etiqueta de tipo, compartida con el combate), `MenuList` (lista con cursor, cancelar, desplazamiento y ◀ ▶) y `TeamSlotView` (estados normal, seleccionado, vacío, debilitado y marcado para cambiar).
 - El arte de `Assets/Art/UI/Menu/` es opcional: sin él se pintan colores planos de la paleta; al añadirlo y volver a construir el menú se aplica.
 - **Torre Ingeniería > Construir todo** (Ctrl+Shift+B, `BuildEverything`): importa el arte nuevo, regenera datos y menú y corre los tres validadores. No regenera escenas, para no renumerar sus ids en el diff.
-- El menú de pausa (maqueta 01) ya existe con sus 8 opciones: EQUIPO, MOCHILA y GUARDAR funcionan; las demás avisan "en construcción" hasta la Etapa 7.
+- El menú de pausa (maqueta 01) ya existe con sus 8 opciones: EQUIPO, MOCHILA y GUARDAR funcionan; MAPA muestra el objetivo actual y las demás avisan "en construcción" hasta la Etapa 7.
 
 **Equipo** (maquetas A y C):
 - Lista real desde `GameState.Save.team`: líder grande a la izquierda y 5 espacios a la derecha.
@@ -221,7 +221,7 @@ Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partid
 - **Opciones** (maqueta K): una sola pantalla compartida con el título (`GameSettings`): volumen, pantalla completa, velocidad de texto (nueva, la usa `DialogueBox`) y "Salir al título".
 - **Carné** (maqueta H): nombre, ID, créditos, Pokédex, tiempo de juego y los 13 sellos (`sealIds`).
 - **Pokédex** (maqueta L): VISTOS / CAPTURADOS, lista por `dexNumber` y ficha con sprite y `PokemonData.description`.
-- **Mapa del edificio** (maqueta I; también con la acción `Map`): 14 pisos, visitados, completados, sello y Pokédex por piso (`GameState.FloorPokedexProgress`). Comparte datos con el selector de ascensor; se hacen juntos.
+- **Mapa del edificio** (maqueta I; también con la acción `Map`): 14 pisos, visitados, completados, sello y Pokédex por piso (`GameState.FloorPokedexProgress`). Comparte datos con el selector de ascensor; se hacen juntos. Hasta que exista la pantalla, `M`/MAPA muestran el objetivo actual de la guía.
 - **Guardado v5** con migración desde v4: lista `seen`, ID de jugador y tiempo de juego. `VerifySaveLoading` cubre la migración. El combate registra los salvajes vistos.
 
 **Hecho cuando:** el ciclo jugar → desmayarse → reaparecer con −25 % de créditos → curarse gratis → guardar → cargar funciona completo, y todas las opciones del menú de pausa abren su pantalla con datos reales y vuelven con B.
