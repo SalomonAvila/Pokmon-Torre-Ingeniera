@@ -23,6 +23,7 @@ namespace TorreIngenieria.EditorTools
         public const string PedroSheet = "Assets/Art/Characters/PedroCaminata.png";
         public const string GabrielSheet = "Assets/Art/Characters/GabrielCaminata.png";
         public const string GuardSheet = "Assets/Art/Characters/VigilanteCaminata.png";
+        public const string CanteraSheet = "Assets/Art/Characters/CanteraCaminata.png";
 
         const int CellWidth = 16;
         const int CellHeight = 32;
@@ -45,6 +46,8 @@ namespace TorreIngenieria.EditorTools
                 SliceWalkSheet(GabrielSheet, "Gabriel");
             if (AssetImporter.GetAtPath(GuardSheet) != null)
                 SliceWalkSheet(GuardSheet, "Vigilante");
+            if (AssetImporter.GetAtPath(CanteraSheet) != null)
+                SliceWalkSheet(CanteraSheet, "Cantera");
         }
 
         public static void SliceWalkSheet(string path, string characterName)
