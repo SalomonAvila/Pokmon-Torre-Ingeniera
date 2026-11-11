@@ -231,14 +231,14 @@ namespace TorreIngenieria.EditorTools
 
         sealed class TrainerRow
         {
-            public string id, name, className, floorId, sealId, defeat, hint;
+            public string id, name, className, floorId, sealId, defeat, hint, fact;
             public TrainerAi ai;
             public bool isBoss;
             public TrainerPokemon[] team;
 
             public TrainerRow(string id, string name, string className, TrainerAi ai, bool isBoss,
                 TrainerPokemon[] team, string floorId = "", string sealId = "",
-                string defeat = "", string hint = "")
+                string defeat = "", string hint = "", string fact = "")
             {
                 this.id = id;
                 this.name = name;
@@ -250,6 +250,7 @@ namespace TorreIngenieria.EditorTools
                 this.sealId = sealId;
                 this.defeat = defeat;
                 this.hint = hint;
+                this.fact = fact;
             }
         }
 
@@ -263,12 +264,19 @@ namespace TorreIngenieria.EditorTools
 
         static readonly TrainerRow[] Trainers =
         {
+            // Balance del prototipo (10 nov 2026): el Doc §8 fija el nivel del jefe en el máximo salvaje
+            // del piso + 4 (10) y la pareja 8/10 delante de un inicial de nivel 5 era inalcanzable (Roca
+            // resiste Normal y Onix tiene 160 de Defensa). Se bajan dos niveles a cada uno y Onix pierde
+            // Avalancha (75), que tumbaba a un inicial de nivel 6 en dos golpes; el ajuste fino vuelve en la
+            // Etapa 9. Los dos estudiantes del pasillo bajan un nivel por la misma razón: el piso 3 no tiene
+            // punto de curación y se llega al jefe con el equipo gastado.
             new TrainerRow("cantera", "Ing. Cantera", "Ingeniera", TrainerAi.Boss, true,
-                new[] { Monster("geodude", 8, "tackle", "rock_throw", "harden"),
-                        Monster("onix", 10, "tackle", "rock_throw", "rock_slide", "harden") },
+                new[] { Monster("geodude", 6, "tackle", "rock_throw", "harden"),
+                        Monster("onix", 8, "tackle", "rock_throw", "harden") },
                 floorId: "3", sealId: "3",
-                defeat: "Buen trabajo. El protocolo \"Evaluación Total\" queda superado en este piso.",
-                hint: "La roca no teme al fuego, pero el agua y la planta la parten en dos. Busca un tipo con ventaja."),
+                defeat: "Cimientos firmes. Toma el sello y este carné: con él el ascensor volverá a funcionar para ti.",
+                hint: "La roca no teme al fuego, pero el agua y la planta la parten en dos. Busca un tipo con ventaja.",
+                fact: "El concreto resiste muy bien la compresión, pero poco la tracción. Por eso se arma con acero."),
 
             // Combate de práctica de la plazoleta (Doc §10). El §6 cuenta solo los dos del piso 3;
             // este es el primero de los tres entrenadores estudiantes del prototipo y la primera fuente
@@ -280,14 +288,14 @@ namespace TorreIngenieria.EditorTools
                 hint: "Don Chucho sube al lobby con lo que sobra del kiosco."),
 
             new TrainerRow("estudiante_concretos", "Estudiante de Concretos", "Estudiante", TrainerAi.Trainer, false,
-                new[] { Monster("geodude", 4, "tackle") },
+                new[] { Monster("geodude", 3, "tackle") },
                 floorId: "3",
                 defeat: "Nada mal. La roca aguanta, pero el agua y la planta la rompen.",
                 hint: "En las salas de roca, busca un movimiento de agua o de planta."),
 
             new TrainerRow("monitora_suelos", "Monitora de Suelos", "Monitora", TrainerAi.Trainer, false,
-                new[] { Monster("geodude", 4, "tackle"),
-                        Monster("onix", 5, "tackle", "harden") },
+                new[] { Monster("geodude", 3, "tackle"),
+                        Monster("onix", 4, "tackle", "harden") },
                 floorId: "3",
                 defeat: "Buen combate. Con eso ya puedes pensar en la Ing. Cantera.",
                 hint: "Cantera usa Geodude y Onix; el agua castiga a los dos."),
@@ -398,6 +406,7 @@ namespace TorreIngenieria.EditorTools
             asset.sealId = row.sealId;
             asset.defeatDialogue = row.defeat;
             asset.hintDialogue = row.hint;
+            asset.engineeringFact = row.fact;
             asset.team.Clear();
             foreach (TrainerPokemon monster in row.team)
                 asset.team.Add(new TrainerPokemon

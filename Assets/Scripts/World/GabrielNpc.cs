@@ -44,6 +44,8 @@ namespace TorreIngenieria.World
                     return "no-starter";
                 if (GameState.Save.gabrielChoice != GabrielChoice.Yes)
                     return "help";
+                if (BossHintOffer.Available)
+                    return BossHintOffer.DialogueKey;
                 if (GameState.TutorialDone)
                     return "done";
                 if (GameState.PassesBuildingDoor)
@@ -69,6 +71,14 @@ namespace TorreIngenieria.World
             if (GameState.Save.gabrielChoice != GabrielChoice.Yes)
             {
                 AskForHelp();
+                return;
+            }
+
+            // Tres derrotas seguidas contra el mismo jefe: pista y Agua de panela, una vez por racha.
+            if (BossHintOffer.Available)
+            {
+                MarkDialogueSeen();
+                BossHintOffer.Show();
                 return;
             }
 

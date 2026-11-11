@@ -13,7 +13,9 @@ namespace TorreIngenieria.Battle
     /// Es lógica sin escena: no depende de la UI ni de GameObjects. Devuelve la lista de mensajes del turno
     /// y deja el estado en <see cref="PlayerActive"/>/<see cref="EnemyActive"/>. El cambio de Pokémon
     /// gasta el turno y el rival ataca al que entra. La experiencia la entrega <see cref="BattleSystem"/>
-    /// al ganar; los combates de entrenador siguen pendientes.
+    /// al ganar. En los combates de entrenador y jefe el rival lo decide <see cref="BattleAI"/> con la
+    /// IA de su tipo y puede curarse una vez con su objeto (Doc §8); de un entrenador o un jefe no se
+    /// huye ni se captura.
     /// </summary>
     public class BattleEngine
     {
@@ -54,6 +56,17 @@ namespace TorreIngenieria.Battle
 
         /// <summary>Tirada de obediencia inyectable para las pruebas; si es nula se usa <see cref="Random.value"/>.</summary>
         public float? ObedienceRoll { get; set; }
+
+        /// <summary>
+        /// IA del rival: <see cref="TrainerAi.Wild"/> en los encuentros salvajes. El combate de entrenador
+        /// y el de jefe la fijan al empezar con el asset del entrenador.
+        /// </summary>
+        public TrainerAi EnemyAi { get; set; } = TrainerAi.Wild;
+
+        /// <summary>El rival ya gastó su objeto curativo: solo se cura una vez por combate (Doc §8).</summary>
+        public bool EnemyHealed => enemyHealed;
+
+        bool enemyHealed;
 
         public BattlePokemon PlayerActive => PlayerTeam[playerIndex];
         public BattlePokemon EnemyActive => EnemyTeam[enemyIndex];
@@ -104,7 +117,7 @@ namespace TorreIngenieria.Battle
             }
 
             TurnCount++;
-            BattleAction enemyAction = BattleAI.ChooseWild(EnemyActive, PlayerActive);
+            BattleAction enemyAction = BattleAI.Choose(EnemyActive, PlayerActive, EnemyAi, !enemyHealed);
 
             if (playerAction.kind == BattleActionKind.Switch)
             {
@@ -120,7 +133,7 @@ namespace TorreIngenieria.Battle
                 // El cambio gasta el turno. El rival ya eligió su movimiento antes de ver entrar al
                 // nuevo Pokémon y ataca a este, no al que salió.
                 if (!IsOver)
-                    UseMove(EnemyActive, PlayerActive, enemyAction.moveIndex, messages, false);
+                    EnemyAct(enemyAction, messages);
                 if (!IsOver)
                     ResolveEndOfTurn(messages);
                 return messages;
@@ -134,7 +147,7 @@ namespace TorreIngenieria.Battle
                 // Usar un objeto gasta el turno y el salvaje ataca después, salvo que la captura tenga
                 // éxito o que el objeto no se haya podido usar.
                 if (consumed && !IsOver)
-                    UseMove(EnemyActive, PlayerActive, enemyAction.moveIndex, messages, false);
+                    EnemyAct(enemyAction, messages);
                 if (consumed && !IsOver)
                     ResolveEndOfTurn(messages);
                 return messages;
@@ -148,7 +161,7 @@ namespace TorreIngenieria.Battle
                     messages.Add("¡No puedes huir de un combate de entrenador!");
 
                 if (!IsOver)
-                    UseMove(EnemyActive, PlayerActive, enemyAction.moveIndex, messages, false);
+                    EnemyAct(enemyAction, messages);
 
                 if (!IsOver)
                     ResolveEndOfTurn(messages);
@@ -160,17 +173,65 @@ namespace TorreIngenieria.Battle
             {
                 UseMove(PlayerActive, EnemyActive, playerAction.moveIndex, messages, true);
                 if (!IsOver && !EnemyActive.IsFainted)
-                    UseMove(EnemyActive, PlayerActive, enemyAction.moveIndex, messages, false);
+                    EnemyAct(enemyAction, messages);
             }
             else
             {
-                UseMove(EnemyActive, PlayerActive, enemyAction.moveIndex, messages, false);
+                EnemyAct(enemyAction, messages);
                 if (!IsOver && !PlayerActive.IsFainted)
                     UseMove(PlayerActive, EnemyActive, playerAction.moveIndex, messages, true);
             }
 
             ResolveEndOfTurn(messages);
             return messages;
+        }
+
+        // ---------- Acción del rival ----------
+
+        /// <summary>
+        /// Ejecuta la acción que ya eligió el rival: curarse con su objeto o usar su movimiento. La
+        /// elección se hace antes de ver entrar a un cambio del jugador, como en el resto del turno.
+        /// </summary>
+        void EnemyAct(BattleAction action, List<BattleMessage> messages)
+        {
+            if (action.kind == BattleActionKind.Item)
+                UseEnemyItem(action.itemId, messages);
+            else
+                UseMove(EnemyActive, PlayerActive, action.moveIndex, messages, false);
+        }
+
+        /// <summary>
+        /// Objeto curativo del entrenador o del jefe (Doc §8): cura a su Pokémon activo, no sale del
+        /// inventario del jugador y solo se puede usar una vez por combate.
+        /// </summary>
+        void UseEnemyItem(string itemId, List<BattleMessage> messages)
+        {
+            ItemData item = ItemDatabase.Get(itemId);
+            if (item == null || item.category != ItemCategory.Heal || EnemyActive.IsFainted)
+            {
+                // Sin datos no hay curación: el turno pasa sin golpe, como un objeto mal elegido.
+                messages.Add($"{Name(EnemyActive, false)} no puede usar ese objeto.");
+                return;
+            }
+
+            int before = EnemyActive.currentHp;
+            EnemyActive.Heal(item.healAmount);
+            enemyHealed = true;
+            messages.Add($"El rival usó {item.displayName}.");
+            messages.Add($"{Name(EnemyActive, false)} recuperó {EnemyActive.currentHp - before} PS.");
+        }
+
+        /// <summary>Pokémon del jugador debilitados al terminar; es el castigo de la nota del jefe (Doc §8).</summary>
+        public int FaintedPlayerCount
+        {
+            get
+            {
+                int fainted = 0;
+                foreach (BattlePokemon pokemon in PlayerTeam)
+                    if (pokemon.IsFainted)
+                        fainted++;
+                return fainted;
+            }
         }
 
         // ---------- Turno ----------

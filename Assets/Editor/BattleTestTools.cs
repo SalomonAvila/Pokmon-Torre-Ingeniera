@@ -72,5 +72,55 @@ namespace TorreIngenieria.EditorTools
 
         [MenuItem("Torre Ingeniería/Combate/Iniciar combate salvaje (prueba)", true)]
         static bool CanStartWildBattle() => EditorApplication.isPlaying;
+
+        /// <summary>
+        /// Arranca el combate del jefe del piso actual (o del primer entrenador del piso si no tiene jefe)
+        /// sin recorrer el mapa: sirve para probar la IA, los créditos y la nota del jefe.
+        /// </summary>
+        [MenuItem("Torre Ingeniería/Combate/Iniciar combate de entrenador (prueba)")]
+        static void StartTrainerBattle()
+        {
+            PlayerController player = Object.FindAnyObjectByType<PlayerController>();
+            if (player == null)
+            {
+                Debug.LogWarning("No hay jugador en la escena; abre un mapa y entra en Play.");
+                return;
+            }
+            if (GameState.TeamCount == 0)
+            {
+                Debug.LogWarning("El equipo está vacío: usa Combate > Preparar equipo de prueba.");
+                return;
+            }
+
+            TrainerData trainer = PickTrainer(GameState.CurrentFloor);
+            if (trainer == null)
+            {
+                Debug.LogWarning($"El piso {GameState.CurrentFloor} no tiene entrenadores en los datos. " +
+                                 "Usa Mapas > Construir todos los mapas o abre el piso 1 o el 3.");
+                return;
+            }
+
+            BattleRequest.StartTrainer(trainer.trainerId, SceneManager.GetActiveScene().name,
+                player.transform.position, (int)player.Facing);
+            SceneTransition.Go(SceneNames.Battle, null);
+            Debug.Log($"Combate de prueba contra {trainer.displayName} ({trainer.trainerId}) del piso {GameState.CurrentFloor}.");
+        }
+
+        [MenuItem("Torre Ingeniería/Combate/Iniciar combate de entrenador (prueba)", true)]
+        static bool CanStartTrainerBattle() => EditorApplication.isPlaying;
+
+        /// <summary>Jefe del piso si lo hay; si no, el primer entrenador de ese piso en los datos.</summary>
+        static TrainerData PickTrainer(string floor)
+        {
+            TrainerData boss = TrainerDatabase.FindBoss(floor);
+            if (boss != null)
+                return boss;
+
+            foreach (TrainerData trainer in Resources.LoadAll<TrainerData>("Data/Trainers"))
+                if (trainer != null && !trainer.isBoss && trainer.floorId == floor)
+                    return trainer;
+
+            return null;
+        }
     }
 }

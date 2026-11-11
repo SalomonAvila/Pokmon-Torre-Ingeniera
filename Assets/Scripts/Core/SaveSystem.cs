@@ -91,7 +91,7 @@ namespace TorreIngenieria.Core
     public class SaveData
     {
         /// <summary>Versión actual del archivo. Al añadir campos se sube; los ausentes arrancan con su valor inicial.</summary>
-        public const int CurrentVersion = 5;
+        public const int CurrentVersion = 6;
 
         /// <summary>
         /// El 1 es el valor antiguo: si el JSON no trae 'version' (formato anterior al campo) se trata como v1
@@ -145,6 +145,13 @@ namespace TorreIngenieria.Core
 
         /// <summary>Derrotas seguidas del jugador contra ese jefe.</summary>
         public int consecutiveBossLosses;
+
+        /// <summary>
+        /// La pista de Gabriel por la racha de derrotas contra el jefe ya se entregó: no se regala un
+        /// Agua de panela por cada derrota de la misma racha. Vuelve a false al vencer al jefe o al
+        /// cambiar de jefe (v6).
+        /// </summary>
+        public bool bossHintGiven;
 
         /// <summary>Pisos completados (ids de Building.Floors); habilitan la escalera hacia el piso siguiente.</summary>
         public List<string> completedFloors = new List<string>();
@@ -200,6 +207,8 @@ namespace TorreIngenieria.Core
         /// y banderas. v2 → v3: se retiró pokedexByFloor (el Pokédex por piso se deriva de SpeciesCatalog).
         /// v3 → v4: el equipo guarda PS, EXP y movimientos con PP.
         /// v4 → v5: se guardan las conversaciones ya vistas por NPC (id + clave del diálogo).
+        /// v5 → v6: se guarda si Gabriel ya entregó la pista de la racha de derrotas contra el jefe
+        /// (<c>bossHintGiven</c>); JsonUtility lo deja en false en las partidas viejas, que es lo correcto.
         /// JsonUtility deja los campos nuevos con su valor inicial e ignora las claves viejas que ya no existen;
         /// la v4 necesita además el centinela de PS para no dejar debilitados a los Pokémon de partidas viejas.
         /// Al final, <see cref="TeamMembers.RecalculateOnLoad"/> completa PS, EXP, movimientos y PP con los

@@ -115,5 +115,26 @@ namespace TorreIngenieria.Core
         }
 
         public static bool Exists(string trainerId) => Get(trainerId) != null;
+
+        /// <summary>
+        /// Jefe de un piso, buscando entre los assets de entrenadores. Lo usan la pista de Gabriel
+        /// y las herramientas de prueba: la partida no guarda el id del jefe de cada piso.
+        /// </summary>
+        public static TrainerData FindBoss(string floorId)
+        {
+            if (string.IsNullOrEmpty(floorId))
+                return null;
+
+            foreach (TrainerData data in Resources.LoadAll<TrainerData>("Data/Trainers"))
+            {
+                if (data == null || !data.isBoss || data.floorId != floorId)
+                    continue;
+
+                Cache[data.trainerId] = data;
+                return data;
+            }
+
+            return null;
+        }
     }
 }

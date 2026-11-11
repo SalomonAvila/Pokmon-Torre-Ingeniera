@@ -63,11 +63,18 @@ namespace TorreIngenieria.World
             // En Awake (no Start) para que no se vea un fotograma antes de ocultarse.
             if (kind == Kind.Item && IsCollected)
                 gameObject.SetActive(false);
-            else if (kind == Kind.Trainer && IsDefeated)
-                gameObject.SetActive(false);
         }
 
         public Kind InteractionKind => kind;
+
+        /// <summary>Id del entrenador de esta casilla (asset de <see cref="TrainerData"/>).</summary>
+        public string TrainerId => trainerId;
+
+        /// <summary>El entrenador de la casilla ya fue vencido: no se puede volver a retar.</summary>
+        protected bool IsTrainerDefeated => IsDefeated;
+
+        /// <summary>Líneas de desafío o de conversación, para las subclases de NPC y de entrenador.</summary>
+        protected string[] Lines => lines;
 
         /// <summary>NPC y entrenadores muestran la burbuja; letreros y objetos, por ahora no.</summary>
         public bool CanShowIndicator => kind == Kind.Npc || kind == Kind.Trainer;
@@ -243,28 +250,30 @@ namespace TorreIngenieria.World
             gameObject.SetActive(false);
         }
 
-        void InteractTrainer()
+        /// <summary>
+        /// Entrenador. Lo sobrescribe <see cref="TrainerController"/>, que reta y arranca el combate;
+        /// la base solo muestra sus líneas, por si una casilla de entrenador llega sin controlador.
+        /// Un entrenador ya vencido da la pista del piso que guarda su asset (Doc §8).
+        /// </summary>
+        protected virtual void InteractTrainer()
         {
-            if (IsDefeated)
+            if (IsTrainerDefeated)
             {
-                gameObject.SetActive(false);
+                ShowTrainerHint();
                 return;
             }
 
-            // Hasta la Etapa 6 no hay combate de entrenadores: hablar con él lo marca vencido.
-            WorldMessage.Show(lines, options, chosen =>
-            {
-                if (options != null && options.Length > 0 && chosen != acceptedOption)
-                {
-                    WorldMessage.Show(rejectedLines);
-                    return;
-                }
+            WorldMessage.Show(lines);
+        }
 
-                WorldMessage.Show(acceptedLines);
-                if (!string.IsNullOrEmpty(trainerId))
-                    GameState.DefeatTrainer(trainerId);
-                gameObject.SetActive(false);
-            });
+        /// <summary>Pista del entrenador o jefe vencido: <see cref="TrainerData.hintDialogue"/>.</summary>
+        protected void ShowTrainerHint()
+        {
+            TrainerData trainer = TrainerDatabase.Get(trainerId);
+            string hint = trainer != null ? trainer.hintDialogue : null;
+            WorldMessage.Show(string.IsNullOrWhiteSpace(hint)
+                ? new[] { "Ya me venciste; no tengo nada más que decirte." }
+                : new[] { hint });
         }
     }
 }

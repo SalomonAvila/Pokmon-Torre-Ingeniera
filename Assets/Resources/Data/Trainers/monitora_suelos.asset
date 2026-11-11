@@ -18,11 +18,11 @@ MonoBehaviour:
   ai: 1
   team:
   - speciesId: geodude
-    level: 4
+    level: 3
     moveIds:
     - tackle
   - speciesId: onix
-    level: 5
+    level: 4
     moveIds:
     - tackle
     - harden
@@ -32,3 +32,4 @@ MonoBehaviour:
   sealId: 
   defeatDialogue: Buen combate. Con eso ya puedes pensar en la Ing. Cantera.
   hintDialogue: Cantera usa Geodude y Onix; el agua castiga a los dos.
+  engineeringFact: 

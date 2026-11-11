@@ -24,6 +24,7 @@ namespace TorreIngenieria.Battle
         [SerializeField] DialogueBox message;
         [SerializeField] BattleMenu menu;
         [SerializeField] BattleMenu moveMenu;
+        [SerializeField] BattleNoteUI note;
 
         TeamMember playerMember;
 
@@ -103,6 +104,16 @@ namespace TorreIngenieria.Battle
             }
 
             playerHud.ShowExp(toExp, level);
+        }
+
+        /// <summary>
+        /// Pantalla de la nota del jefe (Doc §8): se muestra al vencer a un jefe del piso. El cuadro de
+        /// mensajes se limpia para que no asome por los bordes del marco de la evaluación.
+        /// </summary>
+        public IEnumerator ShowBossNote(TrainerData trainer, float grade, bool accessCard)
+        {
+            message.Clear();
+            yield return note.Show(trainer, grade, accessCard);
         }
 
         static string MoveName(string moveId) =>

@@ -81,17 +81,23 @@ namespace TorreIngenieria.Battle
                 yield break;
             }
 
+            TrainerData trainer = Trainer();
             var engine = new BattleEngine(playerTeam, enemyTeam, BattleRequest.Kind)
             {
                 ObedienceSeals = GameState.SealCount,
+                EnemyAi = trainer != null ? trainer.ai : TrainerAi.Wild,
             };
             ui.Bind(engine.PlayerActive, engine.EnemyActive, SlotFor(slots, engine.PlayerActive)?.member);
 
             var intro = new List<string>();
             if (BattleRequest.Kind == BattleKind.Wild)
                 intro.Add($"¡Ha aparecido un {engine.EnemyActive.DisplayName} salvaje!");
-            if (BattleRequest.IsTutorial)
+            else if (BattleRequest.IsTutorial)
                 intro.Add("¡Gabriel quiere comprobar lo que aprendiste!");
+            else if (trainer != null)
+                intro.Add(trainer.isBoss
+                    ? $"¡{trainer.displayName} custodia la escalera; no puedes subir sin vencerla!"
+                    : $"¡{trainer.displayName} te reta a un combate!");
             intro.Add($"¡Adelante, {engine.PlayerActive.DisplayName}!");
             yield return ui.Messages(intro);
 
@@ -165,10 +171,89 @@ namespace TorreIngenieria.Battle
                 yield return ui.Messages(new[] { "¡Superaste la prueba de Gabriel!" });
             }
 
+            // Entrenadores y jefes: diálogo, créditos, piso completado y nota del jefe.
+            if (trainer != null)
+                yield return ResolveTrainerBattle(engine, trainer);
+
             GameState.NotifyTeamChanged();
             yield return null;
 
             ReturnToWorld(Building.SceneFor(GameState.Save.location));
+        }
+
+        /// <summary>Entrenador o jefe del combate en curso; null en un encuentro salvaje y en el tutorial.</summary>
+        static TrainerData Trainer() =>
+            BattleRequest.Kind == BattleKind.Trainer && !BattleRequest.IsTutorial
+                ? TrainerDatabase.Get(BattleRequest.TrainerId)
+                : null;
+
+        /// <summary>
+        /// Cierre del combate de entrenador o jefe. Al ganar: su diálogo, los créditos, la marca de vencido
+        /// y, si es jefe, el flujo de la etapa (piso completado, sello, nota y Carné de acceso del piso 3).
+        /// Al perder deja la pista del piso y, contra un jefe, suma la derrota a la racha de Gabriel (Doc §8).
+        /// </summary>
+        IEnumerator ResolveTrainerBattle(BattleEngine engine, TrainerData trainer)
+        {
+            if (!engine.PlayerWon)
+            {
+                if (trainer.isBoss && !string.IsNullOrEmpty(trainer.floorId))
+                    GameState.RegisterLossToBoss(trainer.floorId);
+
+                if (!string.IsNullOrWhiteSpace(trainer.hintDialogue))
+                    yield return ui.Messages(new[] { trainer.hintDialogue });
+
+                // Sin desmayo todavía (Etapa 7): se vuelve al mapa con el equipo como estaba, y Gabriel
+                // sigue siendo el punto de curación. El jugador ya no queda atrapado: el entrenador no
+                // vuelve a retarlo hasta que salga de su vista y regrese.
+                yield return ui.Messages(new[]
+                {
+                    "Puedes volver a intentarlo cuando quieras; Gabriel cura a tu equipo.",
+                });
+                yield break;
+            }
+
+            GameState.DefeatTrainer(trainer.trainerId);
+
+            if (!string.IsNullOrWhiteSpace(trainer.defeatDialogue))
+                yield return ui.Messages(new[] { trainer.defeatDialogue });
+
+            // Doc §8: 10 × nivel del rival; el asset puede fijar una recompensa propia.
+            int credits = trainer.rewardCredits > 0
+                ? trainer.rewardCredits
+                : GameRules.CreditsReward(HighestLevel(trainer));
+            if (credits > 0)
+            {
+                GameState.AddCredits(credits);
+                yield return ui.Messages(new[] { $"Recibiste {credits} créditos." });
+            }
+
+            if (!trainer.isBoss || string.IsNullOrEmpty(trainer.floorId))
+                yield break;
+
+            // Doc §8: la nota sale de los turnos y de los Pokémon debilitados; la pantalla muestra
+            // el sello, el Carné (solo el piso 3) y el dato de ingeniería.
+            float grade = GameRules.Grade(engine.TurnCount, engine.FaintedPlayerCount);
+            GameState.CompleteFloor(trainer.floorId);
+            GameState.GrantSeal(trainer.sealId);
+            GameState.RegisterBossNote(trainer.floorId, grade);
+            bool accessCard = trainer.floorId == "3";
+            if (accessCard)
+                GameState.GrantAccessCard();
+
+            yield return ui.ShowBossNote(trainer, grade, accessCard);
+        }
+
+        /// <summary>Nivel más alto del equipo de un entrenador; base de los créditos (Doc §8).</summary>
+        static int HighestLevel(TrainerData trainer)
+        {
+            int level = 0;
+            if (trainer.team == null)
+                return level;
+
+            foreach (TrainerPokemon pokemon in trainer.team)
+                if (pokemon != null)
+                    level = Mathf.Max(level, pokemon.level);
+            return level;
         }
 
         IEnumerator AwardExperience(BattleEngine engine, List<PlayerSlot> slots)
@@ -213,10 +298,26 @@ namespace TorreIngenieria.Battle
 
                 case BattleKind.Trainer:
                     if (BattleRequest.IsTutorial)
+                    {
                         team.AddRange(BuildTutorialTeam());
-                    else
-                        // Los combates de entrenador y jefe llegan en la segunda mitad de la etapa.
-                        Debug.LogWarning("Combate de entrenador aún no implementado.");
+                        break;
+                    }
+
+                    TrainerData trainer = Trainer();
+                    if (trainer == null)
+                    {
+                        Debug.LogError($"No existe el entrenador '{BattleRequest.TrainerId}'. " +
+                                       "Ejecuta Datos > Construir datos del prototipo.");
+                        break;
+                    }
+
+                    // Especies, niveles y movimientos fijos salen del asset del entrenador.
+                    foreach (TeamMember member in TeamMembers.CreateTeam(trainer))
+                    {
+                        PokemonData species = PokemonDatabase.Get(member.speciesId);
+                        if (species != null)
+                            team.Add(BattlePokemon.FromTeamMember(member, species));
+                    }
                     break;
             }
 

@@ -190,7 +190,7 @@ namespace TorreIngenieria.EditorTools
             ProvisionalMap.CreateVigilante(10, 2, height);
 
             // Entrenador de práctica del kiosco (Doc §10): primer combate de entrenador y primera fuente
-            // de créditos. Queda junto al mostrador, mirando al camino; el combate real llega en la Etapa 6.
+            // de créditos. Queda junto al mostrador, mirando al camino; lo reta al verlo (TrainerController).
             ProvisionalMap.CreateTrainer("EntrenadorKiosco", 19, 28, height, "kiosco",
                 new[] { "¡Hola! Soy el estudiante del kiosco.", "¿Quieres probar tu equipo en un combate de práctica?" },
                 PlayerController.Direction.Up);

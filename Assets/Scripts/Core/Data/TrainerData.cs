@@ -60,5 +60,9 @@ namespace TorreIngenieria.Core
 
         [TextArea]
         public string hintDialogue;
+
+        [TextArea]
+        [Tooltip("Dato de ingeniería del jefe: la pantalla de la nota lo muestra bajo la evaluación.")]
+        public string engineeringFact;
     }
 }

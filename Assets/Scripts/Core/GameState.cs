@@ -297,6 +297,16 @@ namespace TorreIngenieria.Core
             Commit();
         }
 
+        /// <summary>Suma (o resta, con cantidad negativa) créditos y guarda. Los da el combate de entrenador.</summary>
+        public static void AddCredits(int amount)
+        {
+            if (amount == 0)
+                return;
+
+            Save.credits = Math.Max(0, Save.credits + amount);
+            Commit();
+        }
+
         // ---------- Pokédex ----------
 
         public static int CaughtSpeciesCount => Save.pokedex.Count;
@@ -531,13 +541,40 @@ namespace TorreIngenieria.Core
         public static int BossLossStreak(string floor) =>
             Save.lastBossFloor == floor ? Save.consecutiveBossLosses : 0;
 
+        /// <summary>Jefe de la racha de derrotas actual, o cadena vacía si no hay racha.</summary>
+        public static string BossStreakFloor => Save.lastBossFloor;
+
+        /// <summary>
+        /// ¿Gabriel debe ofrecer la pista del jefe? Solo con la racha completa (3 derrotas seguidas
+        /// contra el mismo jefe), sin jefe vencido y sin haber entregado ya la ayuda de esta racha.
+        /// </summary>
+        public static bool BossHintAvailable =>
+            !string.IsNullOrEmpty(Save.lastBossFloor)
+            && Save.consecutiveBossLosses >= GameRules.DefeatsForHint
+            && !Save.bossHintGiven;
+
+        /// <summary>Marca la ayuda de la racha como entregada (el Agua de panela de Gabriel).</summary>
+        public static void MarkBossHintGiven()
+        {
+            if (Save.bossHintGiven)
+                return;
+            Save.bossHintGiven = true;
+            Commit();
+        }
+
         /// <summary>Suma una derrota del jugador contra el jefe; cambiar de jefe reinicia la racha.</summary>
         public static void RegisterLossToBoss(string floor)
         {
             if (string.IsNullOrEmpty(floor))
                 return;
 
-            Save.consecutiveBossLosses = Save.lastBossFloor == floor ? Save.consecutiveBossLosses + 1 : 1;
+            if (Save.lastBossFloor != floor)
+            {
+                Save.consecutiveBossLosses = 0;
+                Save.bossHintGiven = false;
+            }
+
+            Save.consecutiveBossLosses++;
             Save.lastBossFloor = floor;
             Commit();
         }
@@ -545,10 +582,11 @@ namespace TorreIngenieria.Core
         /// <summary>Vencer al jefe corta la racha: Gabriel deja de ofrecer la pista.</summary>
         static void ResetBossLossStreak()
         {
-            if (string.IsNullOrEmpty(Save.lastBossFloor) && Save.consecutiveBossLosses == 0)
+            if (string.IsNullOrEmpty(Save.lastBossFloor) && Save.consecutiveBossLosses == 0 && !Save.bossHintGiven)
                 return;
             Save.lastBossFloor = "";
             Save.consecutiveBossLosses = 0;
+            Save.bossHintGiven = false;
         }
     }
 }
