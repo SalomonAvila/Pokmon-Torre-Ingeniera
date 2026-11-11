@@ -3,7 +3,7 @@
 Plan de desarrollo del prototipo (vertical slice, Doc §6): plazoleta (`Atrio`), lobby (`Ascensores`) y piso 3.
 Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partida de prueba y un commit que describa el cambio.
 
-Última revisión: 5 de noviembre de 2026. Etapas 0 a 5 **cerradas**; la 5 incluye el flujo de inicio, el tutorial de Gabriel, el indicador de diálogos nuevos y la guía de objetivos. Siguiente: Etapa 6 (entrenadores y jefe del piso 3). El trabajo de **menús** (maquetas A–L) se reparte entre las Etapas 4, 7 y 9.
+Última revisión: 11 de noviembre de 2026. Etapas 0 a 6 **cerradas**; la 6 incluye los entrenadores del piso 3, el jefe (Ing. Cantera), la pantalla de nota, la racha de derrotas y el guardado v6. Siguiente: Etapa 7 (servicios y menú de pausa). El trabajo de **menús** (maquetas A–L) se reparte entre las Etapas 4, 7 y 9.
 
 > **Nota del 25 oct:** el avance de la Etapa 4 se actualizó revisando el código, no con una prueba en Play.
 
@@ -174,7 +174,7 @@ Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partid
 
 ---
 
-## Etapa 5: Flujo de inicio y tutorial (3 a 4 días)
+## Etapa 5: Flujo de inicio y tutorial (3 a 4 días) — ✅ CERRADA
 
 > Va **justo después de la Etapa 4**: es lo que permite jugar desde el menú principal sin herramientas del Editor.
 
@@ -193,17 +193,26 @@ Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partid
 
 ---
 
-## Etapa 6: Entrenadores y jefe del piso 3 (3 a 4 días)
+## Etapa 6: Entrenadores y jefe del piso 3 (3 a 4 días) — ✅ CERRADA
 
 - `TrainerController`: visión de 3 casillas en línea recta (`GameRules.TrainerSightRange` = 3), desafío una sola vez (`GameState.DefeatTrainer`) y pista al perder.
 - Dos entrenadores del piso 3 (`TrainerData`: especies, niveles, ítems, posición y dirección de vista).
-- **Ing. Cantera (jefe del piso 3)**: Geodude nv 8 y Onix nv 10 (`Building.BossTeamSize("3") = 2`, `Building.BossLevel("3") = 10`), sin huida e IA determinista.
+- **Ing. Cantera (jefe del piso 3)**: Geodude nv 6 y Onix nv 8 (ajustados para balance; sin Avalancha), sin huida e IA determinista.
 - Flujo de victoria del jefe: `CompleteFloor` → `GrantSeal("3")` → `RegisterBossNote("3", nota)` → `GrantAccessCard()` (solo piso 3).
-- Pantalla de nota: sello, nota con coma decimal ("4,6"), Carné de acceso (piso 3) y dato de ingeniería.
-- Racha de 3 derrotas seguidas (`GameState.BossLossStreak` y `GameRules.DefeatsForHint` = 3): Gabriel ofrece pista y `AddItem("agua_panela", 1)`.
-**Avance (10 nov 2026):** implementado en la rama `entrenadores-jefe`. `BattleSystem` arma el equipo del entrenador desde su asset; `BattleAI` trae la IA de entrenador (mejor movimiento al 60 %, Tinto bajo el 25 %) y la del jefe (mejor movimiento sin azar, Agua de panela bajo el 30 %), con la curación resuelta por el motor y una sola vez por combate. Al ganar: `defeatDialogue`, créditos (`rewardCredits` o 10 × nivel) y `DefeatTrainer`; al perder: `hintDialogue` y `RegisterLossToBoss` si es jefe. La victoria del jefe encadena `CompleteFloor` → `GrantSeal` → `RegisterBossNote` → `GrantAccessCard` (piso 3) y abre la **pantalla de la nota** (`BattleNoteUI`: sello, nota con coma decimal, Carné y dato de ingeniería). `TrainerController` ve 3 casillas en línea recta, se acerca, reta y arranca el combate; solo reta al que entra en la vista y los vencidos siguen en el mapa dando su pista. El piso 3 ya coloca al Estudiante de Concretos (14, 20), a la Monitora de Suelos (15, 32) y a la Ing. Cantera en la escalera del noroeste (8, 8) con su sprite. La racha de Gabriel se guarda en `bossHintGiven` (guardado v6). Falta la prueba en Play de Daniel (mapas y escena de combate regenerados desde el Editor). El balance del jefe se ajustó después de esa prueba: Cantera con Geodude 6 y Onix 8 (sin Avalancha) y los dos estudiantes del pasillo un nivel menos, con el techo de la regla (máximo salvaje + 4) intacto; el detalle está en `IMPLEMENTACION.md` y la Etapa 9 revisa el ajuste fino.
+- Pantalla de nota: sello, nota con coma decimal ("4,6"), Carné de acceso (piso 3) y dato de ingeniería (`BattleNoteUI`).
+- Racha de 3 derrotas seguidas (`GameState.BossLossStreak` y `GameRules.DefeatsForHint` = 3): Gabriel ofrece pista y `AddItem("agua_panela", 1)` (`BossHintOffer`).
+- Guardado **versión 6** con migración automática v5 → v6 (`bossHintGiven`).
 
-**Hecho cuando:** vences a Cantera, recibes el sello "3" y el Carné, la escalera al piso 4 se abre sola y la racha de derrotas funciona.
+**Implementación y cierre (11 nov 2026):** implementado y probado en Play con éxito en la rama `entrenadores-jefe`, y **mergeado a `main`** (PR #5).
+- `BattleSystem` arma el equipo del entrenador desde su asset; `BattleAI` maneja la IA de entrenador (mejor movimiento al 60 %, Tinto bajo el 25 %) y la del jefe (mejor movimiento sin azar, Agua de panela bajo el 30 %), con curación resuelta por el motor una sola vez por combate.
+- Al ganar: `defeatDialogue`, créditos (`rewardCredits` o 10 × nivel) y `DefeatTrainer`; al perder: `hintDialogue` y `RegisterLossToBoss` si es jefe.
+- La victoria del jefe encadena `CompleteFloor` → `GrantSeal` → `RegisterBossNote` → `GrantAccessCard` (piso 3) y abre la **pantalla de la nota** (`BattleNoteUI`: sello, nota con coma decimal, Carné y dato de ingeniería).
+- `TrainerController` ve 3 casillas en línea recta, se acerca, reta y arranca el combate; no repite el reto si ya fue vencido y los vencidos ofrecen su pista al interactuar.
+- El piso 3 coloca al Estudiante de Concretos (14, 20), a la Monitora de Suelos (15, 32) y a la Ing. Cantera en la escalera del noroeste (8, 8) con su sprite.
+- La racha de derrotas de Gabriel entrega pista + Agua de panela y persiste en `bossHintGiven` (guardado v6).
+- El balance del jefe quedó ajustado con Cantera en Geodude nv 6 y Onix nv 8 y los estudiantes del pasillo un nivel menos; la Etapa 9 revisará el ajuste fino.
+
+**Hecho cuando:** vences a Cantera, recibes el sello "3" y el Carné, la escalera al piso 4 se abre sola y la racha de derrotas funciona. **Superado en Play y mergeado a main el 11 nov 2026.**
 
 ---
 
@@ -301,7 +310,7 @@ Generadas con IA a partir del estilo de FireRed/LeafGreen. Están en `Docs/Maque
 - [x] Reescribir la laguna de la puerta con la condición derivada (`PassesBuildingDoor`).
 - [x] Anotar la decisión de escaleras (una escena, la cinta bloquea la subida) y la del Pokédex por piso (derivado de `SpeciesCatalog`).
 - [x] Documentar `Interactable` y `HUD` en `AGENTS.md` (World y UI).
-- [ ] Añadir `EncounterZone` y `BattleSystem` (ya existen) y `TrainerController` cuando exista.
+- [x] Añadir `EncounterZone`, `BattleSystem` y `TrainerController` (implementados y probados).
 - [x] Documentar `Assets/Scripts/Core/Data/` y el menú de datos del Editor.
 - [ ] Documentar `Assets/Scripts/UI/Menu/` (`MenuStack` y componentes compartidos) cuando exista, y la carpeta `Docs/Maquetas/`.
 
@@ -326,15 +335,15 @@ Generadas con IA a partir del estilo de FireRed/LeafGreen. Están en `Docs/Maque
 
 ## Estado real vs Plan (resumen)
 
-| Etapa | Plan original | Estado real (25 oct 2026) |
+| Etapa | Plan original | Estado real (11 nov 2026) |
 |---|---|---|
 | 0 | Casi cerrada | ✅ **Cerrada** (v4, FadeManager, validación, mapas y herramientas) |
 | 1 | Datos y fórmulas | ✅ **Cerrada** (datos, fórmulas, equipo y assets validados; compilación sin errores) |
 | 2 | Interacción y diálogo | ✅ **Cerrada** (Interactable, HUD, acciones de input, bloqueo y prueba en Play superados) |
 | 3 | Combate núcleo | ✅ **Cerrada** (escena, motor, IA, captura, EXP, cambio de Pokémon y retorno; PR #2) |
 | 4 | Encuentros, plazoleta y menús | ✅ **Cerrada** (encuentros, menú de pausa, Equipo, Resumen y Mochila con arte; probada en Play el 25 oct) |
-| 5 | Flujo de inicio y tutorial | ✅ **100 %** (título → Intro → Atrio → Gabriel → inicial → captura → puerta → tutorial → piso 3; spawn de desmayo listo para la Etapa 7) |
-| 6 | Entrenadores y jefe | ❌ **0 %** (el entrenador del kiosco solo se marca vencido al hablarle) |
+| 5 | Flujo de inicio y tutorial | ✅ **Cerrada** (título → Intro → Atrio → Gabriel → inicial → captura → puerta → tutorial → piso 3; spawn de desmayo listo para la Etapa 7) |
+| 6 | Entrenadores y jefe | ✅ **Cerrada** (TrainerController, visión 3 casillas, Estudiante de Concretos, Monitora de Suelos, Cantera nv 6/8, pantalla de nota, racha de derrotas con Gabriel, guardado v6; probada en Play y mergeada a main) |
 | 7 | Servicios y menú de pausa | ❌ **0 %** (12 maquetas de menús listas; 6 por regenerar) |
 | 8 | Contenido del piso 3 | 🟡 **10 %** (mapa generado, sin contenido) |
 | 9 | Pulido y cierre | ❌ **0 %** |
@@ -343,6 +352,8 @@ Generadas con IA a partir del estilo de FireRed/LeafGreen. Están en `Docs/Maque
 ---
 
 ## Registro de avance
+
+- **11 nov 2026 — Etapa 6 cerrada (PR #5 mergeado a main):** prueba en Play completada con éxito. `TrainerController` (visión en 3 casillas, reto y pista al interactuar), combates con el Estudiante de Concretos, Monitora de Suelos y la Ing. Cantera (Geodude nv 6 + Onix nv 8), IA con curación única (Tinto < 25 % / Agua de panela < 30 %), flujo de victoria completo (`CompleteFloor`, sello "3", pantalla de nota `BattleNoteUI`, Carné de acceso y desbloqueo de escalera al piso 4), racha de 3 derrotas con auxilio de Gabriel (`BossHintOffer`) y persistencia en `SaveData` v6 (`bossHintGiven`). Todo validado y mergeado a `main`. Siguiente: Etapa 7.
 
 - **28 oct 2026 — Fase D: Intro y partida nueva:** `IntroController` + `MainMenuSceneBuilder.BuildIntro` generan `Assets/Scenes/Intro.unity` (narración de la tormenta) y la registran después del título. «Nueva partida» crea la partida, presenta a Pedro y pasa por la Intro; «Continuar» carga `Building.SceneFor(location)`. El lobby añade el `SpawnPoint` `Desmayo` (`Building.SpawnFromFaint`) junto al futuro puesto de Don Chucho. Pendiente: regenerar `Intro` y `Ascensores`.
 - **28 oct 2026 — Combate tutorial de Gabriel:** `TutorialGabrielNpc` en el lobby; rival dinámico = inicial con ventaja de tipo (`GameRules.CounterStarter`), nivel 5 (4 si «Puedo solo»), con el learnset de ese nivel; sin objetos, huida ni EXP (`BattleRequest.IsTutorial`; `BattleUI` desactiva la Mochila). Al ganar, `GameState.CompleteTutorial` y `WarpZone.SetTutorialGate` abren la escalera del piso 3; al perder se reintenta. El Gabriel del lobby cura tras la prueba. Pendiente: regenerar `Ascensores`.
