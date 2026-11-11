@@ -41,6 +41,7 @@ namespace TorreIngenieria.EditorTools
             ValidateExperience();
             ValidateBattleEngine();
             ValidateCapture();
+            ValidateTrainerAndBossBattle();
             ValidateSwitch();
             ValidateMenus();
 
@@ -789,6 +790,136 @@ namespace TorreIngenieria.EditorTools
         }
 
         // ---------- Cambio de Pokémon (Etapa 3) ----------
+
+        // ---------- Entrenadores y jefes ----------
+
+        /// <summary>
+        /// Combate de entrenador y de jefe (Doc §7 y §8): el equipo sale del asset, la IA del jefe no tira
+        /// el azar del mejor movimiento, la curación usa el objeto de cada uno una sola vez, de un
+        /// entrenador no se huye ni se captura, y la nota del jefe sale de la fórmula con coma decimal.
+        /// </summary>
+        static void ValidateTrainerAndBossBattle()
+        {
+            TrainerData cantera = TrainerDatabase.Get("cantera");
+            Check(cantera != null, "Falta el asset del jefe cantera. Ejecuta Datos > Construir datos del prototipo.");
+            if (cantera == null)
+                return;
+
+            // El equipo del jefe sale de TeamMembers.CreateTeam, igual que en BattleSystem.
+            List<TeamMember> team = TeamMembers.CreateTeam(cantera);
+            CheckEqual(team.Count, Building.BossTeamSize("3"), "Cantera debería llevar 2 Pokémon en el piso 3.");
+            Check(team.Count >= 2 && team[0].speciesId == "geodude" && team[0].level == 6,
+                "El primer Pokémon de Cantera debería ser Geodude nv 6 (balance del prototipo).");
+            Check(team.Count >= 2 && team[1].speciesId == "onix" && team[1].level == 8,
+                "El segundo Pokémon de Cantera debería ser Onix nv 8 (balance del prototipo).");
+            // El techo de la regla del Doc §8 (máximo salvaje del piso + 4) no se debe pasar nunca.
+            Check(team.Count >= 2 && team[1].level <= Building.BossLevel("3"),
+                $"Cantera no debería pasar del nivel {Building.BossLevel("3")} que fija el documento.");
+            Check(!string.IsNullOrWhiteSpace(cantera.engineeringFact),
+                "Cantera debería traer el dato de ingeniería que muestra la pantalla de la nota.");
+            Check(!string.IsNullOrWhiteSpace(cantera.defeatDialogue) && !string.IsNullOrWhiteSpace(cantera.hintDialogue),
+                "Cantera debería traer su diálogo de derrota y su pista del piso.");
+
+            BattlePokemon player = BattlePokemon.CreateWild("charmander", 20);
+            BattlePokemon boss = BattlePokemon.FromTeamMember(team[1], PokemonDatabase.Get(team[1].speciesId));
+
+            // Con los PS llenos el jefe ataca y elige siempre su mejor movimiento (sin azar en la elección).
+            BattleAction full = BattleAI.Choose(boss, player, TrainerAi.Boss, true);
+            Check(full.kind == BattleActionKind.Move, "El jefe debería atacar con los PS llenos.");
+            CheckEqual(full.moveIndex, BestMoveIndex(boss, player),
+                "El jefe debería elegir su mejor movimiento (IA determinista).");
+
+            // Bajo el 30 % de PS usa el Agua de panela, y solo una vez.
+            boss.currentHp = Mathf.Max(1, boss.maxHp * 2 / 10);
+            BattleAction heal = BattleAI.Choose(boss, player, TrainerAi.Boss, true);
+            Check(heal.kind == BattleActionKind.Item && heal.itemId == BattleAI.BossHealItem,
+                "El jefe debería curarse con Agua de panela bajo el 30 % de PS.");
+            BattleAction afterHeal = BattleAI.Choose(boss, player, TrainerAi.Boss, false);
+            Check(afterHeal.kind == BattleActionKind.Move, "El jefe no debería curarse dos veces.");
+
+            // Entrenador: su propio umbral (25 %) y el Tinto.
+            BattlePokemon trainer = BattlePokemon.FromTeamMember(TeamMembers.Create("geodude", 8),
+                PokemonDatabase.Get("geodude"));
+            trainer.currentHp = Mathf.Max(1, trainer.maxHp / 5);
+            BattleAction trainerHeal = BattleAI.Choose(trainer, player, TrainerAi.Trainer, true);
+            Check(trainerHeal.kind == BattleActionKind.Item && trainerHeal.itemId == BattleAI.TrainerHealItem,
+                "El entrenador debería curarse con Tinto bajo el 25 % de PS.");
+            Check(BattleAI.Choose(trainer, player, TrainerAi.Wild, true).kind == BattleActionKind.Move,
+                "Un Pokémon salvaje nunca debería usar objetos.");
+
+            // El motor gasta el turno del rival en la curación y no la repite.
+            var engine = new BattleEngine(
+                new List<BattlePokemon> { BattlePokemon.CreateWild("charmander", 20) },
+                new List<BattlePokemon> { BattlePokemon.CreateWild("geodude", 8) },
+                BattleKind.Trainer)
+            {
+                EnemyAi = TrainerAi.Trainer,
+            };
+            engine.EnemyActive.currentHp = 1;
+
+            // Un movimiento de estado no hace daño: el rival llega vivo a su turno para curarse.
+            int statusMove = player.moves.FindIndex(slot =>
+                slot.Data != null && slot.Data.category == MoveCategory.Status);
+            Check(statusMove >= 0, "Charmander debería tener un movimiento de estado para la prueba.");
+            List<BattleMessage> healTurn = engine.ResolveTurn(BattleAction.Move(statusMove));
+            Check(healTurn.Exists(message => message.text.Contains("usó Tinto")),
+                "El turno del entrenador debería usar el Tinto.");
+            Check(engine.EnemyHealed, "El motor debería marcar el objeto del entrenador como gastado.");
+            Check(engine.EnemyActive.currentHp > 1, "El rival debería recuperar PS con el Tinto.");
+
+            engine.EnemyActive.currentHp = 1;
+            List<BattleMessage> secondTurn = engine.ResolveTurn(BattleAction.Move(statusMove));
+            Check(!secondTurn.Exists(message => message.text.Contains("usó Tinto")),
+                "El rival no debería curarse dos veces en el mismo combate.");
+
+            // Del entrenador no se huye ni se captura (Doc §7).
+            Check(!engine.CanPlayerFlee, "No se debería poder huir de un combate de entrenador.");
+            List<BattleMessage> ballTurn = engine.ResolveTurn(BattleAction.Item("pokeball"));
+            Check(ballTurn.Exists(message => message.text.Contains("No puedes capturar")),
+                "La Pokébola debería rechazarse contra el Pokémon de un entrenador.");
+            Check(!engine.Captured, "Una Pokébola no debería capturar al Pokémon de un entrenador.");
+
+            // Nota del jefe (Doc §8): 5,0 menos 0,1 por turno sobre 6 y 0,4 por debilitado, mínimo 3,0.
+            CheckNear(GameRules.Grade(GameRules.GradeFreeTurns, 0), GameRules.GradeBase,
+                "Sin turnos de más ni debilitados, la nota debería ser 5,0.");
+            CheckNear(GameRules.Grade(10, 1), 4.2f, "10 turnos y 1 debilitado deberían dar 4,2.");
+            CheckNear(GameRules.Grade(40, 6), GameRules.GradeMin, "La nota nunca debería bajar de 3,0.");
+            Check(GameRules.FormatGrade(4.6f) == "4,6", "La nota se muestra con coma decimal (4,6).");
+
+            // La pista de Gabriel llega con 3 derrotas seguidas contra el mismo jefe.
+            CheckEqual(GameRules.DefeatsForHint, 3, "La pista de Gabriel debería salir a las 3 derrotas.");
+            CheckEqual(GameRules.TrainerSightRange, 3, "La visión de un entrenador debería ser de 3 casillas.");
+            CheckNear(GameRules.BestMoveChance, 0.6f, "El entrenador debería elegir su mejor movimiento el 60 % de las veces.");
+            CheckNear(GameRules.TrainerHealThreshold, 0.25f, "El entrenador debería curarse bajo el 25 % de PS.");
+            CheckNear(GameRules.BossHealThreshold, 0.30f, "El jefe debería curarse bajo el 30 % de PS.");
+        }
+
+        /// <summary>
+        /// Índice del movimiento de mayor daño esperado, calculado aparte del motor para comparar con la
+        /// elección de <see cref="BattleAI"/> (misma cuenta: poder × STAB × efectividad).
+        /// </summary>
+        static int BestMoveIndex(BattlePokemon attacker, BattlePokemon defender)
+        {
+            int best = -1;
+            float bestScore = 0f;
+            for (int i = 0; i < attacker.moves.Count; i++)
+            {
+                MoveData move = attacker.moves[i].Data;
+                if (move == null || move.power <= 0)
+                    continue;
+
+                float score = move.power
+                    * (attacker.HasType(move.type) ? GameRules.StabMultiplier : 1f)
+                    * defender.GetTypeEffectiveness(move.type);
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    best = i;
+                }
+            }
+
+            return best;
+        }
 
         static void ValidateSwitch()
         {

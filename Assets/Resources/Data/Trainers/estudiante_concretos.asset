@@ -18,7 +18,7 @@ MonoBehaviour:
   ai: 1
   team:
   - speciesId: geodude
-    level: 4
+    level: 3
     moveIds:
     - tackle
   rewardCredits: 0
@@ -27,3 +27,4 @@ MonoBehaviour:
   sealId: 
   defeatDialogue: Nada mal. La roca aguanta, pero el agua y la planta la rompen.
   hintDialogue: En las salas de roca, busca un movimiento de agua o de planta.
+  engineeringFact: 

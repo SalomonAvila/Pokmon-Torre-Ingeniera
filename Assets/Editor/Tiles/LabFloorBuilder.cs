@@ -90,6 +90,7 @@ namespace TorreIngenieria.EditorTools
             ProvisionalMap.AddMessageBox();
             ProvisionalMap.AddHud();
             ProvisionalMap.AddEncounterZone();
+            AddFloorTrainers(floor, height);
 
             // Si se prueba el piso directamente, Pedro empieza donde se llega subiendo.
             var start = upAtNorthwest ? SoutheastArrival : NorthwestArrival;
@@ -125,6 +126,43 @@ namespace TorreIngenieria.EditorTools
                         encounters.SetTile(cell, tiles[EncounterFloor]);
                 }
             }
+        }
+
+        /// <summary>
+        /// Entrenadores del piso 3 (Doc §10): los dos estudiantes del pasillo central y la Ing. Cantera
+        /// custodiando la escalera del noroeste. El resto de los pisos aún no tiene entrenadores.
+        /// </summary>
+        static void AddFloorTrainers(string floor, int height)
+        {
+            if (floor != "3")
+                return;
+
+            // Pasillo central: el estudiante mira al sur (recibe al jugador que sube desde el SE) y la
+            // monitora al norte, delante de la escalera del jefe.
+            ProvisionalMap.CreateTrainer("EstudianteConcretos", 14, 20, height, "estudiante_concretos",
+                new[]
+                {
+                    "¡Alto! Soy el estudiante de Concretos.",
+                    "Aquí se practica con rocas: veamos cómo aguanta tu equipo.",
+                },
+                PlayerController.Direction.Down);
+
+            ProvisionalMap.CreateTrainer("MonitoraSuelos", 15, 32, height, "monitora_suelos",
+                new[]
+                {
+                    "Soy la monitora de Suelos.",
+                    "La Ing. Cantera no deja subir a cualquiera. Demuéstrame que puedes.",
+                },
+                PlayerController.Direction.Up);
+
+            // La jefa del piso espera en su escalera (Doc §8: «Todo gran edificio empieza por los cimientos»).
+            ProvisionalMap.CreateTrainer("IngCantera", 8, 8, height, "cantera",
+                new[]
+                {
+                    "Todo gran edificio empieza por los cimientos.",
+                    "Veamos cuáles son los tuyos.",
+                },
+                PlayerController.Direction.Right, ProvisionalMap.Character.Cantera);
         }
 
         /// <summary>

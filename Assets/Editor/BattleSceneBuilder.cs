@@ -126,10 +126,12 @@ namespace TorreIngenieria.EditorTools
                 font, new Vector2(0, 0), new Vector2(split, 0), new Vector2(8, 8), new Vector2(0, 184),
                 new Vector2(475, 34), 1);
 
+            BattleNoteUI note = CreateBossNote(canvas, controls, boxSprite, font);
+
             var ui = canvas.gameObject.AddComponent<BattleUI>();
             Assign(ui, ("enemyHud", enemyHud), ("playerHud", playerHud),
                 ("enemySprite", enemySprite), ("playerSprite", playerSprite),
-                ("message", message), ("menu", menu), ("moveMenu", moveMenu));
+                ("message", message), ("menu", menu), ("moveMenu", moveMenu), ("note", note));
 
             var system = new GameObject("BattleSystem").AddComponent<BattleSystem>();
             Assign(system, ("controls", controls), ("ui", ui));
@@ -370,6 +372,70 @@ namespace TorreIngenieria.EditorTools
             rect.gameObject.AddComponent<LayoutElement>().ignoreLayout = true; // no es una celda de la rejilla
             rect.gameObject.SetActive(false);
             return rect.gameObject;
+        }
+
+        // ---------- Pantalla de la nota del jefe ----------
+
+        /// <summary>
+        /// Pantalla de la nota del jefe (Doc §8, pantalla 11): un marco a pantalla completa con el sello,
+        /// la nota con coma decimal, el Carné de acceso y el dato de ingeniería. Nace oculta; la muestra
+        /// <see cref="BattleNoteUI"/> al vencer al jefe.
+        /// </summary>
+        static BattleNoteUI CreateBossNote(Transform canvas, InputActionAsset controls, Sprite boxSprite,
+            TMP_FontAsset font)
+        {
+            RectTransform panel = CreatePixelBox(canvas, "PantallaNota", boxSprite);
+            panel.anchorMin = Vector2.zero;
+            panel.anchorMax = Vector2.one;
+            panel.offsetMin = new Vector2(24, 24);
+            panel.offsetMax = new Vector2(-24, -24);
+
+            var layout = panel.gameObject.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(56, 56, 44, 44);
+            layout.spacing = 16;
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+
+            TextMeshProUGUI title = CreateNoteLine(panel, "Titulo", "PISO COMPLETADO", 24, 40f, font);
+            title.fontStyle = FontStyles.Bold;
+
+            TextMeshProUGUI grade = CreateNoteLine(panel, "Nota", "NOTA 5,0", 40, 64f, font);
+            grade.fontStyle = FontStyles.Bold;
+
+            TextMeshProUGUI seal = CreateNoteLine(panel, "Sello", "SELLO OBTENIDO", 20, 32f, font);
+
+            TextMeshProUGUI card = CreateNoteLine(panel, "Carne", string.Empty, 18, 52f, font);
+            card.textWrappingMode = TextWrappingModes.Normal;
+
+            TextMeshProUGUI fact = CreateNoteLine(panel, "Dato", string.Empty, 18, 96f, font);
+            fact.alignment = TextAlignmentOptions.TopLeft;
+            fact.textWrappingMode = TextWrappingModes.Normal;
+
+            TextMeshProUGUI footer = CreateNoteLine(panel, "Pie", "Z PARA CONTINUAR", 16, 28f, font);
+
+            var note = panel.gameObject.AddComponent<BattleNoteUI>();
+            var group = panel.gameObject.AddComponent<CanvasGroup>();
+            group.alpha = 0f;
+            group.blocksRaycasts = false;
+            group.interactable = false;
+            Assign(note, ("controls", controls), ("group", group), ("titleText", title),
+                ("gradeText", grade), ("sealText", seal), ("cardText", card), ("factText", fact),
+                ("footerText", footer));
+            return note;
+        }
+
+        /// <summary>Línea centrada de la pantalla de la nota, con altura fija para que no se pisen.</summary>
+        static TextMeshProUGUI CreateNoteLine(Transform parent, string name, string text, float size,
+            float height, TMP_FontAsset font)
+        {
+            TextMeshProUGUI line = CreateText(parent, name, text, size, TextBlack);
+            line.font = font;
+            line.alignment = TextAlignmentOptions.Center;
+            line.gameObject.AddComponent<LayoutElement>().preferredHeight = height;
+            return line;
         }
 
         // ---------- Cuadro de texto ----------

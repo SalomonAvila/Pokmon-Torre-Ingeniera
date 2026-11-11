@@ -1,7 +1,7 @@
 # Plan de fases: Pokémon Torre Ingeniería
 
 Plan de desarrollo del prototipo (vertical slice, Doc §6): plazoleta (`Atrio`), lobby (`Ascensores`) y piso 3.
-Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partida de prueba y un commit "Avance: ...".
+Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partida de prueba y un commit que describa el cambio.
 
 Última revisión: 5 de noviembre de 2026. Etapas 0 a 5 **cerradas**; la 5 incluye el flujo de inicio, el tutorial de Gabriel, el indicador de diálogos nuevos y la guía de objetivos. Siguiente: Etapa 6 (entrenadores y jefe del piso 3). El trabajo de **menús** (maquetas A–L) se reparte entre las Etapas 4, 7 y 9.
 
@@ -201,6 +201,7 @@ Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partid
 - Flujo de victoria del jefe: `CompleteFloor` → `GrantSeal("3")` → `RegisterBossNote("3", nota)` → `GrantAccessCard()` (solo piso 3).
 - Pantalla de nota: sello, nota con coma decimal ("4,6"), Carné de acceso (piso 3) y dato de ingeniería.
 - Racha de 3 derrotas seguidas (`GameState.BossLossStreak` y `GameRules.DefeatsForHint` = 3): Gabriel ofrece pista y `AddItem("agua_panela", 1)`.
+**Avance (10 nov 2026):** implementado en la rama `entrenadores-jefe`. `BattleSystem` arma el equipo del entrenador desde su asset; `BattleAI` trae la IA de entrenador (mejor movimiento al 60 %, Tinto bajo el 25 %) y la del jefe (mejor movimiento sin azar, Agua de panela bajo el 30 %), con la curación resuelta por el motor y una sola vez por combate. Al ganar: `defeatDialogue`, créditos (`rewardCredits` o 10 × nivel) y `DefeatTrainer`; al perder: `hintDialogue` y `RegisterLossToBoss` si es jefe. La victoria del jefe encadena `CompleteFloor` → `GrantSeal` → `RegisterBossNote` → `GrantAccessCard` (piso 3) y abre la **pantalla de la nota** (`BattleNoteUI`: sello, nota con coma decimal, Carné y dato de ingeniería). `TrainerController` ve 3 casillas en línea recta, se acerca, reta y arranca el combate; solo reta al que entra en la vista y los vencidos siguen en el mapa dando su pista. El piso 3 ya coloca al Estudiante de Concretos (14, 20), a la Monitora de Suelos (15, 32) y a la Ing. Cantera en la escalera del noroeste (8, 8) con su sprite. La racha de Gabriel se guarda en `bossHintGiven` (guardado v6). Falta la prueba en Play de Daniel (mapas y escena de combate regenerados desde el Editor). El balance del jefe se ajustó después de esa prueba: Cantera con Geodude 6 y Onix 8 (sin Avalancha) y los dos estudiantes del pasillo un nivel menos, con el techo de la regla (máximo salvaje + 4) intacto; el detalle está en `IMPLEMENTACION.md` y la Etapa 9 revisa el ajuste fino.
 
 **Hecho cuando:** vences a Cantera, recibes el sello "3" y el Carné, la escalera al piso 4 se abre sola y la racha de derrotas funciona.
 
@@ -338,8 +339,6 @@ Generadas con IA a partir del estilo de FireRed/LeafGreen. Están en `Docs/Maque
 | 8 | Contenido del piso 3 | 🟡 **10 %** (mapa generado, sin contenido) |
 | 9 | Pulido y cierre | ❌ **0 %** |
 | 10 | Futuro | — |
-
-**Próximo commit sugerido:** "Avance: menus de equipo y mochila" (al cerrar la Etapa 4).
 
 ---
 

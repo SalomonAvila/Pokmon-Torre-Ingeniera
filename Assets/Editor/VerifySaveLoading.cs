@@ -8,7 +8,8 @@ namespace TorreIngenieria.EditorTools
 {
     /// <summary>
     /// Comprueba el guardado de punta a punta, sin tocar el archivo del jugador:
-    /// 1) una partida v1 antigua migra conservando lo viejo y con lo nuevo por defecto;
+    /// 1) una partida v1 antigua migra conservando lo viejo y con lo nuevo por defecto (incluida la v6 de
+    ///    la pista de Gabriel);
     /// 2) una partida v2 con 'pokedexByFloor' (clave retirada en la v3) se carga sin fallar y el equipo
     ///    se completa con PS, EXP, movimientos y PP;
     /// 3) una partida actual pasa por ToJson + ParseJson y vuelve igual campo por campo;
@@ -109,7 +110,7 @@ namespace TorreIngenieria.EditorTools
                     "Las listas nuevas (equipo, mochila, Pokédex, visitados, notas, diálogos vistos) deben arrancar vacías.");
                 Check(data.starterId == "" && !data.accessCard && !data.tutorialDone &&
                       data.gabrielChoice == GabrielChoice.Undecided &&
-                      data.lastBossFloor == "" && data.consecutiveBossLosses == 0,
+                      data.lastBossFloor == "" && data.consecutiveBossLosses == 0 && !data.bossHintGiven,
                     "Las banderas nuevas deben arrancar con su valor inicial.");
             }
 
@@ -219,7 +220,7 @@ namespace TorreIngenieria.EditorTools
                       loaded.seenDialogues[0].key == "help",
                     "Se perdió la conversación vista al releer la partida.");
                 Check(loaded.accessCard && loaded.tutorialDone && loaded.gabrielChoice == GabrielChoice.Yes &&
-                      loaded.lastBossFloor == "3" && loaded.consecutiveBossLosses == 2,
+                      loaded.lastBossFloor == "3" && loaded.consecutiveBossLosses == 2 && loaded.bossHintGiven,
                     "Se perdieron banderas o la racha contra el jefe.");
 
                 // Comparación exhaustiva: mismo JSON = mismos valores en todos los campos serializables.
@@ -305,6 +306,7 @@ namespace TorreIngenieria.EditorTools
                 tutorialDone = true,
                 lastBossFloor = "3",
                 consecutiveBossLosses = 2,
+                bossHintGiven = true,
                 createdAt = "2026-10-01 09:00",
             };
 

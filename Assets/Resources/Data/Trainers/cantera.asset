@@ -18,23 +18,24 @@ MonoBehaviour:
   ai: 2
   team:
   - speciesId: geodude
-    level: 8
+    level: 6
     moveIds:
     - tackle
     - rock_throw
     - harden
   - speciesId: onix
-    level: 10
+    level: 8
     moveIds:
     - tackle
     - rock_throw
-    - rock_slide
     - harden
   rewardCredits: 0
   isBoss: 1
   floorId: 3
   sealId: 3
-  defeatDialogue: "Buen trabajo. El protocolo \"Evaluaci\xF3n Total\" queda superado
-    en este piso."
+  defeatDialogue: "Cimientos firmes. Toma el sello y este carn\xE9: con \xE9l el
+    ascensor volver\xE1 a funcionar para ti."
   hintDialogue: La roca no teme al fuego, pero el agua y la planta la parten en dos.
     Busca un tipo con ventaja.
+  engineeringFact: "El concreto resiste muy bien la compresi\xF3n, pero poco la tracci\xF3n.
+    Por eso se arma con acero."

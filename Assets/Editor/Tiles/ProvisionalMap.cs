@@ -180,7 +180,7 @@ namespace TorreIngenieria.EditorTools
         const string IndicatorPath = "Assets/Art/UI/IndicadorInteraccion.png";
 
         /// <summary>Personajes con hoja de caminata propia (ver <see cref="CharacterSpriteSlicer"/>).</summary>
-        public enum Character { Pedro, Gabriel, Vigilante }
+        public enum Character { Pedro, Gabriel, Vigilante, Cantera }
 
         /// <summary>
         /// NPC centrado en la casilla; habla con el jugador (Interactable). Con <paramref name="character"/>
@@ -253,25 +253,35 @@ namespace TorreIngenieria.EditorTools
         }
 
         /// <summary>
-        /// Entrenador de prueba centrado en la casilla, con el cuadro de caminata de Pedro y otro tinte.
-        /// El combate de entrenadores llega en la Etapa 6; hasta entonces <see cref="Interactable"/> lo
-        /// marca como vencido al hablar (comportamiento provisional). La orientación se usa para el
-        /// sprite y deja preparada la casilla para la visión de <c>TrainerController</c>.
+        /// Entrenador centrado en la casilla: reta al jugador y arranca su combate (ver
+        /// <see cref="TrainerController"/>). La orientación define la línea de visión de 3 casillas y el
+        /// sprite; sin personaje propio usa el cuadro de caminata de Pedro con un tinte.
         /// </summary>
-        public static Interactable CreateTrainer(string name, int col, int row, int height, string trainerId,
-            string[] lines, PlayerController.Direction facing = PlayerController.Direction.Down)
+        public static TrainerController CreateTrainer(string name, int col, int row, int height, string trainerId,
+            string[] lines, PlayerController.Direction facing = PlayerController.Direction.Down,
+            Character character = Character.Pedro)
         {
             var go = new GameObject(name);
             go.transform.position = CellCenter(col, row, height);
-            SpriteRenderer sprite = AddCharacterSprite(go, Character.Pedro, facing);
-            sprite.color = new Color(1f, 0.78f, 0.72f); // tinte para distinguirlo de Pedro y del NPC
+            SpriteRenderer sprite = AddCharacterSprite(go, character, facing);
+            if (character == Character.Pedro)
+                sprite.color = new Color(1f, 0.78f, 0.72f); // tinte para distinguirlo de Pedro y del NPC
 
             AddInteractionIndicator(go);
-            var interactable = go.AddComponent<Interactable>();
-            ConfigureInteractable(interactable, Interactable.Kind.Trainer, lines, null, 0,
+            var trainer = go.AddComponent<TrainerController>();
+            ConfigureInteractable(trainer, Interactable.Kind.Trainer, lines, null, 0,
                 null, null, null, 0, null, trainerId);
-            SetDialogueId(interactable, trainerId);
-            return interactable;
+            SetDialogueId(trainer, trainerId);
+            SetTrainerSight(trainer, facing);
+            return trainer;
+        }
+
+        /// <summary>Dirección de la visión de un entrenador (el resto de campos tienen su valor por defecto).</summary>
+        static void SetTrainerSight(TrainerController trainer, PlayerController.Direction facing)
+        {
+            var serialized = new SerializedObject(trainer);
+            serialized.FindProperty("facing").enumValueIndex = (int)facing;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
         /// <summary>
@@ -289,6 +299,7 @@ namespace TorreIngenieria.EditorTools
             {
                 Character.Gabriel => CharacterSpriteSlicer.GabrielSheet,
                 Character.Vigilante => CharacterSpriteSlicer.GuardSheet,
+                Character.Cantera => CharacterSpriteSlicer.CanteraSheet,
                 _ => PedroSheetPath,
             };
             string direction = facing switch
