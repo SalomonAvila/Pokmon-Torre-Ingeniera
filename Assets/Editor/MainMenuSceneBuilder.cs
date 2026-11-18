@@ -498,8 +498,9 @@ namespace TorreIngenieria.EditorTools
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = true;
 
-            var labels = new Object[3];
-            var cursors = new Object[3];
+            // Hasta 4 opciones (el mostrador de Don Chucho: COMPRAR / CURAR / GUARDAR / SALIR).
+            var labels = new Object[4];
+            var cursors = new Object[4];
             for (int i = 0; i < labels.Length; i++)
             {
                 var row = new GameObject($"Opcion{i + 1}", typeof(RectTransform));

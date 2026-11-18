@@ -91,7 +91,7 @@ namespace TorreIngenieria.Core
     public class SaveData
     {
         /// <summary>Versión actual del archivo. Al añadir campos se sube; los ausentes arrancan con su valor inicial.</summary>
-        public const int CurrentVersion = 6;
+        public const int CurrentVersion = 7;
 
         /// <summary>
         /// El 1 es el valor antiguo: si el JSON no trae 'version' (formato anterior al campo) se trata como v1
@@ -99,6 +99,15 @@ namespace TorreIngenieria.Core
         /// </summary>
         public int version = 1;
         public string playerName = "Pedro";
+
+        /// <summary>
+        /// ID del Carné (cinco cifras, como en FireRed). Se genera al crear la partida y, en partidas
+        /// anteriores a la v7, al cargarlas (v7).
+        /// </summary>
+        public string playerId = "";
+
+        /// <summary>Tiempo de juego acumulado en segundos (v7); lo suma <c>PlayTimeClock</c> en los mapas y combates.</summary>
+        public float playTimeSeconds;
         /// <summary>
         /// Piso actual por id de Building.Floors ("1" = atrio, "2" = ascensores, "3"...). No guardar
         /// nombres de escena: la escena se resuelve con Building.SceneFor(location).
@@ -119,6 +128,12 @@ namespace TorreIngenieria.Core
 
         /// <summary>Especies capturadas, sin repetir (Pokédex total). El reparto por piso se deriva de SpeciesCatalog.</summary>
         public List<string> pokedex = new List<string>();
+
+        /// <summary>
+        /// Especies vistas (v7): salvajes y Pokémon rivales que aparecieron en combate, más las capturadas.
+        /// Todo lo capturado está también aquí; el Pokédex muestra VISTOS con esta lista.
+        /// </summary>
+        public List<string> seen = new List<string>();
 
         /// <summary>Pisos a los que el jugador ya llegó (distinto de completedFloors, que son los vencidos).</summary>
         public List<string> visitedFloors = new List<string>();
@@ -209,6 +224,7 @@ namespace TorreIngenieria.Core
         /// v4 → v5: se guardan las conversaciones ya vistas por NPC (id + clave del diálogo).
         /// v5 → v6: se guarda si Gabriel ya entregó la pista de la racha de derrotas contra el jefe
         /// (<c>bossHintGiven</c>); JsonUtility lo deja en false en las partidas viejas, que es lo correcto.
+        /// v6 → v7: lista de especies vistas (arranca con las capturadas), ID del Carné y tiempo de juego.
         /// JsonUtility deja los campos nuevos con su valor inicial e ignora las claves viejas que ya no existen;
         /// la v4 necesita además el centinela de PS para no dejar debilitados a los Pokémon de partidas viejas.
         /// Al final, <see cref="TeamMembers.RecalculateOnLoad"/> completa PS, EXP, movimientos y PP con los
@@ -240,8 +256,20 @@ namespace TorreIngenieria.Core
             foreach (TeamMember member in data.team)
                 TeamMembers.RecalculateOnLoad(member);
 
+            // v7: lo capturado cuenta como visto; vale también para reparar listas incompletas.
+            foreach (string species in data.pokedex)
+                if (!string.IsNullOrEmpty(species) && !data.seen.Contains(species))
+                    data.seen.Add(species);
+            if (string.IsNullOrEmpty(data.playerId))
+                data.playerId = NewPlayerId();
+            if (data.playTimeSeconds < 0f || float.IsNaN(data.playTimeSeconds))
+                data.playTimeSeconds = 0f;
+
             data.version = SaveData.CurrentVersion;
         }
+
+        /// <summary>ID de cinco cifras para el Carné (00000 a 99999).</summary>
+        public static string NewPlayerId() => UnityEngine.Random.Range(0, 100000).ToString("D5");
 
         /// <summary>
         /// Convierte el 'location' viejo (nombre de escena) al id de piso actual. Es idempotente: si ya es
@@ -264,6 +292,7 @@ namespace TorreIngenieria.Core
             if (data.team == null) data.team = new List<TeamMember>();
             if (data.inventory == null) data.inventory = new List<InventoryItem>();
             if (data.pokedex == null) data.pokedex = new List<string>();
+            if (data.seen == null) data.seen = new List<string>();
             if (data.visitedFloors == null) data.visitedFloors = new List<string>();
             if (data.defeatedTrainers == null) data.defeatedTrainers = new List<string>();
             if (data.collectedItems == null) data.collectedItems = new List<string>();
@@ -322,7 +351,11 @@ namespace TorreIngenieria.Core
 
         public static SaveData CreateNew()
         {
-            var data = new SaveData { createdAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm") };
+            var data = new SaveData
+            {
+                createdAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm"),
+                playerId = NewPlayerId(),
+            };
             Save(data);
             return data;
         }

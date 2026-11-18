@@ -1,3 +1,4 @@
+using TorreIngenieria.Audio;
 using System;
 using System.Collections;
 using TorreIngenieria.Core;
@@ -122,6 +123,7 @@ namespace TorreIngenieria.UI
             {
                 if (submitAction.WasPressedThisFrame())
                 {
+                    GameAudio.Sfx(GameAudio.Accept);
                     yield return null;
                     onChosen(index);
                     yield break;
@@ -129,6 +131,7 @@ namespace TorreIngenieria.UI
 
                 if (cancelAction.WasPressedThisFrame())
                 {
+                    GameAudio.Sfx(GameAudio.Cancel);
                     yield return null;
                     onChosen(MenuList.Cancelled);
                     yield break;
@@ -147,6 +150,7 @@ namespace TorreIngenieria.UI
 
                         if (next != index)
                         {
+                            GameAudio.Sfx(GameAudio.Cursor);
                             index = next;
                             if (index > 0 && index < ExitIndex)
                                 lastRight = index;

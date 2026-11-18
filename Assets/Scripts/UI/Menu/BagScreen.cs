@@ -1,3 +1,4 @@
+using TorreIngenieria.Audio;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
@@ -91,7 +92,10 @@ namespace TorreIngenieria.UI
                 yield break;
             }
 
-            bool canUse = item != null && item.category == ItemCategory.Heal;
+            bool canUse = item != null && (item.category == ItemCategory.Heal ||
+                                           item.category == ItemCategory.Teach ||
+                                           item.category == ItemCategory.LevelUp ||
+                                           item.category == ItemCategory.Revive);
             string[] options = canUse ? new[] { "USAR", "TIRAR", "CANCELAR" } : new[] { "TIRAR", "CANCELAR" };
             int action = MenuList.Cancelled;
             yield return menu.ChooseAction($"¿Qué hacer con {name}?", options, value => action = value);
@@ -99,7 +103,13 @@ namespace TorreIngenieria.UI
                 yield break;
 
             string chosen = options[action];
-            if (chosen == "USAR")
+            if (chosen == "USAR" && item.category == ItemCategory.Teach)
+                yield return TeachOnTeam(menu, item, name);
+            else if (chosen == "USAR" && item.category == ItemCategory.Revive)
+                yield return ReviveOnTeam(menu, itemId, name);
+            else if (chosen == "USAR" && item.category == ItemCategory.LevelUp)
+                yield return LevelUpOnTeam(menu, itemId, name);
+            else if (chosen == "USAR")
                 yield return UseOnTeam(menu, itemId, name);
             else if (chosen == "TIRAR")
                 yield return Toss(menu, itemId, name);
@@ -120,6 +130,7 @@ namespace TorreIngenieria.UI
             {
                 string pokemon = PokemonName(target);
                 HealResult result = GameState.UseHealItem(itemId, target, out int healed);
+                GameAudio.Sfx(result == HealResult.Healed ? GameAudio.Heal : GameAudio.Error);
                 menu.Team.Refresh();
                 yield return menu.Say(result switch
                 {
@@ -129,6 +140,131 @@ namespace TorreIngenieria.UI
                 });
             }
             menu.Team.Hide();
+        }
+
+        /// <summary>Arepa: revive al elegido con la mitad de sus PS.</summary>
+        IEnumerator ReviveOnTeam(GameMenu menu, string itemId, string itemName)
+        {
+            if (GameState.Save.team.Count == 0)
+            {
+                yield return menu.Say("No tienes POKÉMON en tu equipo.");
+                yield break;
+            }
+
+            Hide();
+            int target = MenuList.Cancelled;
+            yield return menu.Team.ChooseTarget(menu, $"¿A quién le das {itemName}?", value => target = value);
+            if (target >= 0)
+            {
+                string pokemon = PokemonName(target);
+                bool revived = GameState.UseReviveItem(itemId, target);
+                GameAudio.Sfx(revived ? GameAudio.Heal : GameAudio.Error);
+                menu.Team.Refresh();
+                yield return menu.Say(revived
+                    ? $"¡{pokemon} se recuperó y puede volver a luchar!"
+                    : $"{pokemon} no está debilitado. No tendría ningún efecto.");
+            }
+            menu.Team.Hide();
+        }
+
+        /// <summary>Cafeína: sube un nivel al elegido y cuenta lo que aprendió (u omitió por tener cuatro).</summary>
+        IEnumerator LevelUpOnTeam(GameMenu menu, string itemId, string itemName)
+        {
+            if (GameState.Save.team.Count == 0)
+            {
+                yield return menu.Say("No tienes POKÉMON en tu equipo.");
+                yield break;
+            }
+
+            Hide();
+            int target = MenuList.Cancelled;
+            yield return menu.Team.ChooseTarget(menu, $"¿A quién le das {itemName}?", value => target = value);
+            if (target >= 0)
+            {
+                string pokemon = PokemonName(target);
+                ExpGainResult result = GameState.UseLevelUpItem(itemId, target);
+                menu.Team.Refresh();
+                if (result == null || !result.LeveledUp)
+                {
+                    yield return menu.Say("No tendría ningún efecto.");
+                }
+                else
+                {
+                    GameAudio.Sfx(GameAudio.LevelUp);
+                    yield return menu.Say($"¡{pokemon} subió al nivel {result.NewLevel}!");
+                    foreach (LevelUpEvent level in result.LevelUps)
+                    {
+                        foreach (string move in level.LearnedMoves)
+                            yield return menu.Say($"¡{pokemon} aprendió {MoveName(move)}!");
+                        foreach (string move in level.MissedMoves)
+                            yield return menu.Say($"{pokemon} quería aprender {MoveName(move)}, pero ya sabe cuatro movimientos.");
+                    }
+                }
+            }
+            menu.Team.Hide();
+        }
+
+        /// <summary>
+        /// Apuntes: enseñan su movimiento. Si el elegido ya sabe cuatro, pregunta cuál olvidar (B cancela
+        /// y los Apuntes no se gastan).
+        /// </summary>
+        IEnumerator TeachOnTeam(GameMenu menu, ItemData item, string itemName)
+        {
+            if (GameState.Save.team.Count == 0)
+            {
+                yield return menu.Say("No tienes POKÉMON en tu equipo.");
+                yield break;
+            }
+
+            string moveName = MoveName(item.moveId);
+            Hide();
+            int target = MenuList.Cancelled;
+            yield return menu.Team.ChooseTarget(menu, $"¿Quién estudia {itemName}?", value => target = value);
+            if (target < 0)
+            {
+                menu.Team.Hide();
+                yield break;
+            }
+
+            string pokemon = PokemonName(target);
+            TeachResult result = GameState.UseTeachItem(item.itemId, target);
+            if (result == TeachResult.NeedsReplace)
+            {
+                yield return menu.Say($"{pokemon} quiere aprender {moveName}, pero ya sabe cuatro movimientos.");
+                List<MoveSlot> moves = GameState.Save.team[target].moves;
+                var names = new string[moves.Count];
+                for (int i = 0; i < moves.Count; i++)
+                    names[i] = MoveName(moves[i]?.moveId);
+
+                int forget = MenuList.Cancelled;
+                yield return menu.ChooseAction("¿Qué movimiento olvida? (B para cancelar)", names, value => forget = value);
+                if (forget < 0)
+                {
+                    yield return menu.Say($"{pokemon} no aprendió {moveName}.");
+                    menu.Team.Hide();
+                    yield break;
+                }
+
+                string forgotten = names[forget];
+                result = GameState.UseTeachItem(item.itemId, target, forget);
+                if (result == TeachResult.Learned)
+                    yield return menu.Say($"{pokemon} olvidó {forgotten}...");
+            }
+
+            menu.Team.Refresh();
+            yield return menu.Say(result switch
+            {
+                TeachResult.Learned => $"¡{pokemon} aprendió {moveName}!",
+                TeachResult.AlreadyKnows => $"{pokemon} ya sabe {moveName}.",
+                _ => "No tendría ningún efecto.",
+            });
+            menu.Team.Hide();
+        }
+
+        static string MoveName(string moveId)
+        {
+            MoveData move = MoveDatabase.Get(moveId);
+            return (move != null ? move.displayName : moveId ?? "").ToUpperInvariant();
         }
 
         IEnumerator Toss(GameMenu menu, string itemId, string itemName)

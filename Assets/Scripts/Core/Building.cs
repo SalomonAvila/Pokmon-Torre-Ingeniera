@@ -28,10 +28,13 @@ namespace TorreIngenieria.Core
         public const string SpawnFromStairsAbove = "DesdeEscaleraArriba";
 
         /// <summary>
-        /// SpawnPoint fijo del lobby para reaparecer tras un desmayo (junto al futuro puesto de
-        /// Don Chucho). Lo usará el flujo de desmayo de la Etapa 7.
+        /// SpawnPoint para reaparecer tras un desmayo: en el lobby, junto al puesto de Don Chucho; en la
+        /// plazoleta (antes de cruzar la puerta), junto a Gabriel.
         /// </summary>
         public const string SpawnFromFaint = "Desmayo";
+
+        /// <summary>SpawnPoint frente a los ascensores de cada piso, al llegar en ascensor.</summary>
+        public const string SpawnFromElevator = "DesdeAscensor";
 
         public static bool IsValid(string floor) => Array.IndexOf(Floors, floor) >= 0;
 

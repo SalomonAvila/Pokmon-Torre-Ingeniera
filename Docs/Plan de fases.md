@@ -3,7 +3,7 @@
 Plan de desarrollo del prototipo (vertical slice, Doc §6): plazoleta (`Atrio`), lobby (`Ascensores`) y piso 3.
 Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partida de prueba y un commit que describa el cambio.
 
-Última revisión: 11 de noviembre de 2026. Etapas 0 a 6 **cerradas**; la 6 incluye los entrenadores del piso 3, el jefe (Ing. Cantera), la pantalla de nota, la racha de derrotas y el guardado v6. Siguiente: Etapa 7 (servicios y menú de pausa). El trabajo de **menús** (maquetas A–L) se reparte entre las Etapas 4, 7 y 9.
+Última revisión: 17 de noviembre de 2026. Etapas 0 a 6 **cerradas**; la 6 incluye los entrenadores del piso 3, el jefe (Ing. Cantera), la pantalla de nota, la racha de derrotas y el guardado v6. Etapas 7 (servicios y menú de pausa), 8 (contenido del piso 3) y 9 (pulido) **en curso**: código completo y compilado; falta **Reconstruir todo**, el arte de Antigravity y la prueba en Play. La partida completa y la build de Windows cierran el prototipo. El trabajo de **menús** (maquetas A–L) se reparte entre las Etapas 4, 7 y 9.
 
 > **Nota del 25 oct:** el avance de la Etapa 4 se actualizó revisando el código, no con una prueba en Play.
 
@@ -216,7 +216,7 @@ Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partid
 
 ---
 
-## Etapa 7: Servicios y menú de pausa (5 a 7 días)
+## Etapa 7: Servicios y menú de pausa (5 a 7 días) — 🟡 EN CURSO (código listo, falta prueba en Play)
 
 **Servicios:**
 - Tienda de Don Chucho (Ascensores): compra con `ItemData.price`; la venta queda como **(propuesta)**. Inventario compartido con la mochila.
@@ -232,13 +232,13 @@ Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partid
 - **Carné** (maqueta H): nombre, ID, créditos, Pokédex, tiempo de juego y los 13 sellos (`sealIds`).
 - **Pokédex** (maqueta L): VISTOS / CAPTURADOS, lista por `dexNumber` y ficha con sprite y `PokemonData.description`.
 - **Mapa del edificio** (maqueta I; también con la acción `Map`): 14 pisos, visitados, completados, sello y Pokédex por piso (`GameState.FloorPokedexProgress`). Comparte datos con el selector de ascensor; se hacen juntos. Hasta que exista la pantalla, `M`/MAPA muestran el objetivo actual de la guía.
-- **Guardado v5** con migración desde v4: lista `seen`, ID de jugador y tiempo de juego. `VerifySaveLoading` cubre la migración. El combate registra los salvajes vistos.
+- **Guardado v7** con migración desde v6 (la v5 y la v6 ya se usaron para las conversaciones vistas y la pista de Gabriel): lista `seen`, ID de jugador y tiempo de juego. `VerifySaveLoading` cubre la migración. El combate registra los salvajes vistos.
 
 **Hecho cuando:** el ciclo jugar → desmayarse → reaparecer con −25 % de créditos → curarse gratis → guardar → cargar funciona completo, y todas las opciones del menú de pausa abren su pantalla con datos reales y vuelven con B.
 
 ---
 
-## Etapa 8: Contenido del piso 3 (2 a 3 días)
+## Etapa 8: Contenido del piso 3 (2 a 3 días) — 🟡 EN CURSO (código listo, falta prueba en Play)
 
 - Salas con encuentros: E6, O3, E3 y O1 (tiles `z` ya puestos por `LabFloorLayout`).
 - Objetos en el suelo: E2, E4, pasillo (2 Tintos), E6 (1 Tinto), 5 Pokébolas repartidas, Apuntes, Agua de panela y Cafeína.
@@ -250,7 +250,7 @@ Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partid
 
 ---
 
-## Etapa 9: Pulido y cierre del prototipo (3 a 5 días)
+## Etapa 9: Pulido y cierre del prototipo (3 a 5 días) — 🟡 EN CURSO (sistemas listos, falta arte, balance en Play y build)
 
 - Música (7 temas: título, Atrio, Ascensores, Escalera, piso 3, combate y victoria) y efectos (~30: pasos, menú, daño, cura, captura, nivel y fanfarria).
 - Arte final: sprites del jugador (4 direcciones × 3 fotogramas), NPC y tilesets definitivos.
@@ -312,7 +312,7 @@ Generadas con IA a partir del estilo de FireRed/LeafGreen. Están en `Docs/Maque
 - [x] Documentar `Interactable` y `HUD` en `AGENTS.md` (World y UI).
 - [x] Añadir `EncounterZone`, `BattleSystem` y `TrainerController` (implementados y probados).
 - [x] Documentar `Assets/Scripts/Core/Data/` y el menú de datos del Editor.
-- [ ] Documentar `Assets/Scripts/UI/Menu/` (`MenuStack` y componentes compartidos) cuando exista, y la carpeta `Docs/Maquetas/`.
+- [ ] Documentar `Assets/Scripts/UI/Menu/` (`GameMenu` como pila de corrutinas, `MenuList`, `MenuInput` y las pantallas de la Etapa 7), `DonChuchoNpc`, `ElevatorPanel`, `PlayTimeClock` y la carpeta `Docs/Maquetas/`.
 
 ---
 
@@ -327,15 +327,15 @@ Generadas con IA a partir del estilo de FireRed/LeafGreen. Están en `Docs/Maque
 | 4 | `EncounterZone.cs`, tablas de zonas, `Assets/Scripts/UI/Menu/` (`GameMenu`, `MenuList`, `TeamScreen`, `TeamSlotView`, `SummaryScreen`, `BagScreen`), `UI/Common/HpBar.cs`, `BattleHUD.cs`, `BattleUI.cs`, `PokemonType.cs` (`BadgeMarkup`), `Assets/Editor/GameMenuBuilder.cs`, prefab `Assets/Resources/UI/MenuJuego.prefab`, `PlayerController.cs`, `GameState.cs`, `TeamMembers.cs`, `PokemonData.cs` (`dexNumber`), `ItemData.cs` (`icon`), `PrototypeDataBuilder.cs`, `ValidateData.cs`, arte en `Assets/Art/Pokemon/`, `Assets/Art/UI/Objetos/` y `Assets/Art/UI/Menu/` y `Docs/Maquetas/` |
 | 5 | Escena `Intro.unity`, selector de inicial, diálogos del Vigilante y Gabriel, spawn de desmayo |
 | 6 | `TrainerController.cs`, `TrainerData` del piso 3, `BossData` de Cantera, pantalla de nota y `ProgressTools.cs` |
-| 7 | Tienda de Don Chucho, selector de ascensor, desmayo, `Assets/Scripts/UI/Menu/` (Pausa, Guardar, Opciones, Carné, Pokédex y Mapa), `GameSettings.cs` (velocidad de texto), `SaveSystem.cs` (v5) y `VerifySaveLoading.cs` |
-| 8 | Escena `Piso3.unity` (regenerada), diálogos y objetos en `LabFloorLayout`/`LabFloorBuilder` |
-| 9 | Audio, arte final (incluido `Assets/Art/UI/Menu/` y su Sprite Atlas), build de Windows y `ProjectSettings/EditorBuildSettings.asset` |
+| 7 | `DonChuchoNpc.cs`, `ElevatorPanel.cs`, `BattleSystem.cs` (desmayo y vistos), `GameState.cs`, `GameRules.cs`, `Building.cs`, `PlayTimeClock.cs`, `Assets/Scripts/UI/Menu/` (`GameMenu`, `MenuList`, `MenuInput`, `PokedexScreen`, `BuildingMapScreen`, `CardScreen`, `SaveScreen`, `OptionsScreen`, `ShopScreen`), `ChoiceBox.cs` (4 opciones), `DialogueBox.cs`, `SaveCheckController.cs` (Opciones en el título), `PlayerController.cs` (tecla M), `GameSettings.cs` (velocidad de texto), `SaveSystem.cs` (v7), `GameMenuBuilder.cs`, `ProvisionalMap.cs`, `AscensoresBuilder.cs`, `LabFloorBuilder.cs`, `AtrioBuilder.cs`, `MainMenuSceneBuilder.cs`, `CharacterSpriteSlicer.cs`, `VerifySaveLoading.cs` y `ValidateData.cs` |
+| 8 | Escena `Piso3.unity` (regenerada), `LabFloorBuilder.cs` (contenido del piso 3), `ProvisionalMap.cs` (objeto escondido, letrero, área de encuentros), `EncounterArea.cs`, `EncounterZone.cs`, `ItemData.cs` (Teach, LevelUp y `moveId`), `TeamMembers.cs` (`TeachMove`), `GameState.cs`, `BagScreen.cs`, `PrototypeDataBuilder.cs` (Apuntes y Cafeína), `ValidateData.cs` e iconos `apuntes.png` y `cafeina.png` |
+| 9 | `Assets/Scripts/Audio/GameAudio.cs`, `Assets/Resources/Audio/` (Musica y Efectos), `Tools/Audio/generar_audio.py`, `AudioImportSettings.cs`, sonidos en menús, mundo y combate (`BattleMessage.sound`), `UiAtlasBuilder.cs`, `GameMenuBuilder.cs` (marco `Panel.png`), `DevScreenshot.cs`, `WindowsBuild.cs`, `RebuildEverything.cs`, `ValidateData.cs` (textos, fuente, precios, Arepa), `PrototypeDataBuilder.cs` (precios y Arepa), arte final en `Assets/Art/UI/` |
 
 ---
 
 ## Estado real vs Plan (resumen)
 
-| Etapa | Plan original | Estado real (11 nov 2026) |
+| Etapa | Plan original | Estado real (17 nov 2026) |
 |---|---|---|
 | 0 | Casi cerrada | ✅ **Cerrada** (v4, FadeManager, validación, mapas y herramientas) |
 | 1 | Datos y fórmulas | ✅ **Cerrada** (datos, fórmulas, equipo y assets validados; compilación sin errores) |
@@ -344,14 +344,24 @@ Generadas con IA a partir del estilo de FireRed/LeafGreen. Están en `Docs/Maque
 | 4 | Encuentros, plazoleta y menús | ✅ **Cerrada** (encuentros, menú de pausa, Equipo, Resumen y Mochila con arte; probada en Play el 25 oct) |
 | 5 | Flujo de inicio y tutorial | ✅ **Cerrada** (título → Intro → Atrio → Gabriel → inicial → captura → puerta → tutorial → piso 3; spawn de desmayo listo para la Etapa 7) |
 | 6 | Entrenadores y jefe | ✅ **Cerrada** (TrainerController, visión 3 casillas, Estudiante de Concretos, Monitora de Suelos, Cantera nv 6/8, pantalla de nota, racha de derrotas con Gabriel, guardado v6; probada en Play y mergeada a main) |
-| 7 | Servicios y menú de pausa | ❌ **0 %** (12 maquetas de menús listas; 6 por regenerar) |
-| 8 | Contenido del piso 3 | 🟡 **10 %** (mapa generado, sin contenido) |
-| 9 | Pulido y cierre | ❌ **0 %** |
+| 7 | Servicios y menú de pausa | 🟡 **85 %** (código completo y compilado: Don Chucho, desmayo, ascensores, Pokédex, Mapa, Carné, Guardar, Opciones y guardado v7; faltan builders, arte de Don Chucho y prueba en Play) |
+| 8 | Contenido del piso 3 | 🟡 **85 %** (encuentros por laboratorio, 12 objetos, Apuntes y Cafeína, pistas, placas, E1 cerrada y 5 estudiantes; faltan iconos, regenerar el piso y prueba en Play) |
+| 9 | Pulido y cierre | 🟡 **50 %** (audio ✅ cerrado: 7 temas de ElevenLabs y 30 efectos, precios del Doc y Arepa, marco y fondos opcionales, atlas de UI, validación de textos y fuente, capturas F12, build de Windows y botón Reconstruir todo; faltan arte final, balance probado, revisión de pantallas y partida completa) |
 | 10 | Futuro | — |
 
 ---
 
 ## Registro de avance
+
+- **17 nov 2026 — Audio cerrado:** probado en Play y aprobado. Música de ElevenLabs y efectos provisionales de `generar_audio.py` quedan como definitivos para el prototipo.
+
+- **17 nov 2026 — Música definitiva (ElevenLabs):** 7 temas en OGG en `Assets/Resources/Audio/Musica/`, preparados con `Tools/Audio/preparar_musica.py`. El script recorta el desvanecimiento final, busca el punto de bucle más parecido al inicio y empalma 0,5 s. Bucles: título 48,6 s con una intro de 19 s (`titulo_intro`, que `GameAudio` toca una vez y encadena con `PlayScheduled`), atrio 67,2 s, ascensores 68,2 s (el empalme menos parecido: revisar de oído), escalera 38,8 s, piso 3 61,1 s, combate 47,7 s y victoria 24,5 s. La victoria ahora se repite mientras salen la EXP y la nota. La música conserva el estéreo; los efectos siguen siendo los provisionales (`generar_audio.py`, que ya no toca la música sin `--musica`). Se borraron los WAV provisionales de música. Origen de las pistas: `../AUdio/1.wav` a `7.wav` (fuera del repositorio).
+
+- **17 nov 2026 — Etapa 9 (sistemas) y botón Reconstruir todo:** **Torre Ingeniería > Reconstruir todo (incluye escenas)** (Ctrl+Shift+Alt+B) hace lo de Construir todo más título, Intro, combate y todos los mapas, y corre los validadores. **Audio:** `GameAudio` (persistente, se crea solo) con tema por escena (título, atrio, ascensores, escalera, piso 3, combate y fanfarria de victoria) y 30 efectos (cursor, aceptar, cancelar, abrir/cerrar menú, error, choque, paso, puerta, ascensor, objeto, alerta de entrenador, encuentro, curar, guardar, compra, sello, golpe normal/eficaz/poco eficaz, Pokébola lanzar/sacudir/salir, captura, huida, desmayo, nivel, EXP y estadísticas). Los WAV son provisionales y originales, generados por `Tools/Audio/generar_audio.py`; un archivo con el mismo nombre los sustituye. **Balance:** precios del Doc §10 (Pokébola 20, Tinto 25, Agua de panela 60) y la **Arepa** (100, revive con la mitad de los PS; (propuesta) solo desde la Mochila), que Don Chucho ya vende. **Menús:** marco 9-slice opcional `Menu/Panel.png`, fondos opcionales de Pokédex, Mapa, Carné, Opciones y Tienda, y atlas de la interfaz (`AtlasInterfaz.spriteatlasv2`). **Revisión:** F12 guarda capturas en `Docs/Capturas/` (solo Editor y builds de desarrollo); `ValidateData` comprueba nombres de 10 caracteres, objetos de 14 y que la fuente tenga Á É Í Ó Ú Ñ ¿ ¡ × « » – …. **Build:** **Torre Ingeniería > Build de Windows** genera `Builds/Windows/TorreIngenieria.exe`. **Pendiente:** arte de Antigravity, balance de la Ing. Cantera (hoy nv 6/8; el Doc dice 8/10) tras jugar, revisión de las 13 pantallas contra las maquetas y partida completa de 15 a 30 minutos.
+
+- **17 nov 2026 — Etapa 8 (código):** el piso 3 sigue la Figura 38 y el Doc §10. **Encuentros por laboratorio** con `EncounterArea`: E6 Concretos (Geodude, Rhyhorn), O3 Suelos (Geodude, Onix), E3 Geología (Geodude, Kabuto, Omanyte) y O1 Estructuras (Geodude, Rhyhorn, Onix); fuera de un área se usa `SpeciesCatalog`. **Objetos** con id estable: 2 Tintos en el pasillo, 1 en E6, 5 Pokébolas (O1, O3 ×2, E3, E6), Agua de panela en E4, Apuntes en E2 y Cafeína escondida (sin sprite) en la esquina NO de O3; las cajas decorativas `o` se retiran en este piso. **Objetos nuevos:** Apuntes (`ItemCategory.Teach`, enseñan Bofetón Lodo con menú para olvidar uno si ya sabe cuatro; (propuesta) cualquier especie puede aprenderlo) y Cafeína (`ItemCategory.LevelUp`, sube un nivel), ambos usables desde la Mochila. **Pistas** en O2 (tipos contra Roca y los Apuntes) y E5 (Onix y su Defensa Especial, la Cafeína); placas en la pared de cada sala, letrero del piso, E1 cerrada con aviso y 5 estudiantes de ambiente. El prototipo ronda las 250 frases únicas de diálogo (conteo aproximado). Compila sin errores. **Pendiente:** iconos de Apuntes y Cafeína (Antigravity), **Construir datos del prototipo**, regenerar los pisos de laboratorio y prueba en Play. **Detectado:** los precios del Doc §10 (Pokébola 20, Tinto 25, Agua de panela 60, Arepa 100) no coinciden con los de los datos (200, 100 y 250) y la Arepa no existe; se deja para el balance de la Etapa 9.
+
+- **17 nov 2026 — Etapa 7 (código):** **Servicios:** `DonChuchoNpc` en el lobby (10,2) con COMPRAR / CURAR / GUARDAR / SALIR (`ChoiceBox` admite 4 opciones); `ShopScreen` vende Tinto, Agua de panela y Pokébola con cantidad (▲▼ ±1, ◀▶ ±10) y `GameState.TryBuy`. **Desmayo:** al perder cualquier combate salvo el tutorial, `GameState.Faint` quita el 25 % de los créditos, cura al equipo y lleva al `SpawnPoint` `Desmayo` (lobby frente a Don Chucho; plazoleta frente a Gabriel si aún no se cruzó la puerta). **Ascensores:** `ElevatorPanel` en las puertas del lobby y en los tres ascensores del sur de los pisos de laboratorio; sin Carné de acceso no viajan, con él abren el selector (`BuildingMapScreen`, solo pisos visitados, nunca la plazoleta) y se llega a `DesdeAscensor`. **Menú de pausa:** las 8 opciones abren pantalla: Pokédex (vistos/capturados, ficha con sprite, tipos y descripción de los capturados), Mapa (también con M; pisos, estado, sello y % de Pokédex, más el objetivo de la guía), Carné (nombre, ID, créditos, Pokédex, tiempo, promedio y 13 sellos con el color del piso mientras no haya arte), Guardar con resumen, y Opciones (volumen de 10 pasos, pantalla completa, velocidad del texto y Salir al título), también desde el título. **Guardado v7:** `seen`, `playerId` y `playTimeSeconds` (`PlayTimeClock`); `VerifySaveLoading` prueba la migración desde la v6 y `ValidateData` revisa la tienda. Compila sin errores ni advertencias (Roslyn de Unity). **Pendiente:** hoja de Don Chucho (Antigravity), **Construir menú del juego**, regenerar `Atrio`, `Ascensores` y los pisos de laboratorio, los validadores y la prueba en Play del ciclo jugar → desmayarse → curarse → guardar → cargar.
 
 - **11 nov 2026 — Etapa 6 cerrada (PR #5 mergeado a main):** prueba en Play completada con éxito. `TrainerController` (visión en 3 casillas, reto y pista al interactuar), combates con el Estudiante de Concretos, Monitora de Suelos y la Ing. Cantera (Geodude nv 6 + Onix nv 8), IA con curación única (Tinto < 25 % / Agua de panela < 30 %), flujo de victoria completo (`CompleteFloor`, sello "3", pantalla de nota `BattleNoteUI`, Carné de acceso y desbloqueo de escalera al piso 4), racha de 3 derrotas con auxilio de Gabriel (`BossHintOffer`) y persistencia en `SaveData` v6 (`bossHintGiven`). Todo validado y mergeado a `main`. Siguiente: Etapa 7.
 

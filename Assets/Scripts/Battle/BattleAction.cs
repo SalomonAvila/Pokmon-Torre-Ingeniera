@@ -9,10 +9,14 @@ namespace TorreIngenieria.Battle
         public readonly string text;
         public readonly bool autoAdvance;
 
-        public BattleMessage(string text, bool autoAdvance = false)
+        /// <summary>Efecto que suena al mostrar el mensaje (id de <c>GameAudio</c>); null = ninguno.</summary>
+        public readonly string sound;
+
+        public BattleMessage(string text, bool autoAdvance = false, string sound = null)
         {
             this.text = text;
             this.autoAdvance = autoAdvance;
+            this.sound = sound;
         }
 
         /// <summary>Permite añadir textos normales a una lista de <see cref="BattleMessage"/>.</summary>

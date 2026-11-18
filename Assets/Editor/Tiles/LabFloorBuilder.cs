@@ -66,6 +66,11 @@ namespace TorreIngenieria.EditorTools
         {
             Scene scene = MapSceneBuilder.CreateScene();
             LabFloorLayout.Result layout = LabFloorLayout.Generate(floor);
+            // En el piso 3 los objetos del suelo son recogibles de verdad (AddFloor3Content): se quitan
+            // las cajas decorativas 'o' para que no parezcan objetos que no se pueden coger.
+            if (floor == "3")
+                for (int row = 0; row < layout.Objects.Length; row++)
+                    layout.Objects[row] = layout.Objects[row].Replace('o', '.');
             string[] floorRows = layout.Floor;
             int width = LabFloorLayout.Width;
             int height = LabFloorLayout.Height;
@@ -91,6 +96,9 @@ namespace TorreIngenieria.EditorTools
             ProvisionalMap.AddHud();
             ProvisionalMap.AddEncounterZone();
             AddFloorTrainers(floor, height);
+            AddElevators(height);
+            if (floor == "3")
+                AddFloor3Content(height);
 
             // Si se prueba el piso directamente, Pedro empieza donde se llega subiendo.
             var start = upAtNorthwest ? SoutheastArrival : NorthwestArrival;
@@ -163,6 +171,149 @@ namespace TorreIngenieria.EditorTools
                     "Veamos cuáles son los tuyos.",
                 },
                 PlayerController.Direction.Right, ProvisionalMap.Character.Cantera);
+        }
+
+        /// <summary>
+        /// Contenido del piso 3 (Doc §10, Figura 38), con las salas de <see cref="LabFloorLayout"/>:
+        /// <list type="bullet">
+        /// <item>Encuentros por laboratorio: E6 Concretos (Geodude, Rhyhorn), O3 Suelos (Geodude, Onix),
+        /// E3 Geología (Geodude, Kabuto, Omanyte) y O1 Estructuras (Geodude, Rhyhorn, Onix).</item>
+        /// <item>Objetos: 2 Tintos en el pasillo, 1 Tinto en E6, 5 Pokébolas en los 4 laboratorios, Agua de
+        /// panela en E4, Apuntes en E2 y la Cafeína escondida en O3.</item>
+        /// <item>Pistas en las aulas O2 y E5, placas de cada sala, E1 cerrada y algunos estudiantes.</item>
+        /// </list>
+        /// Las coordenadas son (columna, fila) con la fila 0 al norte, las mismas del layout.
+        /// </summary>
+        static void AddFloor3Content(int height)
+        {
+            // ---------- Encuentros por laboratorio ----------
+            ProvisionalMap.AddEncounterArea("EncuentrosO1Estructuras", 1, 11, 11, 19, height, "geodude", "rhyhorn", "onix");
+            ProvisionalMap.AddEncounterArea("EncuentrosO3Suelos", 1, 11, 31, 39, height, "geodude", "onix");
+            ProvisionalMap.AddEncounterArea("EncuentrosE3Geologia", 18, 30, 15, 20, height, "geodude", "kabuto", "omanyte");
+            ProvisionalMap.AddEncounterArea("EncuentrosE6Concretos", 18, 30, 36, 41, height, "geodude", "rhyhorn");
+
+            // ---------- Objetos (ids estables: no reaparecen al volver) ----------
+            Pickup("TintoPasillo1", 13, 12, height, "piso3_tinto_pasillo_1", "tinto");
+            Pickup("TintoPasillo2", 16, 26, height, "piso3_tinto_pasillo_2", "tinto");
+            Pickup("TintoE6", 29, 40, height, "piso3_tinto_e6", "tinto");
+            Pickup("PokebolaO1", 10, 12, height, "piso3_pokeball_o1", "pokeball");
+            Pickup("PokebolaO3a", 10, 32, height, "piso3_pokeball_o3_a", "pokeball");
+            Pickup("PokebolaO3b", 2, 39, height, "piso3_pokeball_o3_b", "pokeball");
+            Pickup("PokebolaE3", 29, 16, height, "piso3_pokeball_e3", "pokeball");
+            Pickup("PokebolaE6", 19, 37, height, "piso3_pokeball_e6", "pokeball");
+            Pickup("AguaPanelaE4", 28, 26, height, "piso3_agua_panela_e4", "agua_panela", "AGUA DE PANELA");
+            Pickup("ApuntesE2", 28, 12, height, "piso3_apuntes_e2", "apuntes", "APUNTES",
+                "Son unos apuntes de Mecánica de Suelos, llenos de subrayados.");
+            ProvisionalMap.CreateHiddenPickup("CafeinaO3", 1, 31, height, "piso3_cafeina_o3", "cafeina", 1,
+                new[]
+                {
+                    "Detrás del rack hay una lata olvidada...",
+                    "¡Encontraste 1 CAFEÍNA!",
+                });
+
+            // ---------- Placas de las salas (pared junto a cada puerta) ----------
+            ProvisionalMap.CreateSign("LetreroPiso", 15, 0, height,
+                "PISO 3 – INGENIERÍA CIVIL Y GEOLOGÍA.",
+                "«Todo gran edificio empieza por los cimientos.»");
+            ProvisionalMap.CreateSign("PlacaO1", 12, 14, height,
+                "O1 – LABORATORIO DE ESTRUCTURAS.",
+                "Aviso: no apoyar POKÉMON de roca sobre las vigas de prueba.");
+            ProvisionalMap.CreateSign("PlacaO2", 12, 24, height,
+                "O2 – AULA DE GEOLOGÍA.",
+                "Hoy: «Minerales, fósiles y por qué el Onix no cabe en el ascensor».");
+            ProvisionalMap.CreateSign("PlacaO3", 12, 34, height,
+                "O3 – LABORATORIO DE SUELOS.",
+                "Prohibido excavar sin permiso de la Ing. Cantera.");
+            ProvisionalMap.CreateSign("PuertaE1", 17, 3, height,
+                "SALA E1 – CERRADA.",
+                "Un papel pegado dice: «Cerrada por filtraciones tras la tormenta. Mantenimiento».");
+            ProvisionalMap.CreateSign("PlacaE2", 17, 9, height,
+                "E2 – BODEGA DE MATERIALES.",
+                "Inventario: cemento, arena, grava y apuntes que nadie reclamó.");
+            ProvisionalMap.CreateSign("PlacaE3", 17, 16, height,
+                "E3 – LABORATORIO DE GEOLOGÍA.",
+                "Colección de fósiles. Algunos se movieron después de la tormenta.");
+            ProvisionalMap.CreateSign("PlacaE4", 17, 23, height,
+                "E4 – SALA DE ESTUDIO.",
+                "Silencio, por favor: hay parcial de Resistencia de Materiales.");
+            ProvisionalMap.CreateSign("PlacaE5", 17, 30, height,
+                "E5 – AULA DE ESTRUCTURAS.",
+                "Monitoría de Estática: martes y jueves, o cuando haya emergencia.");
+            ProvisionalMap.CreateSign("PlacaE6", 17, 37, height,
+                "E6 – LABORATORIO DE CONCRETOS.",
+                "Cilindros de prueba en curado. No tocar... ni morder, Rhyhorn.");
+
+            // ---------- Pistas (aulas O2 y E5) ----------
+            ProvisionalMap.CreateNpc("EstudianteGeologia", 7, 22, height, new[]
+            {
+                "¿Vas a enfrentar a la Ing. Cantera? Sus POKÉMON son de tipo ROCA.",
+                "La roca no aguanta el agua ni las plantas: con SQUIRTLE o BULBASAUR lo tienes más fácil.",
+                "Si tu compañero es CHARMANDER, busca los Apuntes de la bodega E2.",
+                "Enseñan un ataque de TIERRA, y la tierra también le gana a la roca.",
+            });
+            ProvisionalMap.CreateNpc("MonitorEstructuras", 24, 30, height, new[]
+            {
+                "Dato de monitoría: ONIX tiene muchísima DEFENSA...",
+                "...pero su DEFENSA ESPECIAL es baja. PISTOLA AGUA o BURBUJA le hacen mucho daño.",
+                "Y si te falta nivel, dicen que alguien escondió CAFEÍNA en el Laboratorio de Suelos.",
+                "Revisa las esquinas, detrás de los racks.",
+            });
+
+            // ---------- Estudiantes del piso (ambiente) ----------
+            ProvisionalMap.CreateNpc("EstudianteEscalera", 13, 42, height, new[]
+            {
+                "Subí por la escalera porque los ascensores no sirven sin carné.",
+                "Dicen que la Ing. Cantera tiene el CARNÉ DE ACCESO. Si la vences, te lo da.",
+            }, facing: PlayerController.Direction.Right);
+            ProvisionalMap.CreateNpc("EstudianteE4", 23, 23, height, new[]
+            {
+                "Shh... estoy repasando para el parcial.",
+                "Con la tormenta lo aplazaron, pero el profe dijo que «la naturaleza no da prórroga».",
+                "Si te hace falta, en esta sala dejaron un AGUA DE PANELA.",
+            });
+            ProvisionalMap.CreateNpc("AuxiliarBodega", 21, 9, height, new[]
+            {
+                "Soy el auxiliar de la bodega. Aquí guardamos todo lo que sobra de los laboratorios.",
+                "Esos apuntes de la esquina no son de nadie. Llévatelos, a alguien le servirán.",
+            });
+            ProvisionalMap.CreateNpc("TecnicoConcretos", 25, 39, height, new[]
+            {
+                "¡Cuidado! Un RHYHORN se metió entre los cilindros de prueba.",
+                "Aquí también salen GEODUDE. Si quieres capturarlos, debilítalos primero.",
+            }, facing: PlayerController.Direction.Left);
+            ProvisionalMap.CreateNpc("EstudianteFosiles", 24, 18, height, new[]
+            {
+                "¡Los fósiles del laboratorio cobraron vida! Vi un KABUTO y un OMANYTE.",
+                "Solo salen aquí, en Geología. No los vas a encontrar en otro lado del piso.",
+            }, facing: PlayerController.Direction.Down);
+        }
+
+        static void Pickup(string name, int col, int row, int height, string pickupId, string itemId,
+            string itemName = null, string intro = null)
+        {
+            string label = itemName ?? itemId switch
+            {
+                "tinto" => "TINTO",
+                "pokeball" => "POKÉBOLA",
+                _ => itemId.ToUpperInvariant(),
+            };
+            var lines = new List<string>();
+            if (!string.IsNullOrEmpty(intro))
+                lines.Add(intro);
+            lines.Add($"¡Encontraste 1 {label}!");
+            ProvisionalMap.CreatePickup(name, col, row, height, pickupId, itemId, 1, lines.ToArray());
+        }
+
+        /// <summary>
+        /// Ascensores del sur (filas 41-42 de <see cref="LabFloorLayout"/>): cada puerta abre el selector de
+        /// piso desde la fila 43. Al llegar en ascensor se aparece delante, mirando al pasillo. El ascensor
+        /// de servicio del norte sigue sin funcionar.
+        /// </summary>
+        static void AddElevators(int height)
+        {
+            foreach (int col in new[] { 3, 4, 6, 7, 9, 10 })
+                ProvisionalMap.CreateElevatorPanel($"Ascensor{col}", col, 42, height);
+            ProvisionalMap.AddSpawn(Building.SpawnFromElevator, 7, 43, height, PlayerController.Direction.Down);
         }
 
         /// <summary>

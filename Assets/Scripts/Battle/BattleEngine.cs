@@ -1,3 +1,4 @@
+using TorreIngenieria.Audio;
 using System.Collections.Generic;
 using TorreIngenieria.Core;
 using UnityEngine;
@@ -127,7 +128,7 @@ namespace TorreIngenieria.Battle
                 previous.ResetStages();
 
                 messages.Add($"¡Vuelve, {previous.DisplayName}!");
-                messages.Add($"¡Adelante, {PlayerActive.DisplayName}!");
+                messages.Add(new BattleMessage($"¡Adelante, {PlayerActive.DisplayName}!", false, GameAudio.BallOut));
                 SwitchMessageCount = messages.Count;
 
                 // El cambio gasta el turno. El rival ya eligió su movimiento antes de ver entrar al
@@ -218,7 +219,7 @@ namespace TorreIngenieria.Battle
             EnemyActive.Heal(item.healAmount);
             enemyHealed = true;
             messages.Add($"El rival usó {item.displayName}.");
-            messages.Add($"{Name(EnemyActive, false)} recuperó {EnemyActive.currentHp - before} PS.");
+            messages.Add(new BattleMessage($"{Name(EnemyActive, false)} recuperó {EnemyActive.currentHp - before} PS.", false, GameAudio.Heal));
         }
 
         /// <summary>Pokémon del jugador debilitados al terminar; es el castigo de la nota del jefe (Doc §8).</summary>
@@ -256,13 +257,13 @@ namespace TorreIngenieria.Battle
                 {
                     PlayerActive.ResetStages();
                     playerIndex = FirstHealthy(PlayerTeam);
-                    messages.Add($"¡Adelante, {PlayerActive.DisplayName}!");
+                    messages.Add(new BattleMessage($"¡Adelante, {PlayerActive.DisplayName}!", false, GameAudio.BallOut));
                 }
                 else
                 {
                     IsOver = true;
                     PlayerWon = false;
-                    messages.Add("Todos tus Pokémon se debilitaron…");
+                    messages.Add(new BattleMessage("Todos tus Pokémon se debilitaron…", false, GameAudio.Faint));
                     return;
                 }
             }
@@ -273,7 +274,7 @@ namespace TorreIngenieria.Battle
                 {
                     EnemyActive.ResetStages();
                     enemyIndex = FirstHealthy(EnemyTeam);
-                    messages.Add($"El rival envió a {EnemyActive.DisplayName}.");
+                    messages.Add(new BattleMessage($"El rival envió a {EnemyActive.DisplayName}.", false, GameAudio.BallOut));
                 }
                 else
                 {
@@ -321,7 +322,7 @@ namespace TorreIngenieria.Battle
             {
                 FledAway = true;
                 IsOver = true;
-                messages.Add("¡Escapaste sin problemas!");
+                messages.Add(new BattleMessage("¡Escapaste sin problemas!", false, GameAudio.Flee));
             }
             else
             {
@@ -386,7 +387,7 @@ namespace TorreIngenieria.Battle
 
                 int before = PlayerActive.currentHp;
                 PlayerActive.Heal(item.healAmount);
-                messages.Add($"{PlayerActive.DisplayName} recuperó {PlayerActive.currentHp - before} PS.");
+                messages.Add(new BattleMessage($"{PlayerActive.DisplayName} recuperó {PlayerActive.currentHp - before} PS.", false, GameAudio.Heal));
                 return true;
             }
 
@@ -413,9 +414,9 @@ namespace TorreIngenieria.Battle
             CaptureAttempted = true;
             CaptureShakes = GameRules.CaptureShakes(chance, success);
 
-            messages.Add($"¡Lanzaste una {ball.displayName}!");
+            messages.Add(new BattleMessage($"¡Lanzaste una {ball.displayName}!", false, GameAudio.BallThrow));
             for (int i = 0; i < CaptureShakes; i++)
-                messages.Add(new BattleMessage("¡La Pokébola se sacude...!", true));
+                messages.Add(new BattleMessage("¡La Pokébola se sacude...!", true, GameAudio.BallShake));
 
             if (success)
             {
@@ -424,7 +425,7 @@ namespace TorreIngenieria.Battle
                 CapturedLevel = EnemyActive.level;
                 IsOver = true;
                 messages.Add("¡Ya!");
-                messages.Add($"¡Atrapaste a {EnemyActive.DisplayName}!");
+                messages.Add(new BattleMessage($"¡Atrapaste a {EnemyActive.DisplayName}!", false, GameAudio.Capture));
                 return;
             }
 
@@ -465,6 +466,7 @@ namespace TorreIngenieria.Battle
             }
 
             slot.currentPp--;
+            int usedIndex = messages.Count;
             messages.Add($"¡{Name(attacker, attackerIsPlayer)} usó {move.displayName}!");
 
             if (!Hits(move, attacker, defender))
@@ -497,6 +499,10 @@ namespace TorreIngenieria.Battle
             int damage = GameRules.Damage(attacker.level, move.power, attackStat, defenseStat,
                 effectiveness, stab, roll, critical);
             defender.TakeDamage(damage);
+
+            // El golpe suena con el «usó…», que es cuando la UI baja la barra de PS.
+            string hitSound = effectiveness > 1f ? GameAudio.HitSuper : effectiveness < 1f ? GameAudio.HitWeak : GameAudio.Hit;
+            messages[usedIndex] = new BattleMessage(messages[usedIndex].text, false, hitSound);
 
             if (critical)
                 messages.Add("¡Golpe crítico!");
@@ -580,27 +586,27 @@ namespace TorreIngenieria.Battle
             {
                 case MoveEffect.LowerAttack:
                     if (Lower(ref defender.attackStage))
-                        messages.Add($"Bajó el Ataque de {Name(defender, defenderIsPlayer)}.");
+                        messages.Add(new BattleMessage($"Bajó el Ataque de {Name(defender, defenderIsPlayer)}.", false, GameAudio.StatDown));
                     break;
                 case MoveEffect.LowerDefense:
                     if (Lower(ref defender.defenseStage))
-                        messages.Add($"Bajó la Defensa de {Name(defender, defenderIsPlayer)}.");
+                        messages.Add(new BattleMessage($"Bajó la Defensa de {Name(defender, defenderIsPlayer)}.", false, GameAudio.StatDown));
                     break;
                 case MoveEffect.LowerSpDefense:
                     if (Lower(ref defender.spDefenseStage))
-                        messages.Add($"Bajó la Defensa Especial de {Name(defender, defenderIsPlayer)}.");
+                        messages.Add(new BattleMessage($"Bajó la Defensa Especial de {Name(defender, defenderIsPlayer)}.", false, GameAudio.StatDown));
                     break;
                 case MoveEffect.LowerSpeed:
                     if (Lower(ref defender.speedStage))
-                        messages.Add($"Bajó la Velocidad de {Name(defender, defenderIsPlayer)}.");
+                        messages.Add(new BattleMessage($"Bajó la Velocidad de {Name(defender, defenderIsPlayer)}.", false, GameAudio.StatDown));
                     break;
                 case MoveEffect.LowerAccuracy:
                     if (Lower(ref defender.accuracyStage))
-                        messages.Add($"Bajó la Precisión de {Name(defender, defenderIsPlayer)}.");
+                        messages.Add(new BattleMessage($"Bajó la Precisión de {Name(defender, defenderIsPlayer)}.", false, GameAudio.StatDown));
                     break;
                 case MoveEffect.RaiseDefense:
                     if (Raise(ref attacker.defenseStage))
-                        messages.Add($"Subió la Defensa de {Name(attacker, attackerIsPlayer)}.");
+                        messages.Add(new BattleMessage($"Subió la Defensa de {Name(attacker, attackerIsPlayer)}.", false, GameAudio.StatUp));
                     break;
                 case MoveEffect.Sleep:
                     if (TrySetStatus(defender, StatusCondition.Sleep))

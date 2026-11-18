@@ -44,6 +44,7 @@ namespace TorreIngenieria.EditorTools
             ValidateTrainerAndBossBattle();
             ValidateSwitch();
             ValidateMenus();
+            ValidateTexts();
 
             if (checksFailed == 0)
                 Debug.Log("Datos y fórmulas: todo coincide.");
@@ -242,7 +243,7 @@ namespace TorreIngenieria.EditorTools
 
         static void ValidateItemAssets()
         {
-            foreach (string id in new[] { "tinto", "agua_panela", "pokeball" })
+            foreach (string id in new[] { "tinto", "agua_panela", "pokeball", "apuntes", "cafeina", "arepa" })
             {
                 ItemData data = ItemDatabase.Get(id);
                 Check(data != null, $"Falta el objeto '{id}'.");
@@ -253,6 +254,8 @@ namespace TorreIngenieria.EditorTools
                 Check(id == id.ToLowerInvariant(), $"El id '{id}' debe ir en minúscula.");
                 Check(data.category != ItemCategory.Heal || data.healAmount > 0,
                     $"'{id}' es curativo y no cura nada.");
+                Check(data.category != ItemCategory.Teach || MoveDatabase.Exists(data.moveId),
+                    $"'{id}' enseña el movimiento '{data.moveId}', que no existe.");
             }
         }
 
@@ -367,8 +370,11 @@ namespace TorreIngenieria.EditorTools
                         Check(team[0].speciesId == "geodude" && team[0].moves.Count == 3 &&
                               team[0].moves[0].moveId == "tackle",
                             "Cantera: Geodude debería conservar sus 3 movimientos fijos.");
-                        Check(team[1].speciesId == "onix" && team[1].moves.Count == 4,
-                            "Cantera: Onix debería conservar sus 4 movimientos fijos.");
+                        // Los fijos del asset (Etapa 6: Onix nv 8 con tackle, rock_throw y harden).
+                        TrainerPokemon onix = cantera.team[1];
+                        int fixedMoves = onix.moveIds != null ? onix.moveIds.Count : 0;
+                        Check(team[1].speciesId == "onix" && fixedMoves > 0 && team[1].moves.Count == fixedMoves,
+                            $"Cantera: Onix debería conservar sus {fixedMoves} movimientos fijos.");
                     }
                 }
                 catch (Exception e)
@@ -1060,6 +1066,39 @@ namespace TorreIngenieria.EditorTools
         /// Datos que muestran el Equipo, el Resumen y la Mochila: números de la Pokédex nacional y la
         /// curación fuera de combate (<see cref="TeamMembers.ApplyHeal"/>), sin tocar la partida guardada.
         /// </summary>
+        /// <summary>
+        /// Etapa 9: los textos caben en sus cajas (nombres de Pokémon de hasta 10 caracteres, objetos de
+        /// hasta 14, como en FireRed) y la fuente pixel tiene los caracteres del español.
+        /// </summary>
+        static void ValidateTexts()
+        {
+            foreach (PokemonData species in PokemonDatabase.All())
+                if (species != null)
+                    Check(species.displayName.Length <= 10,
+                        $"El nombre '{species.displayName}' tiene más de 10 caracteres y no cabe en las fichas.");
+
+            foreach (string id in new[] { "tinto", "agua_panela", "pokeball", "apuntes", "cafeina", "arepa" })
+            {
+                ItemData item = ItemDatabase.Get(id);
+                if (item != null)
+                    Check(item.displayName.Length <= 14,
+                        $"El objeto '{item.displayName}' tiene más de 14 caracteres y no cabe en la Mochila.");
+            }
+
+            var font = AssetDatabase.LoadAssetAtPath<TMPro.TMP_FontAsset>("Assets/Art/Fonts/PressStart2P SDF.asset");
+            Check(font != null, "Falta la fuente pixel (Assets/Art/Fonts/PressStart2P SDF.asset).");
+            if (font != null)
+            {
+                const string spanish = "ÁÉÍÓÚÜÑáéíóúüñ¿¡×«»–…";
+                bool all = font.HasCharacters(spanish, out uint[] missing, true, true);
+                var names = new System.Text.StringBuilder();
+                if (missing != null)
+                    foreach (uint code in missing)
+                        names.Append(char.ConvertFromUtf32((int)code));
+                Check(all, $"A la fuente pixel le faltan caracteres: {names}.");
+            }
+        }
+
         static void ValidateMenus()
         {
             var dex = new Dictionary<string, int>
@@ -1098,6 +1137,50 @@ namespace TorreIngenieria.EditorTools
 
             Check(HpBar.ColorFor(0.4f) == BattleHUD.HpYellow,
                 "La barra de PS de los menús debería usar los mismos colores que el combate.");
+
+            // Etapa 7: todo lo que vende Don Chucho existe y tiene precio.
+            foreach (string id in ShopScreen.Stock)
+            {
+                ItemData item = ItemDatabase.Get(id);
+                Check(item != null, $"La tienda vende '{id}', pero el objeto no existe.");
+                if (item != null)
+                    Check(item.price > 0, $"'{id}' está en la tienda sin precio (ItemData.price).");
+            }
+
+            // Etapa 8: Apuntes (enseñar, con reemplazo si ya sabe cuatro) y Cafeína (un nivel).
+            TeamMember student = TeamMembers.Create("charmander", 5);
+            int knownBefore = student.moves.Count;
+            Check(TeamMembers.TeachMove(student, "mud_slap") == TeachResult.Learned &&
+                  student.moves.Count == knownBefore + 1, "Los Apuntes deberían enseñar Bofetón Lodo.");
+            Check(TeamMembers.TeachMove(student, "mud_slap") == TeachResult.AlreadyKnows,
+                "No se debería aprender dos veces el mismo movimiento.");
+            while (student.moves.Count < 4)
+                student.moves.Add(new MoveSlot { moveId = "tackle" + student.moves.Count, pp = 1, maxPp = 1 });
+            Check(TeamMembers.TeachMove(student, "rock_throw") == TeachResult.NeedsReplace,
+                "Con cuatro movimientos hay que elegir cuál olvidar.");
+            Check(TeamMembers.TeachMove(student, "rock_throw", 0) == TeachResult.Learned &&
+                  student.moves[0].moveId == "rock_throw" && student.moves.Count == 4,
+                "Al elegir uno para olvidar, el nuevo debería ocupar su lugar.");
+            int levelBefore = student.level;
+            Check(TeamMembers.LevelUp(student, 1).LeveledUp && student.level == levelBefore + 1,
+                "La Cafeína debería subir exactamente un nivel.");
+
+            // Etapa 9: precios del Doc §10 y la Arepa.
+            foreach ((string id, int price) in new[] { ("pokeball", 20), ("tinto", 25), ("agua_panela", 60), ("arepa", 100) })
+            {
+                ItemData item = ItemDatabase.Get(id);
+                if (item != null)
+                    CheckEqual(item.price, price, $"Precio de '{id}' (Doc §10; vuelve a construir los datos).");
+            }
+            TeamMember fainted = TeamMembers.Create("squirtle", 5);
+            Check(!TeamMembers.Revive(fainted), "La Arepa no debería tener efecto en un Pokémon sano.");
+            fainted.hp = 0;
+            Check(TeamMembers.Revive(fainted) && fainted.hp == Math.Max(1, fainted.maxHp / 2),
+                "La Arepa debería revivir con la mitad de los PS.");
+
+            // El selector de ascensor no lleva a la plazoleta ni a pisos desconocidos.
+            Check(BuildingMapScreen.ElevatorProblem(Building.Floors[0]) != null,
+                "El ascensor no debería llevar a la plazoleta.");
         }
 
         // ---------- Utilidades ----------

@@ -7,10 +7,16 @@ namespace TorreIngenieria.Core
     /// </summary>
     public static class GameSettings
     {
+        /// <summary>Velocidad de la máquina de escribir de los cuadros de texto.</summary>
+        public enum TextSpeed { Slow, Normal, Fast }
+
+        public static readonly string[] TextSpeedNames = { "LENTA", "NORMAL", "RÁPIDA" };
+
         public const int MaxVolume = 10;
 
         const string VolumeKey = "opciones.volumen";
         const string FullscreenKey = "opciones.pantallaCompleta";
+        const string TextSpeedKey = "opciones.velocidadTexto";
         const int DefaultVolume = 8;
 
         public static int Volume
@@ -33,6 +39,23 @@ namespace TorreIngenieria.Core
                 Screen.fullScreen = value;
             }
         }
+
+        public static TextSpeed Speed
+        {
+            get => (TextSpeed)Mathf.Clamp(PlayerPrefs.GetInt(TextSpeedKey, (int)TextSpeed.Normal), 0, 2);
+            set => PlayerPrefs.SetInt(TextSpeedKey, (int)value);
+        }
+
+        /// <summary>
+        /// Factor sobre las letras por segundo del cuadro de texto (30 en NORMAL). (propuesta) LENTA ≈ 18,
+        /// RÁPIDA ≈ 75 letras por segundo.
+        /// </summary>
+        public static float TextSpeedMultiplier => Speed switch
+        {
+            TextSpeed.Slow => 0.6f,
+            TextSpeed.Fast => 2.5f,
+            _ => 1f,
+        };
 
         public static void Save() => PlayerPrefs.Save();
 

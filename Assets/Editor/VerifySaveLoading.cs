@@ -12,8 +12,10 @@ namespace TorreIngenieria.EditorTools
     ///    la pista de Gabriel);
     /// 2) una partida v2 con 'pokedexByFloor' (clave retirada en la v3) se carga sin fallar y el equipo
     ///    se completa con PS, EXP, movimientos y PP;
-    /// 3) una partida actual pasa por ToJson + ParseJson y vuelve igual campo por campo;
-    /// 4) la puerta del edificio exige inicial y una captura distinta de él.
+    /// 3) una partida v6 migra a la v7 (vistos desde las capturas, ID del Carné y tiempo de juego), y las
+    ///    reglas del desmayo y del tiempo de juego dan los números del documento;
+    /// 4) una partida actual pasa por ToJson + ParseJson y vuelve igual campo por campo;
+    /// 5) la puerta del edificio exige inicial y una captura distinta de él.
     /// La ida y vuelta es en memoria y el menú está deshabilitado en Play, así que no puede corromper
     /// la partida en curso. Menú: Torre Ingeniería > Verificar guardado y carga (también con -executeMethod).
     /// </summary>
@@ -51,6 +53,19 @@ namespace TorreIngenieria.EditorTools
   ""savedAt"": ""2026-10-02 18:30""
 }";
 
+        /// <summary>Formato v6: sin especies vistas, ID del Carné ni tiempo de juego (llegan en la v7).</summary>
+        const string Version6Json = @"{
+  ""version"": 6,
+  ""playerName"": ""Pedro"",
+  ""location"": ""2"",
+  ""credits"": 300,
+  ""pokedex"": [ ""bulbasaur"", ""pidgey"" ],
+  ""starterId"": ""bulbasaur"",
+  ""bossHintGiven"": false,
+  ""createdAt"": ""2026-11-01 09:00"",
+  ""savedAt"": ""2026-11-02 18:30""
+}";
+
         static int checksFailed;
 
         [MenuItem("Torre Ingeniería/Verificar guardado y carga")]
@@ -64,6 +79,12 @@ namespace TorreIngenieria.EditorTools
             Debug.Log("--- Carga de partida v2 con 'pokedexByFloor' retirado ---");
             VerifyVersion2();
 
+            Debug.Log("--- Carga de partida v6 (vistos, ID y tiempo de juego de la v7) ---");
+            VerifyVersion6();
+
+            Debug.Log("--- Reglas del desmayo y del tiempo de juego ---");
+            VerifyFaintAndPlayTimeRules();
+
             Debug.Log("--- Ida y vuelta en memoria de una partida actual ---");
             VerifyRoundTrip();
 
@@ -71,7 +92,7 @@ namespace TorreIngenieria.EditorTools
             VerifyBuildingDoor();
 
             if (checksFailed == 0)
-                Debug.Log("Guardado y carga: verificado (v1 y v2 migran, la partida vuelve igual —incluidas las conversaciones vistas— y la puerta exige captura).");
+                Debug.Log("Guardado y carga: verificado (v1, v2 y v6 migran, la partida vuelve igual —incluidas las conversaciones vistas— y la puerta exige captura).");
             else
                 Debug.LogError($"Guardado y carga: {checksFailed} problema(s).");
         }
@@ -171,6 +192,50 @@ namespace TorreIngenieria.EditorTools
         /// Ida y vuelta en memoria: ToJson + ParseJson. No escribe en disco, así que no puede perder la
         /// partida del jugador ni aunque el Editor se cierre a mitad de la prueba.
         /// </summary>
+        /// <summary>
+        /// v6 → v7: lo capturado pasa a la lista de vistos, se genera un ID de cinco cifras y el tiempo de
+        /// juego arranca en 0.
+        /// </summary>
+        static void VerifyVersion6()
+        {
+            SaveData data = null;
+            try
+            {
+                data = SaveSystem.ParseJson(Version6Json);
+            }
+            catch (Exception e)
+            {
+                Check(false, $"La partida v6 no debería fallar al cargar: {e.Message}");
+            }
+            if (data == null)
+                return;
+
+            Check(data.version == SaveData.CurrentVersion,
+                $"La partida v6 debería migrar a {SaveData.CurrentVersion} y quedó en {data.version}.");
+            Check(data.seen != null && data.seen.Count == 2 && data.seen.Contains("bulbasaur") && data.seen.Contains("pidgey"),
+                "Las especies capturadas de una partida v6 deben pasar a la lista de vistas.");
+            Check(!string.IsNullOrEmpty(data.playerId) && data.playerId.Length == 5 && int.TryParse(data.playerId, out _),
+                $"La migración debe generar un ID de cinco cifras y quedó '{data.playerId}'.");
+            Check(data.playTimeSeconds == 0f, "El tiempo de juego de una partida v6 debe arrancar en 0.");
+            Check(data.credits == 300 && data.location == "2" && data.starterId == "bulbasaur",
+                "Se perdieron datos de la partida v6 al migrar.");
+
+            // Un ID existente no se cambia al volver a cargar.
+            SaveData again = SaveSystem.ParseJson(JsonUtility.ToJson(data));
+            Check(again != null && again.playerId == data.playerId, "El ID del Carné no debe cambiar entre cargas.");
+        }
+
+        /// <summary>Números del desmayo (Doc §8: se pierde el 25 %) y formato del tiempo del Carné.</summary>
+        static void VerifyFaintAndPlayTimeRules()
+        {
+            Check(GameRules.CreditsLost(1000) == 250 && GameRules.CreditsLost(3) == 0 && GameRules.CreditsLost(0) == 0,
+                "El desmayo debe quitar el 25 % de los créditos, redondeando hacia abajo.");
+            Check(GameRules.FormatPlayTime(0f) == "0:00" && GameRules.FormatPlayTime(59f) == "0:00" &&
+                  GameRules.FormatPlayTime(3725f) == "1:02" && GameRules.FormatPlayTime(-5f) == "0:00",
+                "El tiempo de juego debe mostrarse como H:MM.");
+            Check(GameRules.FormatPlayTime(1000f * 3600f) == "999:59", "El tiempo de juego debe topar en 999:59.");
+        }
+
         static void VerifyRoundTrip()
         {
             try
@@ -219,6 +284,9 @@ namespace TorreIngenieria.EditorTools
                       loaded.seenDialogues[0].id == "Atrio/Gabriel" &&
                       loaded.seenDialogues[0].key == "help",
                     "Se perdió la conversación vista al releer la partida.");
+                Check(loaded.seen.Count == 3 && loaded.seen.Contains("geodude") &&
+                      loaded.playerId == "04217" && Mathf.Approximately(loaded.playTimeSeconds, 3725.5f),
+                    "Se perdieron las especies vistas, el ID del Carné o el tiempo de juego (v7).");
                 Check(loaded.accessCard && loaded.tutorialDone && loaded.gabrielChoice == GabrielChoice.Yes &&
                       loaded.lastBossFloor == "3" && loaded.consecutiveBossLosses == 2 && loaded.bossHintGiven,
                     "Se perdieron banderas o la racha contra el jefe.");
@@ -292,7 +360,7 @@ namespace TorreIngenieria.EditorTools
             }
         }
 
-        /// <summary>Partida v5 con todos los campos para que la comparación campo por campo cubra el formato entero.</summary>
+        /// <summary>Partida v7 con todos los campos para que la comparación campo por campo cubra el formato entero.</summary>
         static SaveData CreateCurrentSave()
         {
             var data = new SaveData
@@ -307,6 +375,8 @@ namespace TorreIngenieria.EditorTools
                 lastBossFloor = "3",
                 consecutiveBossLosses = 2,
                 bossHintGiven = true,
+                playerId = "04217",
+                playTimeSeconds = 3725.5f,
                 createdAt = "2026-10-01 09:00",
             };
 
@@ -381,6 +451,9 @@ namespace TorreIngenieria.EditorTools
             data.inventory.Add(new InventoryItem { id = "tinto", amount = 3 });
             data.pokedex.Add("bulbasaur");
             data.pokedex.Add("pidgey");
+            data.seen.Add("bulbasaur");
+            data.seen.Add("pidgey");
+            data.seen.Add("geodude"); // visto en combate, sin capturar
             data.visitedFloors.Add("1");
             data.visitedFloors.Add("3");
             data.defeatedTrainers.Add("entrenador-1");

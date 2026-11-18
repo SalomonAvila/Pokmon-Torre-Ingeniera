@@ -1,3 +1,4 @@
+using TorreIngenieria.Audio;
 using System.Collections.Generic;
 using TorreIngenieria.Core;
 using UnityEngine;
@@ -81,6 +82,8 @@ namespace TorreIngenieria.World
                 return;
             }
 
+            if (!SceneTransition.IsTransitioning)
+                GameAudio.Sfx(GameAudio.Door);
             if (!SceneTransition.Go(targetScene, targetSpawn))
                 WorldMessage.Show("Esta zona del edificio todavía está en construcción.");
         }

@@ -11,8 +11,8 @@ namespace TorreIngenieria.EditorTools
 {
     /// <summary>
     /// Construye el pasillo de los ascensores del lobby principal (Figura 23 del documento de diseño):
-    /// escalera de madera a la izquierda, nicho con los tres ascensores (fuera de servicio), torniquetes
-    /// y la escalera que baja al atrio. Al bajar por esa escalera se vuelve a las gradas del atrio.
+    /// escalera de madera a la izquierda, nicho con los tres ascensores (funcionan con el Carné de acceso),
+    /// puesto de Don Chucho, torniquetes y la escalera que baja al atrio. Al bajar por esa escalera se vuelve a las gradas del atrio.
     /// Es el piso 2: la escalera de la izquierda sube al piso 3 (escena Escalera).
     /// Menú: Torre Ingeniería > Mapas > Construir pasillo de ascensores provisional.
     /// </summary>
@@ -71,7 +71,7 @@ namespace TorreIngenieria.EditorTools
             ['W'] = 5, ['>'] = 7, ['|'] = 3, ['E'] = 9, ['F'] = 10, ['e'] = 11, ['f'] = 12, ['G'] = 13,
         };
 
-        // Los ascensores están fuera de servicio: bloquean el paso. Los torniquetes están abiertos (luz verde).
+        // Los ascensores bloquean el paso (se usan mirándolos, ver ElevatorPanel). Los torniquetes están abiertos.
         const string BlockingFloors = " ";
         const string BlockingObjects = "W|EFefG";
 
@@ -106,8 +106,18 @@ namespace TorreIngenieria.EditorTools
 
             // Llegada desde el atrio: arriba de la escalera, mirando hacia el pasillo.
             ProvisionalMap.AddSpawn(SpawnFromAtrium, 20, 6, height, PlayerController.Direction.Up);
-            // Reaparición tras un desmayo, junto al futuro puesto de Don Chucho (lo usa la Etapa 7).
-            ProvisionalMap.AddSpawn(Building.SpawnFromFaint, 9, 6, height, PlayerController.Direction.Down);
+            // Don Chucho atiende su puesto contra la pared norte: tienda, curación gratis y guardado.
+            // Tras un desmayo se reaparece frente a él.
+            ProvisionalMap.CreateDonChucho(10, 2, height, PlayerController.Direction.Down);
+            ProvisionalMap.AddSpawn(Building.SpawnFromFaint, 10, 3, height, PlayerController.Direction.Up);
+
+            // Ascensores: cada puerta (fila de arriba del nicho) y el panel de llamada abren el selector de
+            // piso. Sin el Carné de acceso de la Ing. Cantera no viajan. Al llegar en ascensor se aparece
+            // en el nicho, de espaldas a las puertas.
+            for (int col = 6; col <= 11; col++)
+                ProvisionalMap.CreateElevatorPanel($"Ascensor{col - 5}", col, 7, height);
+            ProvisionalMap.CreateElevatorPanel("PanelLlamada", 12, 6, height);
+            ProvisionalMap.AddSpawn(Building.SpawnFromElevator, 8, 6, height, PlayerController.Direction.Up);
             // Último escalón de la escalera (entre las barandas) → gradas superiores del atrio.
             // Bajar siempre está permitido: esta salida no lleva la guarda de la puerta del edificio.
             ProvisionalMap.AddWarp("BajadaAtrio", 17, 23, 9, 9, height, SceneNames.Atrio, AtrioBuilder.SpawnFromElevators);

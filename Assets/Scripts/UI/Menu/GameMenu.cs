@@ -1,6 +1,8 @@
+using TorreIngenieria.Audio;
 using System;
 using System.Collections;
 using TorreIngenieria.Core;
+using TorreIngenieria.World;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -8,8 +10,9 @@ namespace TorreIngenieria.UI
 {
     /// <summary>
     /// Menú del juego en el mundo (maqueta 01): POKÉDEX, EQUIPO, MOCHILA, MAPA, PEDRO, GUARDAR, OPCIONES y
-    /// SALIR, con una línea de ayuda abajo. Abre las pantallas de Equipo, Resumen y Mochila (Etapa 4); las
-    /// demás muestran un aviso hasta la Etapa 7.
+    /// SALIR, con una línea de ayuda abajo. Cada opción abre su pantalla (Etapas 4 y 7); SALIR cierra el menú.
+    /// Además sirve las pantallas que se abren desde el mundo sin pasar por la pausa: el Mapa (tecla M), la
+    /// tienda de Don Chucho, el selector de ascensor y las Opciones del título.
     ///
     /// Es un prefab (<c>Resources/UI/MenuJuego</c>, lo genera <c>GameMenuBuilder</c>) que se instancia en la
     /// escena la primera vez que se abre, así ningún mapa necesita regenerarse. Cada pantalla es una corrutina
@@ -28,6 +31,12 @@ namespace TorreIngenieria.UI
         [SerializeField] TeamScreen team;
         [SerializeField] SummaryScreen summary;
         [SerializeField] BagScreen bag;
+        [SerializeField] PokedexScreen pokedex;
+        [SerializeField] BuildingMapScreen map;
+        [SerializeField] CardScreen card;
+        [SerializeField] SaveScreen saveScreen;
+        [SerializeField] OptionsScreen options;
+        [SerializeField] ShopScreen shop;
 
         static readonly string[] PauseOptions =
             { "POKÉDEX", "EQUIPO", "MOCHILA", "MAPA", "PEDRO", "GUARDAR", "OPCIONES", "SALIR" };
@@ -37,17 +46,20 @@ namespace TorreIngenieria.UI
             "Registro de los POKÉMON vistos y capturados.",
             "Revisa a los POKÉMON de tu equipo.",
             "Revisa los objetos de tu mochila.",
-            "Consulta tu objetivo actual.",
+            "Mapa del edificio y tu objetivo actual.",
             "Revisa tu carné estudiantil.",
             "Guarda tu progreso.",
             "Ajusta el volumen y otras opciones.",
             "Cierra este menú.",
         };
 
+        const int PokedexOption = 0;
         const int TeamOption = 1;
         const int BagOption = 2;
         const int MapOption = 3;
+        const int CardOption = 4;
         const int SaveOption = 5;
+        const int OptionsOption = 6;
         const int CloseOption = 7;
 
         /// <summary>True mientras cualquier pantalla del menú está abierta (el jugador no se mueve).</summary>
@@ -80,8 +92,42 @@ namespace TorreIngenieria.UI
             }
         }
 
+        // ---------- Puntos de entrada ----------
+
         /// <summary>Abre el menú de pausa. Devuelve false si falta el prefab (hay que generarlo en el Editor).</summary>
-        public static bool Open()
+        public static bool Open() => Run(menu => menu.RunPause());
+
+        /// <summary>Mapa del edificio directamente (tecla M).</summary>
+        public static bool OpenMap() => Run(menu => menu.map.Browse(menu));
+
+        /// <summary>Tienda de Don Chucho; <paramref name="onClosed"/> se llama al salir.</summary>
+        public static bool OpenShop(Action onClosed) => Run(menu => menu.shop.Browse(menu), onClosed);
+
+        /// <summary>
+        /// Selector de ascensor; <paramref name="onChosen"/> recibe el piso elegido (o null) una vez que el
+        /// menú ya se cerró, para que el viaje pueda empezar el fundido.
+        /// </summary>
+        public static bool OpenElevator(Action<string> onChosen)
+        {
+            string destination = null;
+            return Run(menu => menu.map.ChooseElevatorFloor(menu, floor => destination = floor),
+                () => onChosen(destination));
+        }
+
+        /// <summary>
+        /// Opciones desde la pantalla de título (sin SALIR AL TÍTULO). Es una corrutina para que el título
+        /// espere a que el jugador vuelva.
+        /// </summary>
+        public static IEnumerator RunTitleOptions()
+        {
+            bool done = false;
+            if (!Run(menu => menu.RunOptions(false), () => done = true))
+                yield break;
+            while (!done)
+                yield return null;
+        }
+
+        static bool Run(Func<GameMenu, IEnumerator> screen, Action onClosed = null)
         {
             if (IsOpen)
                 return false;
@@ -99,14 +145,28 @@ namespace TorreIngenieria.UI
             }
 
             instance.gameObject.SetActive(true);
-            instance.StartCoroutine(instance.RunPause());
+            instance.StartCoroutine(instance.RunScreen(screen(instance), onClosed));
             return true;
+        }
+
+        IEnumerator RunScreen(IEnumerator screen, Action onClosed)
+        {
+            IsOpen = true;
+            GameAudio.Sfx(GameAudio.MenuOpen);
+            controls.FindActionMap("UI", true).Enable();
+            HideAll();
+            yield return screen;
+            GameAudio.Sfx(GameAudio.MenuClose);
+
+            HideAll();
+            message.Clear();
+            gameObject.SetActive(false);
+            IsOpen = false;
+            onClosed?.Invoke();
         }
 
         IEnumerator RunPause()
         {
-            IsOpen = true;
-            controls.FindActionMap("UI", true).Enable();
             int option = TeamOption;
 
             while (true)
@@ -121,39 +181,50 @@ namespace TorreIngenieria.UI
                     break;
 
                 option = chosen;
-                if (chosen == TeamOption)
+                pauseList.Hide();
+                switch (chosen)
                 {
-                    pauseList.Hide();
-                    yield return team.Browse(this);
+                    case PokedexOption:
+                        yield return pokedex.Browse(this);
+                        break;
+                    case TeamOption:
+                        yield return team.Browse(this);
+                        break;
+                    case BagOption:
+                        yield return bag.Browse(this);
+                        break;
+                    case MapOption:
+                        yield return map.Browse(this);
+                        break;
+                    case CardOption:
+                        yield return card.Show(this);
+                        break;
+                    case SaveOption:
+                        yield return saveScreen.Run(this);
+                        break;
+                    case OptionsOption:
+                        bool quit = false;
+                        yield return options.Run(this, true, result => quit = result == OptionsScreen.Result.QuitToTitle);
+                        if (quit)
+                        {
+                            QuitToTitle();
+                            yield break;
+                        }
+                        break;
                 }
-                else if (chosen == BagOption)
-                {
-                    pauseList.Hide();
-                    yield return bag.Browse(this);
-                }
-                else if (chosen == SaveOption)
-                    yield return SaveGame();
-                else if (chosen == MapOption)
-                    yield return Say(Guidance.MessageText());
-                else
-                    yield return Say("Esta opción todavía está en construcción.");
             }
-
-            HideAll();
-            message.Clear();
-            gameObject.SetActive(false);
-            IsOpen = false;
         }
 
-        IEnumerator SaveGame()
+        IEnumerator RunOptions(bool inGame)
         {
-            bool yes = false;
-            yield return Confirm("¿Quieres guardar la partida?", value => yes = value);
-            if (!yes)
-                yield break;
+            yield return options.Run(this, inGame, _ => { });
+        }
 
-            SaveSystem.Save(GameState.Save);
-            yield return Say($"{GameState.Save.playerName} guardó la partida.");
+        /// <summary>SALIR AL TÍTULO: cierra el menú y vuelve a la pantalla de título con fundido.</summary>
+        static void QuitToTitle()
+        {
+            if (!SceneTransition.Go(SceneNames.MainMenu, null))
+                Debug.LogWarning("No se pudo volver al título: falta la escena MainMenu en Build Profiles.");
         }
 
         void HideAll()
@@ -163,6 +234,12 @@ namespace TorreIngenieria.UI
             team.Hide();
             summary.Hide();
             bag.Hide();
+            pokedex.Hide();
+            map.Hide();
+            card.Hide();
+            saveScreen.Hide();
+            options.Hide();
+            shop.Hide();
         }
 
         // ---------- Utilidades para las pantallas ----------

@@ -180,7 +180,7 @@ namespace TorreIngenieria.EditorTools
         const string IndicatorPath = "Assets/Art/UI/IndicadorInteraccion.png";
 
         /// <summary>Personajes con hoja de caminata propia (ver <see cref="CharacterSpriteSlicer"/>).</summary>
-        public enum Character { Pedro, Gabriel, Vigilante, Cantera }
+        public enum Character { Pedro, Gabriel, Vigilante, Cantera, DonChucho }
 
         /// <summary>
         /// NPC centrado en la casilla; habla con el jugador (Interactable). Con <paramref name="character"/>
@@ -234,6 +234,35 @@ namespace TorreIngenieria.EditorTools
             var vigilante = go.AddComponent<VigilanteNpc>();
             SetDialogueId(vigilante, "vigilante");
             return vigilante;
+        }
+
+        /// <summary>
+        /// Don Chucho en su puesto del lobby: tienda, curación gratis y guardado (ver <see cref="DonChuchoNpc"/>).
+        /// </summary>
+        public static DonChuchoNpc CreateDonChucho(int col, int row, int height,
+            PlayerController.Direction facing = PlayerController.Direction.Down)
+        {
+            var go = new GameObject("DonChucho");
+            go.transform.position = CellCenter(col, row, height);
+            AddCharacterSprite(go, Character.DonChucho, facing);
+            AddInteractionIndicator(go);
+            var chucho = go.AddComponent<DonChuchoNpc>();
+            SetDialogueId(chucho, "don_chucho");
+            return chucho;
+        }
+
+        /// <summary>
+        /// Puerta de ascensor invisible sobre una casilla del ascensor (ya bloqueada por el tile): al
+        /// mirarla abre el selector de piso (ver <see cref="ElevatorPanel"/>). Es un letrero: sin burbuja.
+        /// </summary>
+        public static ElevatorPanel CreateElevatorPanel(string name, int col, int row, int height)
+        {
+            var go = new GameObject(name);
+            go.transform.position = CellCenter(col, row, height);
+            var panel = go.AddComponent<ElevatorPanel>();
+            ConfigureInteractable(panel, Interactable.Kind.Sign, new[] { "Ascensor." }, null, 0,
+                null, null, null, 0, null, null);
+            return panel;
         }
 
         /// <summary>
@@ -300,8 +329,19 @@ namespace TorreIngenieria.EditorTools
                 Character.Gabriel => CharacterSpriteSlicer.GabrielSheet,
                 Character.Vigilante => CharacterSpriteSlicer.GuardSheet,
                 Character.Cantera => CharacterSpriteSlicer.CanteraSheet,
+                Character.DonChucho => CharacterSpriteSlicer.DonChuchoSheet,
                 _ => PedroSheetPath,
             };
+
+            // Personaje cuya hoja todavía no existe: se usa la de Pedro con un tinte, sin romper el mapa.
+            string spriteName = character.ToString();
+            bool placeholder = character != Character.Pedro && AssetImporter.GetAtPath(sheet) == null;
+            if (placeholder)
+            {
+                Debug.LogWarning($"Falta la hoja {sheet}: {character} usa la de Pedro teñida hasta que llegue su arte.");
+                sheet = PedroSheetPath;
+                spriteName = nameof(Character.Pedro);
+            }
             string direction = facing switch
             {
                 PlayerController.Direction.Up => "Arriba",
@@ -313,9 +353,11 @@ namespace TorreIngenieria.EditorTools
             var sprite = spriteObject.AddComponent<SpriteRenderer>();
             sprite.sortingOrder = MapSceneBuilder.CharacterSortingOrder;
             sprite.sprite = AssetDatabase.LoadAllAssetsAtPath(sheet).OfType<Sprite>()
-                .FirstOrDefault(s => s.name == $"{character}_{direction}_Quieto");
+                .FirstOrDefault(s => s.name == $"{spriteName}_{direction}_Quieto");
             if (sprite.sprite == null)
-                Debug.LogError($"No se encontró {character}_{direction}_Quieto en {sheet}: corta las hojas de caminata.");
+                Debug.LogError($"No se encontró {spriteName}_{direction}_Quieto en {sheet}: corta las hojas de caminata.");
+            if (placeholder)
+                sprite.color = new Color(1f, 0.85f, 0.6f); // tinte cálido: se distingue de Pedro
             return sprite;
         }
 
@@ -397,6 +439,45 @@ namespace TorreIngenieria.EditorTools
             ConfigureInteractable(interactable, Interactable.Kind.Item, lines, null, 0,
                 null, null, itemId, amount, pickupId, null);
             return interactable;
+        }
+
+        /// <summary>
+        /// Objeto escondido: igual que <see cref="CreatePickup"/>, pero sin sprite (como los objetos
+        /// ocultos de FireRed, se encuentra al mirar la casilla y pulsar aceptar).
+        /// </summary>
+        public static Interactable CreateHiddenPickup(string name, int col, int row, int height,
+            string pickupId, string itemId, int amount, string[] lines)
+        {
+            Interactable pickup = CreatePickup(name, col, row, height, pickupId, itemId, amount, lines);
+            UnityEngine.Object.DestroyImmediate(pickup.GetComponent<SpriteRenderer>());
+            return pickup;
+        }
+
+        /// <summary>Letrero invisible en una casilla bloqueada (placa de una sala, puerta cerrada).</summary>
+        public static Interactable CreateSign(string name, int col, int row, int height, params string[] lines)
+        {
+            var go = new GameObject(name);
+            go.transform.position = CellCenter(col, row, height);
+            var sign = go.AddComponent<Interactable>();
+            ConfigureInteractable(sign, Interactable.Kind.Sign, lines, null, 0, null, null, null, 0, null, null);
+            return sign;
+        }
+
+        /// <summary>
+        /// Área de encuentros con su propia tabla de especies (ver <see cref="EncounterArea"/>): el
+        /// rectángulo va de la fila <paramref name="top"/> a la <paramref name="bottom"/> (fila 0 = norte).
+        /// </summary>
+        public static EncounterArea AddEncounterArea(string name, int left, int right, int top, int bottom,
+            int height, params string[] species)
+        {
+            var go = new GameObject(name);
+            go.transform.position = Cell(left, bottom, height);
+            var area = go.AddComponent<EncounterArea>();
+            var serialized = new SerializedObject(area);
+            serialized.FindProperty("size").vector2IntValue = new Vector2Int(right - left + 1, bottom - top + 1);
+            SetStringArray(serialized.FindProperty("species"), species);
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            return area;
         }
 
         static void ConfigureInteractable(Interactable target, Interactable.Kind kind, string[] lines,

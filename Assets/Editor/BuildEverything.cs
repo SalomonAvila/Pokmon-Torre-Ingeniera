@@ -29,6 +29,9 @@ namespace TorreIngenieria.EditorTools
             Debug.Log("--- Construir todo: menú del juego ---");
             GameMenuBuilder.Build();
 
+            Debug.Log("--- Construir todo: atlas de la interfaz ---");
+            UiAtlasBuilder.Build();
+
             ValidateRules.Validate();
             ValidateData.Validate();
             VerifySaveLoading.Verify();

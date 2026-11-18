@@ -30,10 +30,14 @@ namespace TorreIngenieria.UI
             {
                 GameState.Save = save;
                 yield return dialogue.Say($"Se encontró la partida de {save.playerName} en {Building.DisplayName(save.location)}.");
-                yield return dialogue.Type("¿Qué quieres hacer?");
-
-                int choice = 0;
-                yield return choices.Choose(new[] { "CONTINUAR", "NUEVA PARTIDA" }, i => choice = i);
+                int choice = OptionsChoice;
+                while (choice == OptionsChoice)
+                {
+                    yield return dialogue.Type("¿Qué quieres hacer?");
+                    yield return choices.Choose(new[] { "CONTINUAR", "NUEVA PARTIDA", "OPCIONES" }, i => choice = i);
+                    if (choice == OptionsChoice)
+                        yield return OpenOptions();
+                }
 
                 if (choice == 0)
                 {
@@ -57,6 +61,14 @@ namespace TorreIngenieria.UI
             else
             {
                 yield return dialogue.Say("No se encontró ningún progreso guardado.");
+                int choice = 1;
+                while (choice == 1)
+                {
+                    yield return dialogue.Type("¿Qué quieres hacer?");
+                    yield return choices.Choose(new[] { "NUEVA PARTIDA", "OPCIONES" }, i => choice = i);
+                    if (choice == 1)
+                        yield return OpenOptions();
+                }
             }
 
             yield return dialogue.Say("Creando una nueva partida...");
@@ -69,6 +81,21 @@ namespace TorreIngenieria.UI
 
             // La partida nueva pasa por la introducción narrada antes de la plazoleta.
             LoadWorld(SceneNames.Intro, SceneNames.Atrio);
+        }
+
+        /// <summary>Índice de OPCIONES en la elección con partida guardada.</summary>
+        const int OptionsChoice = 2;
+
+        /// <summary>
+        /// Opciones compartidas con el menú de pausa (<see cref="OptionsScreen"/>, del prefab del menú del
+        /// juego). Si el prefab no existe todavía, solo avisa.
+        /// </summary>
+        IEnumerator OpenOptions()
+        {
+            dialogue.Clear();
+            yield return GameMenu.RunTitleOptions();
+            if (!GameMenu.IsOpen && Resources.Load<GameMenu>("UI/MenuJuego") == null)
+                yield return dialogue.Say("Las opciones aún no están generadas (Construir menú del juego).");
         }
 
         static void LoadWorld(string scene, string fallback)

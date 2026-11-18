@@ -201,10 +201,12 @@ namespace TorreIngenieria.EditorTools
             public ItemCategory category;
             public int heal, price;
             public float catchBonus;
+            public string moveId;
 
             public ItemRow(string id, string name, ItemCategory category, string description,
-                int heal = 0, float catchBonus = 1f, int price = 0)
+                int heal = 0, float catchBonus = 1f, int price = 0, string moveId = "")
             {
+                this.moveId = moveId;
                 this.id = id;
                 this.name = name;
                 this.category = category;
@@ -218,13 +220,25 @@ namespace TorreIngenieria.EditorTools
         static readonly ItemRow[] Items =
         {
             new ItemRow("tinto", "Tinto", ItemCategory.Heal, "Café tinto bien cargado.",
-                heal: GameRules.TintoHeal, price: 100),
+                heal: GameRules.TintoHeal, price: 25),
             new ItemRow("agua_panela", "Agua de panela", ItemCategory.Heal,
-                "Bebida caliente de la plazoleta.", heal: GameRules.PanelaWaterHeal, price: 250),
+                "Bebida caliente de la plazoleta.", heal: GameRules.PanelaWaterHeal, price: 60),
             // El nombre lleva la É en mayúscula en el propio texto fuente: no depende de que
             // ToUpperInvariant ni el estilo UpperCase de TMP encuentren el glifo.
             new ItemRow("pokeball", "POKÉBOLA", ItemCategory.Ball,
-                "DISPOSITIVO PARA CAPTURAR POKÉMON SALVAJES.", catchBonus: 1f, price: 200),
+                "DISPOSITIVO PARA CAPTURAR POKÉMON SALVAJES.", catchBonus: 1f, price: 20),
+            // Precios del Doc §10 (Etapa 9): Pokébola 20, Tinto 25, Agua de panela 60 y Arepa 100.
+            new ItemRow("arepa", "Arepa", ItemCategory.Revive,
+                "Arepa con queso recién hecha. Revive a un POKÉMON debilitado con la mitad de sus PS.",
+                price: 100),
+            // Piso 3 (Doc §10): los Apuntes de la sala E2 y la Cafeína escondida en el Laboratorio de Suelos.
+            // (propuesta) Los Apuntes son de Mecánica de Suelos y enseñan Bofetón Lodo (Tierra, eficaz
+            // contra Roca): una salida para quien eligió a Charmander antes de la Ing. Cantera.
+            new ItemRow("apuntes", "Apuntes", ItemCategory.Teach,
+                "Apuntes de Mecánica de Suelos. Enseñan BOFETÓN LODO a un POKÉMON. Se gastan al usarlos.",
+                moveId: "mud_slap"),
+            new ItemRow("cafeina", "Cafeína", ItemCategory.LevelUp,
+                "Una dosis para la noche antes del parcial. Sube un nivel a un POKÉMON."),
         };
 
         // ---------- Tabla de entrenadores ----------
@@ -389,6 +403,7 @@ namespace TorreIngenieria.EditorTools
             asset.healAmount = row.heal;
             asset.catchBonus = row.catchBonus;
             asset.price = row.price;
+            asset.moveId = row.moveId;
             asset.description = row.description;
             asset.icon = LoadArt($"{ItemIconFolder}/{row.id}.png") ?? asset.icon;
             EditorUtility.SetDirty(asset);

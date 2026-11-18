@@ -1,3 +1,4 @@
+using TorreIngenieria.Audio;
 using System.Text;
 using TorreIngenieria.Core;
 using UnityEngine;
@@ -243,6 +244,7 @@ namespace TorreIngenieria.World
 
         void Collect()
         {
+            GameAudio.Sfx(GameAudio.ItemFound);
             if (!string.IsNullOrEmpty(itemId))
                 GameState.AddItem(itemId, itemAmount);
             if (!string.IsNullOrEmpty(PickupId))

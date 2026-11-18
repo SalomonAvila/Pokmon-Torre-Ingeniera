@@ -186,6 +186,13 @@ namespace TorreIngenieria.Core
             }
         }
 
+        /// <summary>Tiempo de juego como en el Carné de FireRed: horas y minutos (0:07, 12:45). Tope 999:59.</summary>
+        public static string FormatPlayTime(float seconds)
+        {
+            int totalMinutes = Math.Min(999 * 60 + 59, (int)(Math.Max(0f, seconds) / 60f));
+            return $"{totalMinutes / 60}:{totalMinutes % 60:00}";
+        }
+
         /// <summary>Experiencia que da un rival: base del Pokémon vencido × su nivel / 7.</summary>
         public static int ExpReward(int baseExp, int defeatedLevel) => baseExp * defeatedLevel / ExpDivisor;
 

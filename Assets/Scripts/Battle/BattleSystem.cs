@@ -1,3 +1,4 @@
+using TorreIngenieria.Audio;
 using System.Collections;
 using System.Collections.Generic;
 using TorreIngenieria.Core;
@@ -12,9 +13,10 @@ namespace TorreIngenieria.Battle
     /// arma los equipos, conduce el bucle de turnos con <see cref="BattleEngine"/> y la <see cref="BattleUI"/>,
     /// y vuelve al mundo con el fundido de <see cref="SceneTransition"/>.
     ///
-    /// Al ganar, capturar o huir se conservan los PS y los PP del equipo; al perder se restauran como estaban
-    /// antes del combate. Los objetos gastados no se devuelven. El desmayo con pérdida de créditos y el
-    /// reaparecer en el lobby son de la segunda mitad.
+    /// Al ganar, capturar o huir se conservan los PS y los PP del equipo. Al perder (salvo el tutorial de
+    /// Gabriel, que se reintenta) el jugador se desmaya: pierde el 25 % de los créditos, el equipo se cura
+    /// y reaparece en el lobby junto a Don Chucho (<see cref="GameState.Faint"/>). Los objetos gastados no
+    /// se devuelven. Cada Pokémon rival que entra queda registrado como visto en el Pokédex.
     /// </summary>
     public class BattleSystem : MonoBehaviour
     {
@@ -88,6 +90,7 @@ namespace TorreIngenieria.Battle
                 EnemyAi = trainer != null ? trainer.ai : TrainerAi.Wild,
             };
             ui.Bind(engine.PlayerActive, engine.EnemyActive, SlotFor(slots, engine.PlayerActive)?.member);
+            GameState.RegisterSeen(engine.EnemyActive.speciesId);
 
             var intro = new List<string>();
             if (BattleRequest.Kind == BattleKind.Wild)
@@ -128,6 +131,7 @@ namespace TorreIngenieria.Battle
                 }
 
                 ui.Bind(engine.PlayerActive, engine.EnemyActive, SlotFor(slots, engine.PlayerActive)?.member);
+                GameState.RegisterSeen(engine.EnemyActive.speciesId); // el entrenador pudo sacar otro
             }
 
             // La captura cuenta para el Pokédex y se suma al equipo solo si hay sitio (no hay PC en el
@@ -150,6 +154,11 @@ namespace TorreIngenieria.Battle
                           "pero no se pudo conservar: el equipo está lleno.",
                 });
             }
+
+            // Tema de victoria (Doc §5) al vencer o capturar: se repite mientras salen la EXP y la nota, y
+            // se corta al volver al mundo.
+            if (engine.PlayerWon || engine.Captured)
+                GameAudio.Music(GameAudio.ThemeVictory);
 
             // Al ganar, capturar o huir se conservan PS y PP; al perder se deja el equipo como estaba.
             // Los objetos gastados no se devuelven en ningún caso.
@@ -175,10 +184,42 @@ namespace TorreIngenieria.Battle
             if (trainer != null)
                 yield return ResolveTrainerBattle(engine, trainer);
 
+            // Desmayo (Doc §8): sin PS en todo el equipo. El tutorial no cuenta: se reintenta con Gabriel.
+            bool fainted = !engine.PlayerWon && !engine.FledAway && !engine.Captured && !BattleRequest.IsTutorial;
+            if (fainted)
+            {
+                yield return Faint();
+                yield break;
+            }
+
             GameState.NotifyTeamChanged();
             yield return null;
 
             ReturnToWorld(Building.SceneFor(GameState.Save.location));
+        }
+
+        /// <summary>
+        /// Mensajes del desmayo, pérdida de créditos y curación (<see cref="GameState.Faint"/>), y vuelta al
+        /// lobby junto a Don Chucho (o a la plazoleta junto a Gabriel si aún no se cruzó la puerta).
+        /// </summary>
+        IEnumerator Faint()
+        {
+            string player = GameState.Save.playerName.ToUpperInvariant();
+            bool lobby = GameState.FaintRespawnFloor == Building.Floors[1];
+            int lost = GameState.Faint();
+
+            var lines = new List<string> { $"¡A {player} no le quedan POKÉMON en condiciones de luchar!" };
+            if (lost > 0)
+                lines.Add($"{player} perdió {lost} créditos en la confusión...");
+            lines.Add(lobby
+                ? $"...y {player} corrió al lobby, donde Don Chucho atendió a su equipo."
+                : $"...y {player} corrió hasta Gabriel, que atendió a su equipo.");
+            yield return ui.Messages(lines);
+
+            BattleRequest.Clear();
+            string scene = Building.SceneFor(GameState.FaintRespawnFloor);
+            if (!SceneTransition.Go(scene, Building.SpawnFromFaint))
+                Debug.LogError($"No se pudo reaparecer en '{scene}' tras el desmayo.");
         }
 
         /// <summary>Entrenador o jefe del combate en curso; null en un encuentro salvaje y en el tutorial.</summary>
@@ -199,16 +240,9 @@ namespace TorreIngenieria.Battle
                 if (trainer.isBoss && !string.IsNullOrEmpty(trainer.floorId))
                     GameState.RegisterLossToBoss(trainer.floorId);
 
+                // Después viene el desmayo (Run): créditos perdidos y reaparecer en el lobby.
                 if (!string.IsNullOrWhiteSpace(trainer.hintDialogue))
                     yield return ui.Messages(new[] { trainer.hintDialogue });
-
-                // Sin desmayo todavía (Etapa 7): se vuelve al mapa con el equipo como estaba, y Gabriel
-                // sigue siendo el punto de curación. El jugador ya no queda atrapado: el entrenador no
-                // vuelve a retarlo hasta que salga de su vista y regrese.
-                yield return ui.Messages(new[]
-                {
-                    "Puedes volver a intentarlo cuando quieras; Gabriel cura a tu equipo.",
-                });
                 yield break;
             }
 
@@ -240,6 +274,7 @@ namespace TorreIngenieria.Battle
             if (accessCard)
                 GameState.GrantAccessCard();
 
+            GameAudio.Sfx(GameAudio.Seal);
             yield return ui.ShowBossNote(trainer, grade, accessCard);
         }
 

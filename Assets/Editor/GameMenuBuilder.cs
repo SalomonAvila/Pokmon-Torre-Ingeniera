@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using TMPro;
 using TorreIngenieria.Core;
 using TorreIngenieria.UI;
@@ -15,7 +16,8 @@ namespace TorreIngenieria.EditorTools
 {
     /// <summary>
     /// Genera el prefab del menú del juego (<c>Assets/Resources/UI/MenuJuego.prefab</c>): menú de pausa,
-    /// Equipo, Resumen, Mochila, cuadro de mensajes y submenú de acciones. <see cref="GameMenu"/> lo
+    /// Equipo, Resumen, Mochila, Pokédex, Mapa (y ascensor), Carné, Guardar, Opciones, la tienda de
+    /// Don Chucho, cuadro de mensajes y submenú de acciones. <see cref="GameMenu"/> lo
     /// instancia la primera vez que el jugador abre el menú, así los mapas no necesitan regenerarse.
     ///
     /// Distribución de las maquetas de <c>Docs/Maquetas/</c> (01 a 07) en el canvas de 1024×576 (256×144 px
@@ -49,6 +51,29 @@ namespace TorreIngenieria.EditorTools
             MenuArtFolder + "/MochilaObjetos.png",
             MenuArtFolder + "/MochilaPokebolas.png",
             MenuArtFolder + "/MochilaClave.png",
+        };
+
+        // Arte opcional de las pantallas de la Etapa 7 (fondos en mosaico y sellos).
+        const string PokedexBackgroundPath = MenuArtFolder + "/FondoPokedex.png";
+        const string MapBackgroundPath = MenuArtFolder + "/FondoMapa.png";
+        const string CardBackgroundPath = MenuArtFolder + "/FondoCarne.png";
+        const string OptionsBackgroundPath = MenuArtFolder + "/FondoOpciones.png";
+        const string ShopBackgroundPath = MenuArtFolder + "/FondoTienda.png";
+        const string SealFolder = MenuArtFolder + "/Sellos";
+        const string PanelFramePath = MenuArtFolder + "/Panel.png";
+        const int PanelFrameBorder = 4;
+        const string PokeballItemPath = "Assets/Resources/Data/Items/pokeball.asset";
+
+        /// <summary>
+        /// Los 13 sellos (pisos con jefe, en el orden de Building.Floors) con el color del tipo de cada piso
+        /// (Doc §5, los mismos acentos de LabFloorBuilder; el 14 es Dragón). El arte, si existe, es
+        /// <c>Sellos/Sello{piso}.png</c>.
+        /// </summary>
+        static readonly (string floor, string accent)[] Seals =
+        {
+            ("3", "#B8A038"), ("4", "#B8B8D0"), ("5", "#F8D030"), ("6", "#A8B820"), ("7", "#C03028"),
+            ("PT", "#705898"), ("8", "#78C850"), ("9", "#A040A0"), ("10", "#6890F0"), ("11", "#F08030"),
+            ("12", "#A890F0"), ("13", "#F85888"), ("14", "#7038F8"),
         };
 
         /// <summary>Borde 9-slice de las fichas del equipo, en píxeles del PNG.</summary>
@@ -102,13 +127,21 @@ namespace TorreIngenieria.EditorTools
                 TeamScreen team = CreateTeamScreen(root.transform);
                 SummaryScreen summary = CreateSummaryScreen(root.transform);
                 BagScreen bag = CreateBagScreen(root.transform);
+                PokedexScreen pokedex = CreatePokedexScreen(root.transform);
+                BuildingMapScreen map = CreateMapScreen(root.transform);
+                CardScreen card = CreateCardScreen(root.transform);
+                SaveScreen saveScreen = CreateSaveScreen(root.transform);
+                OptionsScreen options = CreateOptionsScreen(root.transform);
+                ShopScreen shop = CreateShopScreen(root.transform);
                 MenuList pauseList = CreatePauseList(root.transform);
                 DialogueBox message = CreateMessageBox(root.transform);
                 MenuList actionList = CreateActionList(root.transform);
 
                 var menu = root.AddComponent<GameMenu>();
                 Assign(menu, ("controls", controls), ("pauseList", pauseList), ("message", message),
-                    ("actionList", actionList), ("team", team), ("summary", summary), ("bag", bag));
+                    ("actionList", actionList), ("team", team), ("summary", summary), ("bag", bag),
+                    ("pokedex", pokedex), ("map", map), ("card", card), ("saveScreen", saveScreen),
+                    ("options", options), ("shop", shop));
 
                 EnsureFolder(PrefabFolder);
                 PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
@@ -175,7 +208,8 @@ namespace TorreIngenieria.EditorTools
                 background.sprite = normal;
                 background.type = Image.Type.Sliced;
                 background.pixelsPerUnitMultiplier = normal.pixelsPerUnit / 100f / PixelScale;
-                Object.DestroyImmediate(slot.GetComponent<Outline>()); // el marco dibujado ya trae borde
+                if (slot.TryGetComponent(out Outline slotOutline))
+                    Object.DestroyImmediate(slotOutline); // el marco dibujado ya trae borde
             }
 
             float iconSize = lead ? 64 : 48;
@@ -411,6 +445,343 @@ namespace TorreIngenieria.EditorTools
             return bag;
         }
 
+        // ---------- Pokédex (maqueta 12) ----------
+
+        static PokedexScreen CreatePokedexScreen(Transform parent)
+        {
+            RectTransform screen = CreateBackground(parent, "Pokedex", Navy, PokedexBackgroundPath);
+            RectTransform header = CreateHeader(screen, "POKÉDEX");
+            TextMeshProUGUI counts = CreateText(header, "Cuentas", "VISTOS 0   CAPTURADOS 0", 16, TextWhite);
+            counts.alignment = TextAlignmentOptions.MidlineRight;
+            TopLeft(counts.rectTransform, 400, 0, 608, 52);
+
+            RectTransform portrait = CreatePanel(screen, "Ficha", SpriteBackdrop);
+            TopLeft(portrait, 16, 68, 400, 300);
+            RectTransform sprite = CreateImage(portrait, "Sprite", Color.white);
+            sprite.anchorMin = sprite.anchorMax = new Vector2(0.5f, 1f);
+            sprite.pivot = new Vector2(0.5f, 1f);
+            sprite.anchoredPosition = new Vector2(0, -12);
+            sprite.sizeDelta = new Vector2(192, 192);
+            sprite.GetComponent<Image>().preserveAspect = true;
+            sprite.GetComponent<Image>().enabled = false;
+            TextMeshProUGUI unknown = CreateText(portrait, "Desconocido", "?", 48, Palette.DarkGray);
+            unknown.alignment = TextAlignmentOptions.Center;
+            TopLeft(unknown.rectTransform, 0, 12, 400, 192);
+            TextMeshProUGUI nameText = CreateText(portrait, "Nombre", "000 -----", 20, TextBlack);
+            TopLeft(nameText.rectTransform, 16, 216, 368, 28);
+            TextMeshProUGUI types = CreateText(portrait, "Tipos", string.Empty, 14, TextBlack);
+            TopLeft(types.rectTransform, 16, 256, 368, 28);
+
+            MenuList list = CreateMenuList(screen, "ListaEspecies", 6, 40, true, withIcons: true);
+            TopLeft((RectTransform)list.transform, 432, 60, 576, 332);
+            list.gameObject.SetActive(true);
+
+            TextMeshProUGUI description = CreateDescriptionPanel(screen);
+
+            Sprite caught = AssetDatabase.LoadAssetAtPath<ItemData>(PokeballItemPath)?.icon;
+            var pokedex = screen.gameObject.AddComponent<PokedexScreen>();
+            Assign(pokedex, ("list", list), ("countsText", counts), ("sprite", sprite.GetComponent<Image>()),
+                ("unknownText", unknown), ("nameText", nameText), ("typesText", types),
+                ("descriptionText", description));
+            AssignOptional(pokedex, ("caughtIcon", caught));
+            screen.gameObject.SetActive(false);
+            return pokedex;
+        }
+
+        // ---------- Mapa del edificio y ascensor (maqueta 09) ----------
+
+        static BuildingMapScreen CreateMapScreen(Transform parent)
+        {
+            RectTransform screen = CreateBackground(parent, "MapaEdificio", Navy, MapBackgroundPath);
+            RectTransform header = CreateHeader(screen, "MAPA DEL EDIFICIO");
+            var title = header.GetComponentInChildren<TextMeshProUGUI>();
+
+            MenuList list = CreateMenuList(screen, "ListaPisos", 6, 40, true, withIcons: true);
+            TopLeft((RectTransform)list.transform, 16, 60, 480, 332);
+            list.gameObject.SetActive(true);
+
+            RectTransform panel = CreatePanel(screen, "Detalle", BoneWhite);
+            TopLeft(panel, 512, 60, 496, 332);
+            TextMeshProUGUI floorText = CreateText(panel, "Piso", "PISO 3 – CIVIL", 18, TextBlack);
+            floorText.textWrappingMode = TextWrappingModes.Normal;
+            TopLeft(floorText.rectTransform, 24, 24, 448, 64);
+            TextMeshProUGUI detail = CreateText(panel, "Estado", string.Empty, 16, TextBlack);
+            detail.textWrappingMode = TextWrappingModes.Normal;
+            detail.lineSpacing = 40;
+            TopLeft(detail.rectTransform, 24, 112, 448, 196);
+
+            var map = screen.gameObject.AddComponent<BuildingMapScreen>();
+            Assign(map, ("list", list), ("titleText", title), ("floorText", floorText), ("detailText", detail));
+            AssignSeals(map);
+            screen.gameObject.SetActive(false);
+            return map;
+        }
+
+        // ---------- Carné (maqueta 08) ----------
+
+        static CardScreen CreateCardScreen(Transform parent)
+        {
+            RectTransform screen = CreateBackground(parent, "Carne", SkyBlue, CardBackgroundPath);
+
+            RectTransform cardPanel = CreatePanel(screen, "Tarjeta", BoneWhite);
+            TopLeft(cardPanel, 48, 20, 928, 400);
+            RectTransform strip = CreateImage(cardPanel, "Franja", Palette.EngineeringBlue);
+            TopLeft(strip, 0, 0, 928, 48);
+            TextMeshProUGUI stripText = CreateText(strip, "Texto", "CARNÉ ESTUDIANTIL · TORRE DE INGENIERÍA", 16, TextWhite);
+            stripText.alignment = TextAlignmentOptions.Center;
+            Stretch(stripText.rectTransform);
+
+            RectTransform photo = CreatePanel(cardPanel, "Foto", SpriteBackdrop);
+            TopLeft(photo, 24, 68, 152, 184);
+            RectTransform pedro = CreateImage(photo, "Pedro", Color.white);
+            Stretch(pedro);
+            pedro.offsetMin = new Vector2(24, 12);
+            pedro.offsetMax = new Vector2(-24, -12);
+            Image pedroImage = pedro.GetComponent<Image>();
+            pedroImage.preserveAspect = true;
+            pedroImage.sprite = AssetDatabase.LoadAllAssetsAtPath(CharacterSpriteSlicer.PedroSheet)
+                .OfType<Sprite>().FirstOrDefault(sprite => sprite.name == "Pedro_Abajo_Quieto");
+            pedroImage.enabled = pedroImage.sprite != null;
+
+            TextMeshProUGUI nameText = CreateText(cardPanel, "Nombre", "PEDRO", 24, TextBlack);
+            TopLeft(nameText.rectTransform, 200, 72, 400, 32);
+            TextMeshProUGUI idText = CreateText(cardPanel, "ID", "ID No. 00000", 18, TextBlack);
+            idText.alignment = TextAlignmentOptions.TopRight;
+            TopLeft(idText.rectTransform, 600, 76, 304, 28);
+
+            TextMeshProUGUI labels = CreateText(cardPanel, "Etiquetas", "CRÉDITOS\nPOKÉDEX\nTIEMPO\nPROMEDIO", 18, TextBlack);
+            labels.lineSpacing = 36;
+            TopLeft(labels.rectTransform, 200, 124, 320, 136);
+            TextMeshProUGUI values = CreateText(cardPanel, "Valores", "0\n0\n0:00\n-", 18, TextBlack);
+            values.lineSpacing = 36;
+            values.alignment = TextAlignmentOptions.TopRight;
+            TopLeft(values.rectTransform, 520, 124, 384, 136);
+
+            TextMeshProUGUI sealsTitle = CreateText(cardPanel, "TituloSellos", "SELLOS", 16, TextBlack);
+            TopLeft(sealsTitle.rectTransform, 24, 272, 400, 24);
+
+            var floors = new string[Seals.Length];
+            var images = new Object[Seals.Length];
+            var sealLabels = new Object[Seals.Length];
+            var sprites = new Object[Seals.Length];
+            var colors = new Color[Seals.Length];
+            for (int i = 0; i < Seals.Length; i++)
+            {
+                RectTransform seal = CreateImage(cardPanel, $"Sello{Seals[i].floor}", Color.gray);
+                TopLeft(seal, 24 + i * 68, 304, 60, 60);
+                seal.GetComponent<Image>().preserveAspect = true;
+                TextMeshProUGUI label = CreateText(seal, "Piso", Seals[i].floor, 14, TextWhite);
+                label.alignment = TextAlignmentOptions.Center;
+                Stretch(label.rectTransform);
+
+                floors[i] = Seals[i].floor;
+                images[i] = seal.GetComponent<Image>();
+                sealLabels[i] = label;
+                sprites[i] = LoadOptionalSprite($"{SealFolder}/Sello{Seals[i].floor}.png", 0);
+                ColorUtility.TryParseHtmlString(Seals[i].accent, out colors[i]);
+            }
+
+            var card = screen.gameObject.AddComponent<CardScreen>();
+            Assign(card, ("controls", controls), ("nameText", nameText), ("idText", idText), ("valuesText", values));
+            AssignStrings(card, "sealFloors", floors);
+            AssignArray(card, "sealImages", images);
+            AssignArray(card, "sealLabels", sealLabels);
+            AssignArray(card, "sealSprites", sprites);
+            AssignColors(card, "sealColors", colors);
+            screen.gameObject.SetActive(false);
+            return card;
+        }
+
+        // ---------- Guardar (maqueta 10) ----------
+
+        static SaveScreen CreateSaveScreen(Transform parent)
+        {
+            RectTransform panel = CreatePanel(parent, "Guardar", BoneWhite);
+            TopLeft(panel, 16, 16, 560, 248);
+            TextMeshProUGUI labels = CreateText(panel, "Etiquetas", "JUGADOR\nLUGAR\nSELLOS\nPOKÉDEX\nTIEMPO", 18, TextBlack);
+            labels.lineSpacing = 28;
+            TopLeft(labels.rectTransform, 24, 24, 200, 208);
+            TextMeshProUGUI values = CreateText(panel, "Valores", string.Empty, 18, Palette.EngineeringBlue);
+            values.lineSpacing = 28;
+            values.alignment = TextAlignmentOptions.TopRight;
+            values.overflowMode = TextOverflowModes.Ellipsis;
+            TopLeft(values.rectTransform, 200, 24, 336, 208);
+
+            var save = panel.gameObject.AddComponent<SaveScreen>();
+            Assign(save, ("valuesText", values));
+            panel.gameObject.SetActive(false);
+            return save;
+        }
+
+        // ---------- Opciones (maqueta 11) ----------
+
+        static OptionsScreen CreateOptionsScreen(Transform parent)
+        {
+            RectTransform screen = CreateBackground(parent, "Opciones", Navy, OptionsBackgroundPath);
+            CreateHeader(screen, "OPCIONES");
+
+            RectTransform panel = CreatePanel(screen, "Panel", BoneWhite);
+            TopLeft(panel, 64, 72, 896, 344);
+
+            string[] names = { "VOLUMEN", "PANTALLA COMPLETA", "VELOCIDAD DEL TEXTO", "SALIR AL TÍTULO", "VOLVER" };
+            var rows = new Object[names.Length];
+            var cursors = new Object[names.Length];
+            var values = new Object[names.Length];
+            var segments = new Object[GameSettings.MaxVolume];
+            for (int i = 0; i < names.Length; i++)
+            {
+                var row = new GameObject($"Fila{i + 1}", typeof(RectTransform));
+                row.transform.SetParent(panel, false);
+                TopLeft((RectTransform)row.transform, 0, 24 + i * 62, 896, 56);
+
+                RectTransform cursor = CreatePixelImage(row.transform, "Cursor", cursorSprite);
+                cursor.anchorMin = cursor.anchorMax = cursor.pivot = new Vector2(0, 0.5f);
+                cursor.anchoredPosition = new Vector2(28, 0);
+                cursor.gameObject.SetActive(false);
+
+                TextMeshProUGUI label = CreateText(row.transform, "Texto", names[i], 20, TextBlack);
+                label.alignment = TextAlignmentOptions.MidlineLeft;
+                TopLeft(label.rectTransform, 72, 0, 440, 56);
+
+                TextMeshProUGUI value = null;
+                if (i < 3)
+                {
+                    value = CreateText(row.transform, "Valor", string.Empty, 20, Palette.EngineeringBlue);
+                    value.alignment = TextAlignmentOptions.MidlineRight;
+                    TopLeft(value.rectTransform, 520, 0, 344, 56);
+                }
+
+                if (i == 0)
+                {
+                    // Barra de 10 pasos; el número va a su derecha.
+                    for (int j = 0; j < segments.Length; j++)
+                    {
+                        RectTransform segment = CreateImage(row.transform, $"Paso{j + 1}", Palette.ConcreteGray);
+                        TopLeft(segment, 520 + j * 26, 16, 20, 24);
+                        segments[j] = segment.GetComponent<Image>();
+                    }
+                }
+
+                rows[i] = row;
+                cursors[i] = cursor.gameObject;
+                values[i] = value;
+            }
+
+            var options = screen.gameObject.AddComponent<OptionsScreen>();
+            Assign(options, ("controls", controls));
+            AssignArray(options, "rows", rows);
+            AssignArray(options, "cursors", cursors);
+            AssignArray(options, "values", values);
+            AssignArray(options, "volumeSegments", segments);
+            AssignColor(options, "segmentOn", Palette.EngineeringBlue);
+            AssignColor(options, "segmentOff", Palette.ConcreteGray);
+            screen.gameObject.SetActive(false);
+            return options;
+        }
+
+        // ---------- Tienda de Don Chucho ----------
+
+        static ShopScreen CreateShopScreen(Transform parent)
+        {
+            RectTransform screen = CreateBackground(parent, "Tienda", Navy, ShopBackgroundPath);
+
+            RectTransform creditsBox = CreatePanel(screen, "Creditos", BoneWhite);
+            TopLeft(creditsBox, 16, 16, 320, 96);
+            TextMeshProUGUI credits = CreateText(creditsBox, "Texto", "CRÉDITOS\n0", 20, TextBlack);
+            credits.lineSpacing = 24;
+            Stretch(credits.rectTransform);
+            credits.rectTransform.offsetMin = new Vector2(20, 12);
+            credits.rectTransform.offsetMax = new Vector2(-20, -16);
+
+            TextMeshProUGUI owned = CreateText(screen, "EnMochila", string.Empty, 16, TextWhite);
+            TopLeft(owned.rectTransform, 16, 128, 320, 28);
+
+            RectTransform quantityBox = CreatePanel(screen, "Cantidad", BoneWhite);
+            TopLeft(quantityBox, 16, 176, 320, 96);
+            TextMeshProUGUI quantity = CreateText(quantityBox, "Cantidad", "x01", 24, TextBlack);
+            quantity.alignment = TextAlignmentOptions.MidlineLeft;
+            TopLeft(quantity.rectTransform, 24, 0, 120, 96);
+            TextMeshProUGUI total = CreateText(quantityBox, "Total", "0", 20, TextBlack);
+            total.alignment = TextAlignmentOptions.MidlineRight;
+            TopLeft(total.rectTransform, 144, 0, 152, 96);
+            quantityBox.gameObject.SetActive(false);
+
+            MenuList list = CreateMenuList(screen, "ListaTienda", 5, 44, true);
+            TopLeft((RectTransform)list.transform, 352, 16, 656, 308);
+            list.gameObject.SetActive(true);
+
+            (TextMeshProUGUI description, Image icon) = CreateDescriptionWithIcon(screen);
+
+            var shop = screen.gameObject.AddComponent<ShopScreen>();
+            Assign(shop, ("controls", controls), ("itemList", list), ("creditsText", credits),
+                ("itemIcon", icon), ("descriptionText", description), ("quantityBox", quantityBox.gameObject),
+                ("quantityText", quantity), ("totalText", total), ("ownedText", owned));
+            screen.gameObject.SetActive(false);
+            return shop;
+        }
+
+        /// <summary>Barra superior azul con el título de la pantalla.</summary>
+        static RectTransform CreateHeader(Transform screen, string titleText)
+        {
+            RectTransform header = CreateImage(screen, "Cabecera", Palette.EngineeringBlue);
+            header.anchorMin = new Vector2(0, 1);
+            header.anchorMax = Vector2.one;
+            header.offsetMin = new Vector2(0, -52);
+            header.offsetMax = Vector2.zero;
+            TextMeshProUGUI title = CreateText(header, "Titulo", titleText, 24, TextWhite);
+            title.alignment = TextAlignmentOptions.MidlineLeft;
+            TopLeft(title.rectTransform, 16, 0, 600, 52);
+            return header;
+        }
+
+        /// <summary>Recuadro de descripción de abajo (como el de la Mochila), sin icono.</summary>
+        static TextMeshProUGUI CreateDescriptionPanel(Transform screen)
+        {
+            RectTransform panel = CreatePanel(screen, "Descripcion", BoneWhite);
+            panel.anchorMin = Vector2.zero;
+            panel.anchorMax = new Vector2(1, 0);
+            panel.offsetMin = new Vector2(16, 12);
+            panel.offsetMax = new Vector2(-16, 12 + MessageHeight - 8);
+            TextMeshProUGUI text = CreateText(panel, "Texto", string.Empty, 18, TextBlack);
+            text.textWrappingMode = TextWrappingModes.Normal;
+            text.lineSpacing = 20;
+            text.overflowMode = TextOverflowModes.Ellipsis;
+            Stretch(text.rectTransform);
+            text.rectTransform.offsetMin = new Vector2(24, 16);
+            text.rectTransform.offsetMax = new Vector2(-24, -20);
+            return text;
+        }
+
+        /// <summary>Recuadro de descripción con icono a la izquierda (Mochila y tienda).</summary>
+        static (TextMeshProUGUI text, Image icon) CreateDescriptionWithIcon(Transform screen)
+        {
+            TextMeshProUGUI text = CreateDescriptionPanel(screen);
+            text.fontSize = 20;
+            text.rectTransform.offsetMin = new Vector2(112, 16);
+            RectTransform icon = CreateImage(text.rectTransform.parent, "Icono", Color.white);
+            icon.anchorMin = icon.anchorMax = new Vector2(0, 0.5f);
+            icon.pivot = new Vector2(0, 0.5f);
+            icon.anchoredPosition = new Vector2(24, 0);
+            icon.sizeDelta = new Vector2(64, 64);
+            Image image = icon.GetComponent<Image>();
+            image.preserveAspect = true;
+            image.enabled = false;
+            return (text, image);
+        }
+
+        static void AssignSeals(BuildingMapScreen map)
+        {
+            var floors = new string[Seals.Length];
+            var sprites = new Object[Seals.Length];
+            for (int i = 0; i < Seals.Length; i++)
+            {
+                floors[i] = Seals[i].floor;
+                sprites[i] = LoadOptionalSprite($"{SealFolder}/Sello{Seals[i].floor}.png", 0);
+            }
+            AssignStrings(map, "sealFloors", floors);
+            AssignArray(map, "sealSprites", sprites);
+        }
+
         // ---------- Menú de pausa, mensajes y submenú (maquetas 01 y 03) ----------
 
         static MenuList CreatePauseList(Transform parent)
@@ -455,7 +826,8 @@ namespace TorreIngenieria.EditorTools
         /// Cuadro con el marco del diálogo y <paramref name="rowCount"/> filas: cursor, texto y detalle a la
         /// derecha (cantidades). <paramref name="scrollArrows"/> añade las flechas de desplazamiento.
         /// </summary>
-        static MenuList CreateMenuList(Transform parent, string name, int rowCount, float rowHeight, bool scrollArrows)
+        static MenuList CreateMenuList(Transform parent, string name, int rowCount, float rowHeight, bool scrollArrows,
+            bool withIcons = false)
         {
             RectTransform box = CreatePixelBox(parent, name, boxSprite);
             var layout = box.gameObject.AddComponent<VerticalLayoutGroup>();
@@ -471,6 +843,7 @@ namespace TorreIngenieria.EditorTools
             var labels = new Object[rowCount];
             var details = new Object[rowCount];
             var cursors = new Object[rowCount];
+            var icons = new Object[withIcons ? rowCount : 0];
             for (int i = 0; i < rowCount; i++)
             {
                 var row = new GameObject($"Opcion{i + 1}", typeof(RectTransform));
@@ -496,6 +869,18 @@ namespace TorreIngenieria.EditorTools
                 label.alignment = TextAlignmentOptions.MidlineLeft;
                 label.overflowMode = TextOverflowModes.Ellipsis;
                 label.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
+
+                if (withIcons)
+                {
+                    RectTransform icon = CreateImage(row.transform, "Icono", Color.white);
+                    var iconLayout = icon.gameObject.AddComponent<LayoutElement>();
+                    iconLayout.preferredWidth = 32;
+                    iconLayout.preferredHeight = 32;
+                    Image iconImage = icon.GetComponent<Image>();
+                    iconImage.preserveAspect = true;
+                    iconImage.enabled = false;
+                    icons[i] = iconImage;
+                }
 
                 TextMeshProUGUI detail = CreateText(row.transform, "Detalle", string.Empty, 20, TextBlack);
                 detail.alignment = TextAlignmentOptions.MidlineRight;
@@ -523,6 +908,7 @@ namespace TorreIngenieria.EditorTools
             AssignArray(list, "labels", labels);
             AssignArray(list, "details", details);
             AssignArray(list, "cursors", cursors);
+            AssignArray(list, "icons", icons);
             box.gameObject.SetActive(false);
             return list;
         }
@@ -568,10 +954,22 @@ namespace TorreIngenieria.EditorTools
             return rect;
         }
 
-        /// <summary>Panel de color con borde oscuro de 4 px (1 px del arte a escala 4).</summary>
+        /// <summary>
+        /// Panel de color con borde oscuro de 4 px (1 px del arte a escala 4). Si existe el marco 9-slice
+        /// <c>Menu/Panel.png</c> (Etapa 9), se usa ese arte teñido con el color del panel.
+        /// </summary>
         static RectTransform CreatePanel(Transform parent, string name, Color color)
         {
             RectTransform rect = CreateImage(parent, name, color);
+            Sprite frame = LoadOptionalSprite(PanelFramePath, PanelFrameBorder);
+            if (frame != null)
+            {
+                Image image = rect.GetComponent<Image>();
+                image.sprite = frame;
+                image.type = Image.Type.Sliced;
+                image.pixelsPerUnitMultiplier = frame.pixelsPerUnit / 100f / PixelScale;
+                return rect;
+            }
             var outline = rect.gameObject.AddComponent<Outline>();
             outline.effectColor = Palette.DarkOutline;
             outline.effectDistance = new Vector2(4, -4);
@@ -698,6 +1096,33 @@ namespace TorreIngenieria.EditorTools
             property.arraySize = values.Count;
             for (int i = 0; i < values.Count; i++)
                 property.GetArrayElementAtIndex(i).objectReferenceValue = values[i];
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        static void AssignStrings(Object target, string field, IReadOnlyList<string> values)
+        {
+            var serialized = new SerializedObject(target);
+            SerializedProperty property = serialized.FindProperty(field);
+            property.arraySize = values.Count;
+            for (int i = 0; i < values.Count; i++)
+                property.GetArrayElementAtIndex(i).stringValue = values[i];
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        static void AssignColors(Object target, string field, IReadOnlyList<Color> values)
+        {
+            var serialized = new SerializedObject(target);
+            SerializedProperty property = serialized.FindProperty(field);
+            property.arraySize = values.Count;
+            for (int i = 0; i < values.Count; i++)
+                property.GetArrayElementAtIndex(i).colorValue = values[i];
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        static void AssignColor(Object target, string field, Color value)
+        {
+            var serialized = new SerializedObject(target);
+            serialized.FindProperty(field).colorValue = value;
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 

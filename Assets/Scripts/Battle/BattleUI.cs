@@ -1,3 +1,4 @@
+using TorreIngenieria.Audio;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -57,7 +58,10 @@ namespace TorreIngenieria.Battle
             string name = PokemonDatabase.Get(member.speciesId)?.displayName ?? member.speciesId;
             message.SetPanel(DialogueBox.PanelSide.Full);
             if (result.ExpGained > 0)
+            {
+                GameAudio.Sfx(GameAudio.Exp);
                 yield return message.Say($"¡{name} ganó {result.ExpGained} de EXP!");
+            }
 
             int level = result.OldLevel;
             int experience = result.OldExp;
@@ -70,6 +74,7 @@ namespace TorreIngenieria.Battle
                 level = levelUp.Level;
                 experience = threshold;
                 playerHud.ShowExp(experience, level);
+                GameAudio.Sfx(GameAudio.LevelUp);
                 yield return message.Say($"¡{name} subió al nivel {level}!");
 
                 foreach (string moveId in levelUp.LearnedMoves)
@@ -131,6 +136,7 @@ namespace TorreIngenieria.Battle
             message.SetPanel(DialogueBox.PanelSide.Full);
             foreach (BattleMessage line in lines)
             {
+                GameAudio.Sfx(line.sound);
                 if (line.autoAdvance)
                 {
                     yield return message.Type(line.text);

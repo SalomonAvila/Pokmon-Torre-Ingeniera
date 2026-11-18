@@ -21,11 +21,19 @@ namespace TorreIngenieria.Core
             get
             {
                 if (save == null)
-                    save = SaveSystem.TryLoad(out SaveData loaded) ? loaded : new SaveData();
+                    save = SaveSystem.TryLoad(out SaveData loaded)
+                        ? loaded
+                        : new SaveData { playerId = SaveSystem.NewPlayerId() };
                 return save;
             }
             set => save = value;
         }
+
+        /// <summary>
+        /// ¿Ya hay una partida en memoria? A diferencia de <see cref="Save"/>, no la carga ni la crea:
+        /// lo usa el reloj de juego para no tocar el disco desde la pantalla de título.
+        /// </summary>
+        public static bool IsLoaded => save != null;
 
         /// <summary>Piso donde está el jugador (lo actualiza FloorInfo al entrar a cada piso).</summary>
         public static string CurrentFloor { get; set; } = Building.Floors[0];
@@ -46,6 +54,12 @@ namespace TorreIngenieria.Core
             ProgressChanged = null;
             StateChanged = null;
         }
+
+        /// <summary>
+        /// Guarda la partida a petición del jugador (menú de pausa o mostrador de Don Chucho). Es el
+        /// mismo archivo que el guardado automático; existe para que las pantallas no llamen a SaveSystem.
+        /// </summary>
+        public static void SaveNow() => Commit();
 
         /// <summary>Guarda la partida y avisa a quien escuche tras un cambio persistente.</summary>
         static void Commit()
@@ -190,6 +204,15 @@ namespace TorreIngenieria.Core
         /// </summary>
         public static bool HealTeam()
         {
+            bool healed = HealTeamSilently();
+            if (healed)
+                Commit();
+            return healed;
+        }
+
+        /// <summary>Cura PS y PP del equipo sin guardar; devuelve si cambió algo.</summary>
+        static bool HealTeamSilently()
+        {
             bool healed = false;
             foreach (TeamMember member in Save.team)
             {
@@ -215,9 +238,6 @@ namespace TorreIngenieria.Core
                     }
                 }
             }
-
-            if (healed)
-                Commit();
             return healed;
         }
 
@@ -238,6 +258,8 @@ namespace TorreIngenieria.Core
 
             if (!Save.pokedex.Contains(speciesId))
                 Save.pokedex.Add(speciesId);
+            if (!Save.seen.Contains(speciesId))
+                Save.seen.Add(speciesId);
 
             if (CanAddToTeam)
                 Save.team.Add(member);
@@ -272,6 +294,63 @@ namespace TorreIngenieria.Core
             HealResult result = TeamMembers.ApplyHeal(Save.team[teamIndex], item.healAmount, out healed);
             if (result == HealResult.Healed)
                 AddItem(itemId, -1); // AddItem ya guarda y avisa
+            return result;
+        }
+
+        /// <summary>
+        /// Cafeína: sube un nivel al Pokémon y se gasta. No hace nada (ni gasta) en el nivel máximo ni
+        /// con un debilitado. (propuesta) Los movimientos del nivel nuevo que no caben se pierden, igual
+        /// que al subir en combate.
+        /// </summary>
+        public static ExpGainResult UseLevelUpItem(string itemId, int teamIndex)
+        {
+            ItemData item = ItemDatabase.Get(itemId);
+            if (item == null || item.category != ItemCategory.LevelUp || CountItem(itemId) <= 0 ||
+                teamIndex < 0 || teamIndex >= Save.team.Count)
+                return null;
+
+            TeamMember member = Save.team[teamIndex];
+            if (member == null || TeamMembers.IsFainted(member) || member.level >= PokemonStats.MaxLevel)
+                return null;
+
+            ExpGainResult result = TeamMembers.LevelUp(member, 1);
+            if (result.LeveledUp)
+                AddItem(itemId, -1); // AddItem guarda y avisa
+            return result;
+        }
+
+        /// <summary>
+        /// Arepa: revive al debilitado con la mitad de sus PS y se gasta. (propuesta) Solo fuera de
+        /// combate, desde la Mochila: el combate solo usa objetos sobre el Pokémon activo, que nunca
+        /// está debilitado.
+        /// </summary>
+        public static bool UseReviveItem(string itemId, int teamIndex)
+        {
+            ItemData item = ItemDatabase.Get(itemId);
+            if (item == null || item.category != ItemCategory.Revive || CountItem(itemId) <= 0 ||
+                teamIndex < 0 || teamIndex >= Save.team.Count)
+                return false;
+
+            if (!TeamMembers.Revive(Save.team[teamIndex]))
+                return false;
+            AddItem(itemId, -1); // AddItem guarda y avisa
+            return true;
+        }
+
+        /// <summary>
+        /// Apuntes: enseñan su movimiento y se gastan si lo aprende. Con cuatro movimientos hay que
+        /// pasar <paramref name="replaceIndex"/> (lo elige la Mochila).
+        /// </summary>
+        public static TeachResult UseTeachItem(string itemId, int teamIndex, int replaceIndex = -1)
+        {
+            ItemData item = ItemDatabase.Get(itemId);
+            if (item == null || item.category != ItemCategory.Teach || CountItem(itemId) <= 0 ||
+                teamIndex < 0 || teamIndex >= Save.team.Count)
+                return TeachResult.Invalid;
+
+            TeachResult result = TeamMembers.TeachMove(Save.team[teamIndex], item.moveId, replaceIndex);
+            if (result == TeachResult.Learned)
+                AddItem(itemId, -1);
             return result;
         }
 
@@ -341,8 +420,89 @@ namespace TorreIngenieria.Core
                 return;
 
             Save.pokedex.Add(speciesId);
+            if (!Save.seen.Contains(speciesId))
+                Save.seen.Add(speciesId);
             Commit();
         }
+
+        public static int SeenSpeciesCount => Save.seen.Count;
+
+        /// <summary>¿La especie apareció alguna vez en combate (o se capturó o se eligió)?</summary>
+        public static bool HasSeen(string speciesId) => Save.seen.Contains(speciesId) || HasCaught(speciesId);
+
+        /// <summary>
+        /// Registra una especie vista (v7). La llama el combate cada vez que entra un Pokémon rival; solo
+        /// guarda si la especie es nueva.
+        /// </summary>
+        public static void RegisterSeen(string speciesId)
+        {
+            if (string.IsNullOrEmpty(speciesId) || Save.seen.Contains(speciesId))
+                return;
+            Save.seen.Add(speciesId);
+            Commit();
+        }
+
+        // ---------- Tiempo de juego ----------
+
+        /// <summary>
+        /// Suma tiempo de juego sin guardar (sería escribir el archivo cada fotograma): el valor viaja en
+        /// el siguiente guardado de cualquier cambio. Lo llama <c>PlayTimeClock</c>.
+        /// </summary>
+        public static void AddPlayTime(float seconds)
+        {
+            if (save == null || seconds <= 0f)
+                return;
+            save.playTimeSeconds += seconds;
+        }
+
+        /// <summary>Tiempo de juego con formato H:MM (o HHH:MM), como en el Carné de FireRed.</summary>
+        public static string FormattedPlayTime() => GameRules.FormatPlayTime(Save.playTimeSeconds);
+
+        // ---------- Servicios del lobby (Don Chucho) ----------
+
+        /// <summary>
+        /// Compra <paramref name="amount"/> unidades de un objeto con su <see cref="ItemData.price"/>.
+        /// Devuelve false sin cambiar nada si el objeto no se vende o no alcanzan los créditos.
+        /// </summary>
+        public static bool TryBuy(string itemId, int amount)
+        {
+            ItemData item = ItemDatabase.Get(itemId);
+            if (item == null || item.price <= 0 || amount <= 0)
+                return false;
+
+            int cost = item.price * amount;
+            if (cost > Save.credits)
+                return false;
+
+            Save.credits -= cost;
+            AddItem(itemId, amount); // AddItem guarda y avisa
+            return true;
+        }
+
+        /// <summary>
+        /// Desmayo (Doc §8): el equipo se queda sin PS. Pierde el 25 % de los créditos
+        /// (<see cref="GameRules.CreditsLost"/>), el equipo se cura por completo y la partida queda en el
+        /// lugar de reaparición (<see cref="FaintRespawnFloor"/>). Devuelve los créditos perdidos.
+        ///
+        /// (propuesta) Se cura al reaparecer, como en el Centro Pokémon de FireRed: sin eso el jugador
+        /// llegaría al lobby con todo el equipo debilitado.
+        /// </summary>
+        public static int Faint()
+        {
+            int lost = GameRules.CreditsLost(Save.credits);
+            Save.credits = Math.Max(0, Save.credits - lost);
+            HealTeamSilently();
+            Save.location = FaintRespawnFloor;
+            Commit();
+            return lost;
+        }
+
+        /// <summary>
+        /// Piso donde se reaparece tras un desmayo: el lobby (junto a Don Chucho). (propuesta) Antes de
+        /// pasar la puerta del edificio el jugador aún no puede entrar, así que reaparece en la plazoleta,
+        /// junto a Gabriel.
+        /// </summary>
+        public static string FaintRespawnFloor => PassesBuildingDoor ? Building.Floors[1] : Building.Floors[0];
 
         // ---------- Banderas de historia ----------
 
@@ -360,6 +520,8 @@ namespace TorreIngenieria.Core
             Save.starterId = speciesId;
             if (!Save.pokedex.Contains(speciesId))
                 Save.pokedex.Add(speciesId);
+            if (!Save.seen.Contains(speciesId))
+                Save.seen.Add(speciesId);
 
             // El inicial se entrega una sola vez: si ya está en el equipo (por ejemplo, al inferirlo en
             // EnsureStarterFromTeam) no se duplica.

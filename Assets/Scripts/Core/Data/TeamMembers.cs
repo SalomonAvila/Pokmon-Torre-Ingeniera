@@ -32,6 +32,16 @@ namespace TorreIngenieria.Core
         public bool LeveledUp => LevelUps.Count > 0;
     }
 
+    /// <summary>Resultado de enseñar un movimiento con los Apuntes.</summary>
+    public enum TeachResult
+    {
+        Learned,
+        AlreadyKnows,
+        /// <summary>Ya sabe cuatro: hay que elegir cuál olvidar (índice de reemplazo).</summary>
+        NeedsReplace,
+        Invalid,
+    }
+
     /// <summary>Resultado de usar un objeto curativo fuera de combate (Mochila → Equipo).</summary>
     public enum HealResult
     {
@@ -165,7 +175,7 @@ namespace TorreIngenieria.Core
         /// <summary>
         /// Sube niveles sin EXP de combate (Cafeína). Para cada nivel fija la EXP mínima del siguiente
         /// y reutiliza <see cref="GainExp"/>, así los PS y los movimientos se tratan igual que en el
-        /// combate. (propuesta) La Cafeína aún no existe como objeto en los datos del prototipo.
+        /// combate. La usa la Cafeína (<see cref="GameState.UseLevelUpItem"/>).
         /// </summary>
         public static ExpGainResult LevelUp(TeamMember member, int levels = 1)
         {
@@ -190,6 +200,47 @@ namespace TorreIngenieria.Core
             result.NewLevel = member.level;
             result.NewExp = member.exp;
             return result;
+        }
+
+        /// <summary>
+        /// Enseña un movimiento (Apuntes). Con menos de cuatro se añade; con cuatro hace falta
+        /// <paramref name="replaceIndex"/> (0 a 3) para olvidar uno, o devuelve <see cref="TeachResult.NeedsReplace"/>.
+        /// (propuesta) Cualquier especie puede aprender lo que traen los Apuntes: el prototipo no tiene
+        /// tabla de compatibilidad de máquinas técnicas.
+        /// </summary>
+        public static TeachResult TeachMove(TeamMember member, string moveId, int replaceIndex = -1)
+        {
+            MoveData move = MoveDatabase.Get(moveId);
+            if (member == null || move == null)
+                return TeachResult.Invalid;
+            if (member.moves == null)
+                member.moves = new List<MoveSlot>();
+            if (member.moves.Exists(slot => slot != null && slot.moveId == moveId))
+                return TeachResult.AlreadyKnows;
+
+            var learned = new MoveSlot { moveId = moveId, pp = move.maxPp, maxPp = move.maxPp };
+            if (member.moves.Count < MaxMoves)
+            {
+                member.moves.Add(learned);
+                return TeachResult.Learned;
+            }
+            if (replaceIndex < 0 || replaceIndex >= member.moves.Count)
+                return TeachResult.NeedsReplace;
+
+            member.moves[replaceIndex] = learned;
+            return TeachResult.Learned;
+        }
+
+        /// <summary>
+        /// Arepa: revive a un Pokémon debilitado con la mitad de sus PS máximos (al menos 1). Devuelve
+        /// false (y no cambia nada) si no estaba debilitado.
+        /// </summary>
+        public static bool Revive(TeamMember member)
+        {
+            if (member == null || !IsFainted(member))
+                return false;
+            member.hp = Math.Max(1, member.maxHp / 2);
+            return true;
         }
 
         /// <summary>Materializa el equipo completo de un entrenador o jefe.</summary>

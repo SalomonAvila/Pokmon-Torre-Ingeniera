@@ -1,3 +1,4 @@
+using TorreIngenieria.Audio;
 using System;
 using System.Collections;
 using TMPro;
@@ -36,10 +37,12 @@ namespace TorreIngenieria.UI
             submitAction ??= controls.FindAction("UI/Submit", true);
             navigateAction ??= controls.FindAction("UI/Navigate", true);
 
-            // El cuadro se adapta al número de opciones: tres (iniciales) necesita más alto y ancho.
+            // El cuadro se adapta al número de opciones: tres (iniciales) necesita más alto y ancho, y
+            // cuatro (mostrador de Don Chucho) una fila más.
             bool tall = options.Length > 2;
             var box = (RectTransform)transform;
-            box.sizeDelta = new Vector2(tall ? 480f : 400f, tall ? 220f : 160f);
+            float height = tall ? 220f + 56f * Mathf.Max(0, options.Length - 3) : 160f;
+            box.sizeDelta = new Vector2(tall ? 480f : 400f, height);
             if (TryGetComponent<VerticalLayoutGroup>(out VerticalLayoutGroup layout))
                 layout.padding = new RectOffset(layout.padding.left, layout.padding.right,
                     tall ? 24 : 40, tall ? 24 : 40);
@@ -66,7 +69,10 @@ namespace TorreIngenieria.UI
                 {
                     if (!axisHeld)
                     {
-                        index = (index + (y < 0 ? 1 : -1) + options.Length) % options.Length;
+                        // Una escena generada antes de la cuarta fila no puede mostrar más de las que tiene.
+                        int count = Mathf.Min(options.Length, optionLabels.Length);
+                        index = (index + (y < 0 ? 1 : -1) + count) % count;
+                        GameAudio.Sfx(GameAudio.Cursor);
                         Highlight(index);
                     }
                     axisHeld = true;
@@ -78,6 +84,7 @@ namespace TorreIngenieria.UI
                 yield return null;
             }
 
+            GameAudio.Sfx(GameAudio.Accept);
             gameObject.SetActive(false);
             IsChoosing = false;
             yield return null;

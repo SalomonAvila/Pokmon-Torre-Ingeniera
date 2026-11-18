@@ -9,6 +9,15 @@ namespace TorreIngenieria.Core
         Ball,
         Key,
         Battle,
+
+        /// <summary>Apuntes (máquina técnica, Doc §10): enseñan <see cref="ItemData.moveId"/> y se gastan.</summary>
+        Teach,
+
+        /// <summary>Cafeína (caramelo raro, Doc §10): sube un nivel a un Pokémon.</summary>
+        LevelUp,
+
+        /// <summary>Arepa (revivir, Doc §10): revive a un debilitado con la mitad de sus PS.</summary>
+        Revive,
     }
 
     /// <summary>
@@ -30,6 +39,9 @@ namespace TorreIngenieria.Core
 
         [Tooltip("Multiplicador del ratio de captura (solo Ball).")]
         public float catchBonus = 1f;
+
+        [Tooltip("Movimiento que enseña (solo Teach: los Apuntes).")]
+        public string moveId;
 
         [Tooltip("Precio de compra en créditos; 0 si no se vende.")]
         public int price;

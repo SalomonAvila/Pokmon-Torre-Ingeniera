@@ -1,3 +1,4 @@
+using TorreIngenieria.Audio;
 using System;
 using System.Collections;
 using TorreIngenieria.Core;
@@ -159,17 +160,17 @@ namespace TorreIngenieria.World
                 return;
             }
 
-            // Menú del juego (Equipo y Mochila en la Etapa 4; el resto de opciones llega en la Etapa 7).
+            // Menú del juego (pausa) y mapa del edificio (M), que también muestra el objetivo actual.
             if (menuAction.WasPressedThisFrame())
             {
                 if (!GameMenu.Open())
                     WorldMessage.Show("El menú todavía no está generado (Torre Ingeniería > Construir menú del juego).");
                 return;
             }
-            // Mientras no exista la pantalla de mapa, M recuerda el objetivo actual.
             if (mapAction.WasPressedThisFrame())
             {
-                WorldMessage.Show(Guidance.MessageText());
+                if (!GameMenu.OpenMap())
+                    WorldMessage.Show(Guidance.MessageText());
                 return;
             }
             if (cancelAction.WasPressedThisFrame())
@@ -279,6 +280,7 @@ namespace TorreIngenieria.World
             bool blocked = IsBlocked(target);
             if (blocked)
             {
+                GameAudio.Sfx(GameAudio.Bump);
                 Bumped?.Invoke(target);
                 target = start; // camina en el sitio, como al chocar en los juegos originales
             }
@@ -301,6 +303,7 @@ namespace TorreIngenieria.World
             if (!blocked)
             {
                 WarpZone.At(transform.position)?.Trigger();
+                GameAudio.Sfx(GameAudio.Step);
                 Stepped?.Invoke(transform.position);
             }
 

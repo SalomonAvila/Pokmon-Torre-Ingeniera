@@ -182,6 +182,8 @@ namespace TorreIngenieria.EditorTools
             // según el progreso (ver GabrielNpc).
             GabrielNpc gabriel = ProvisionalMap.CreateGabriel(11, 18, height);
             ProvisionalMap.AttachGuidanceTarget(gabriel.gameObject, Guidance.GabrielAtrio);
+            // Desmayo antes de cruzar la puerta del edificio: se reaparece frente a Gabriel (GameState.Faint).
+            ProvisionalMap.AddSpawn(Building.SpawnFromFaint, 11, 19, height, PlayerController.Direction.Up);
             ProvisionalMap.AddGuidanceTarget("DestinoJardinera", Guidance.JardineraInferior, 7, 31, height);
             ProvisionalMap.AddGuidanceTarget("DestinoPuerta", Guidance.PuertaEdificio, 9, 1, height);
 

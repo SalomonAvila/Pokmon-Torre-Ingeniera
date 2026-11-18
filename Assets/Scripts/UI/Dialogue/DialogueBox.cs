@@ -1,3 +1,4 @@
+using TorreIngenieria.Audio;
 using System.Collections;
 using TMPro;
 using UnityEngine;
@@ -169,7 +170,7 @@ namespace TorreIngenieria.UI
 
         IEnumerator TypePage(int first, int last)
         {
-            float delay = 1f / charactersPerSecond;
+            float delay = 1f / (charactersPerSecond * TorreIngenieria.Core.GameSettings.TextSpeedMultiplier);
             for (int index = first; index <= last; index++)
             {
                 text.maxVisibleCharacters = index + 1;
@@ -199,6 +200,7 @@ namespace TorreIngenieria.UI
                 continueArrow.anchoredPosition = arrowRestPosition + (down ? new Vector2(0, -4) : Vector2.zero);
                 yield return null;
             }
+            GameAudio.Sfx(GameAudio.Accept);
             continueArrow.gameObject.SetActive(false);
             yield return null;
         }

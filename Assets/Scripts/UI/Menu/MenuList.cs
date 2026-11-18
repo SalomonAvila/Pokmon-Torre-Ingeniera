@@ -1,8 +1,10 @@
+using TorreIngenieria.Audio;
 using System;
 using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 namespace TorreIngenieria.UI
 {
@@ -28,12 +30,20 @@ namespace TorreIngenieria.UI
         [SerializeField] TMP_Text[] labels;
         [SerializeField] TMP_Text[] details;
         [SerializeField] GameObject[] cursors;
+        [SerializeField, Tooltip("Icono opcional de cada fila (Pokébola del Pokédex, sello del Mapa).")]
+        Image[] icons;
         [SerializeField] GameObject scrollUp;
         [SerializeField] GameObject scrollDown;
 
         InputAction submitAction;
         InputAction cancelAction;
         InputAction navigateAction;
+
+        /// <summary>
+        /// Icono de cada opción (null = sin icono). Se lee al pintar las filas; quien abre la lista lo fija
+        /// antes de <see cref="Choose"/> y lo deja en null al terminar.
+        /// </summary>
+        public Func<int, Sprite> IconFor { get; set; }
 
         /// <summary>Filas visibles a la vez.</summary>
         public int VisibleRows => rows.Length;
@@ -72,6 +82,7 @@ namespace TorreIngenieria.UI
             {
                 if (submitAction.WasPressedThisFrame())
                 {
+                    GameAudio.Sfx(GameAudio.Accept);
                     yield return null;
                     onChosen(index);
                     yield break;
@@ -79,6 +90,7 @@ namespace TorreIngenieria.UI
 
                 if (cancelAction.WasPressedThisFrame())
                 {
+                    GameAudio.Sfx(GameAudio.Cancel);
                     yield return null;
                     onChosen(Cancelled);
                     yield break;
@@ -93,6 +105,7 @@ namespace TorreIngenieria.UI
                         {
                             if (horizontal)
                             {
+                                GameAudio.Sfx(GameAudio.Cursor);
                                 yield return null;
                                 onChosen(nav.x < 0 ? PressedLeft : PressedRight);
                                 yield break;
@@ -101,6 +114,7 @@ namespace TorreIngenieria.UI
                         else
                         {
                             index = (index + (nav.y < 0 ? 1 : -1) + count) % count;
+                            GameAudio.Sfx(GameAudio.Cursor);
                             if (ScrollTo(index, ref first))
                                 Refresh(options, extraDetails, first);
                             Highlight(index, first);
@@ -136,6 +150,12 @@ namespace TorreIngenieria.UI
                     string detail = extraDetails != null && item < extraDetails.Length ? extraDetails[item] : null;
                     details[i].text = detail ?? string.Empty;
                     details[i].gameObject.SetActive(!string.IsNullOrEmpty(detail));
+                }
+                if (icons != null && i < icons.Length && icons[i] != null)
+                {
+                    Sprite icon = IconFor?.Invoke(item);
+                    icons[i].sprite = icon;
+                    icons[i].enabled = icon != null;
                 }
             }
 

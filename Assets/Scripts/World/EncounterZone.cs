@@ -1,3 +1,4 @@
+using TorreIngenieria.Audio;
 using System.Collections.Generic;
 using TorreIngenieria.Battle;
 using TorreIngenieria.Core;
@@ -12,7 +13,8 @@ namespace TorreIngenieria.World
     /// probabilidad (10 %, <see cref="GameRules.EncounterChance"/>) de que salga un Pokémon salvaje.
     /// Los pasillos y el lobby no tienen tiles de encuentro, así que son seguros (Doc §7).
     ///
-    /// La especie sale de <see cref="SpeciesCatalog"/> y el nivel de <see cref="Building.WildLevelRange"/>.
+    /// La especie sale del <see cref="EncounterArea"/> de la casilla (un laboratorio) o, si no hay, de
+    /// <see cref="SpeciesCatalog"/>, y el nivel de <see cref="Building.WildLevelRange"/>.
     /// Empieza el combate con <see cref="BattleRequest"/> y carga la escena <see cref="SceneNames.Battle"/>.
     /// </summary>
     public class EncounterZone : MonoBehaviour
@@ -68,7 +70,11 @@ namespace TorreIngenieria.World
                 return;
 
             string floor = GameState.CurrentFloor;
-            IReadOnlyList<string> species = SpeciesCatalog.OnFloor(floor);
+            // Cada laboratorio puede tener su tabla (Doc §10); si no, la del piso entero.
+            EncounterArea area = EncounterArea.At(position);
+            IReadOnlyList<string> species = area != null && area.Species != null && area.Species.Count > 0
+                ? area.Species
+                : SpeciesCatalog.OnFloor(floor);
             if (species.Count == 0)
                 return;
 
@@ -83,6 +89,7 @@ namespace TorreIngenieria.World
         {
             Debug.Log($"Encuentro salvaje: {speciesId} nv {level} en {GameState.CurrentFloor}.");
             busy = true;
+            GameAudio.Sfx(GameAudio.Encounter);
             BattleRequest.StartWild(speciesId, level, SceneManager.GetActiveScene().name,
                 player.transform.position, (int)player.Facing);
 

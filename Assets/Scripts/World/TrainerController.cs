@@ -1,3 +1,4 @@
+using TorreIngenieria.Audio;
 using System.Collections;
 using TorreIngenieria.Battle;
 using TorreIngenieria.Core;
@@ -96,6 +97,7 @@ namespace TorreIngenieria.World
                 return;
 
             MarkDialogueSeen();
+            GameAudio.Sfx(GameAudio.TrainerAlert);
             WorldMessage.Show(Lines, null, _ => StartBattle());
         }
 
