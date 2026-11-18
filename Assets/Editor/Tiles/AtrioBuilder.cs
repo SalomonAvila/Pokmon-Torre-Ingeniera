@@ -195,7 +195,7 @@ namespace TorreIngenieria.EditorTools
             // de créditos. Queda junto al mostrador, mirando al camino; lo reta al verlo (TrainerController).
             ProvisionalMap.CreateTrainer("EntrenadorKiosco", 19, 28, height, "kiosco",
                 new[] { "¡Hola! Soy el estudiante del kiosco.", "¿Quieres probar tu equipo en un combate de práctica?" },
-                PlayerController.Direction.Up);
+                PlayerController.Direction.Up, ProvisionalMap.Character.EstudianteHombre);
 
             GameObject pedro = ProvisionalMap.CreatePlayer(ProvisionalMap.CellCenter(PlayerStart.x, PlayerStart.y, height));
             ProvisionalMap.SetupCamera(pedro.transform, width, height);

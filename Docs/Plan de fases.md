@@ -3,7 +3,7 @@
 Plan de desarrollo del prototipo (vertical slice, Doc §6): plazoleta (`Atrio`), lobby (`Ascensores`) y piso 3.
 Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partida de prueba y un commit que describa el cambio.
 
-Última revisión: 17 de noviembre de 2026. Etapas 0 a 6 **cerradas**; la 6 incluye los entrenadores del piso 3, el jefe (Ing. Cantera), la pantalla de nota, la racha de derrotas y el guardado v6. Etapas 7 (servicios y menú de pausa), 8 (contenido del piso 3) y 9 (pulido) **en curso**: código completo y compilado; falta **Reconstruir todo**, el arte de Antigravity y la prueba en Play. La partida completa y la build de Windows cierran el prototipo. El trabajo de **menús** (maquetas A–L) se reparte entre las Etapas 4, 7 y 9.
+Última revisión: 18 de noviembre de 2026. Etapas 0 a 9 **cerradas**: el prototipo (plazoleta, lobby y piso 3) está completo y probado en Play. Lo siguiente es la Etapa 10 (trabajo futuro). El trabajo de **menús** (maquetas A–L) se reparte entre las Etapas 4, 7 y 9.
 
 > **Nota del 25 oct:** el avance de la Etapa 4 se actualizó revisando el código, no con una prueba en Play.
 
@@ -17,6 +17,7 @@ Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partid
 | Escaleras | Se mantiene una sola escena `Escalera` para todos los tramos. **Bajar siempre está permitido**; la cinta bloquea la **subida** hasta completar el piso. Es una decisión consciente, distinta de la lectura literal del Doc §2 (dos escaleras por piso, una con cinta permanente). No se implementa la segunda escalera ni `Building.TapedCorner` por ahora. |
 | Puerta Atrio ↔ Ascensores | Condición **derivada** del Doc §8: inicial elegido y al menos una especie capturada **distinta del inicial**. `tutorialDone` queda reservado para el combate tutorial con Gabriel. Se añade un atajo de prueba en el menú del Editor (junto a `Progreso`). |
 | Pokédex por piso | Catálogo puro en Core (piso → especies). El porcentaje por piso se **deriva** (capturadas del piso / total del piso). `pokedexByFloor` se eliminó en el **guardado v3** (ya migrado). |
+| Balance del piso 3 | Ing. Cantera nv 6/8 (no 8/10 como el Doc): probado en Play el 18 nov 2026 y aprobado. Precios del Doc §10. |
 | Iniciales en el Pokédex | Se registran en el Pokédex total al elegirlos (`GameState.SetStarter`), pero **no** cuentan para el porcentaje por piso ni como "captura distinta" para la puerta (`PassesBuildingDoor`). |
 | Cámara | `Main Camera` con Pixel Perfect (240×160) y `CinemachineBrain`; una `CinemachineCamera` sigue al jugador con `CinemachineConfiner2D` limitado al rectángulo del `FloorInfo` (implementado). |
 | Equipos de jefes | Manda la regla numérica: 2 Pokémon en el piso 3, 3 en pisos 4 a 7 y PT, 4 desde el piso 8. |
@@ -216,7 +217,7 @@ Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partid
 
 ---
 
-## Etapa 7: Servicios y menú de pausa (5 a 7 días) — 🟡 EN CURSO (código listo, falta prueba en Play)
+## Etapa 7: Servicios y menú de pausa (5 a 7 días) — ✅ CERRADA
 
 **Servicios:**
 - Tienda de Don Chucho (Ascensores): compra con `ItemData.price`; la venta queda como **(propuesta)**. Inventario compartido con la mochila.
@@ -238,7 +239,7 @@ Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partid
 
 ---
 
-## Etapa 8: Contenido del piso 3 (2 a 3 días) — 🟡 EN CURSO (código listo, falta prueba en Play)
+## Etapa 8: Contenido del piso 3 (2 a 3 días) — ✅ CERRADA
 
 - Salas con encuentros: E6, O3, E3 y O1 (tiles `z` ya puestos por `LabFloorLayout`).
 - Objetos en el suelo: E2, E4, pasillo (2 Tintos), E6 (1 Tinto), 5 Pokébolas repartidas, Apuntes, Agua de panela y Cafeína.
@@ -250,7 +251,7 @@ Cada etapa deja algo jugable que la siguiente necesita. Se cierra con una partid
 
 ---
 
-## Etapa 9: Pulido y cierre del prototipo (3 a 5 días) — 🟡 EN CURSO (sistemas listos, falta arte, balance en Play y build)
+## Etapa 9: Pulido y cierre del prototipo (3 a 5 días) — ✅ CERRADA (sin build de Windows, por decisión del equipo)
 
 - Música (7 temas: título, Atrio, Ascensores, Escalera, piso 3, combate y victoria) y efectos (~30: pasos, menú, daño, cura, captura, nivel y fanfarria).
 - Arte final: sprites del jugador (4 direcciones × 3 fotogramas), NPC y tilesets definitivos.
@@ -279,25 +280,27 @@ Generadas con IA a partir del estilo de FireRed/LeafGreen. Están en `Docs/Maque
 | `01_Pausa.jpg` | A | Menú de pausa | 7 | ✅ Sirve |
 | `02_Equipo.jpg` | B | Equipo | 4 | ✅ Sirve (quitar el símbolo de género) |
 | `03_Equipo_Submenu.jpg` | C | Submenú del Equipo | 4 | ✅ Sirve (quitar OBJETO) |
-| `04_Resumen_Info.jpg` | D | Resumen: INFO | 4 | 🔁 Regenerar: dice "PAGE" en inglés; quitar OBJETO y naturaleza |
-| `05_Resumen_Estadisticas.jpg` | E | Resumen: ESTADÍSTICAS | 4 | 🔁 Regenerar: la pestaña activa sigue en INFO, "PUNTOS EXP." repetido; quitar HABILIDAD |
-| `06_Resumen_Movimientos.jpg` | F | Resumen: MOVIMIENTOS | 4 | 🔁 Regenerar: la pestaña activa sigue en INFO |
+| `04_Resumen_Info.jpg` | D | Resumen: INFO | 4 | ✅ Cerrada: la pantalla está implementada y aprobada en Play; la maqueta era solo referencia y no se regenera |
+| `05_Resumen_Estadisticas.jpg` | E | Resumen: ESTADÍSTICAS | 4 | ✅ Cerrada: la pantalla está implementada y aprobada en Play; la maqueta era solo referencia y no se regenera |
+| `06_Resumen_Movimientos.jpg` | F | Resumen: MOVIMIENTOS | 4 | ✅ Cerrada: la pantalla está implementada y aprobada en Play; la maqueta era solo referencia y no se regenera |
 | `07_Mochila.jpg` | G | Mochila | 4 | ✅ Sirve |
 | `08_Carne.jpg` | H | Carné | 7 | ✅ Sirve |
-| `09_Mapa.jpg` | I | Mapa del edificio | 7 | 🔁 Regenerar: falta el piso 9, el piso 3 es ROCA (no TIERRA), etiqueta "Roca / Listo" sin sentido |
+| `09_Mapa.jpg` | I | Mapa del edificio | 7 | ✅ Cerrada: la pantalla está implementada y aprobada en Play; la maqueta era solo referencia y no se regenera |
 | `10_Guardar.jpg` | J | Guardar | 7 | ✅ Sirve |
-| `11_Opciones.jpg` | K | Opciones | 7 | 🔁 Regenerar: solo las opciones decididas; barra de volumen de 10 pasos; resaltado de un solo color |
-| `12_Pokedex.jpg` | L | Pokédex | 7 | 🔁 Regenerar: Squirtle solo visto (sin Pokébola) y Pidgey capturado |
+| `11_Opciones.jpg` | K | Opciones | 7 | ✅ Cerrada: la pantalla está implementada y aprobada en Play; la maqueta era solo referencia y no se regenera |
+| `12_Pokedex.jpg` | L | Pokédex | 7 | ✅ Cerrada: la pantalla está implementada y aprobada en Play; la maqueta era solo referencia y no se regenera |
 
 ---
 
-## Preguntas abiertas del documento
+## Preguntas abiertas del documento (resueltas para el prototipo)
 
 - **Montoya:** el documento da la lista (Dragonair, Gyarados, Aerodactyl, Dragonite) y el rango 46 a 50, pero no el nivel de cada uno. Propuesta: 46, 48, 49 y 50 (implementada en `GameRules.MontoyaLevels`). El "refuerzo de energía" del último no está definido.
 - **Obediencia:** el documento no dice qué ocurre al desobedecer. Propuesta: mensaje y turno perdido solo en la acción Luchar.
 - **Racha de derrotas:** no se indica si el contador se reinicia al recibir la ayuda de Gabriel (hoy `ResetBossLossStreak` se llama al vencer al jefe, no al recibir ayuda).
 - **Escalera del piso 3:** la lectura literal del documento deja la escalera SE con cinta; se resolvió con "bajar siempre permitido".
 - **Menú de pausa:** el Doc §7 no incluye el Carné ("PEDRO") ni dice si "Salir" vuelve al título. Propuestas en la tabla de decisiones.
+
+> **Cierre (18 nov 2026):** todas quedan resueltas con las propuestas implementadas. Niveles de Montoya 46/48/49/50 (`GameRules.MontoyaLevels`); desobedecer = mensaje y turno perdido; la racha se reinicia al vencer al jefe; escalera con "bajar siempre permitido"; PEDRO abre el Carné y SALIR cierra el menú, con "Salir al título" dentro de Opciones. Montoya y el refuerzo de energía se retoman en la Etapa 10.
 
 ---
 
@@ -312,7 +315,7 @@ Generadas con IA a partir del estilo de FireRed/LeafGreen. Están en `Docs/Maque
 - [x] Documentar `Interactable` y `HUD` en `AGENTS.md` (World y UI).
 - [x] Añadir `EncounterZone`, `BattleSystem` y `TrainerController` (implementados y probados).
 - [x] Documentar `Assets/Scripts/Core/Data/` y el menú de datos del Editor.
-- [ ] Documentar `Assets/Scripts/UI/Menu/` (`GameMenu` como pila de corrutinas, `MenuList`, `MenuInput` y las pantallas de la Etapa 7), `DonChuchoNpc`, `ElevatorPanel`, `PlayTimeClock` y la carpeta `Docs/Maquetas/`.
+- [x] ~~Documentar los sistemas de las Etapas 7 a 9~~: no aplica, porque `AGENTS.md` ya no está en el repositorio. La documentación vive en los comentarios del código y en este plan.
 
 ---
 
@@ -344,14 +347,24 @@ Generadas con IA a partir del estilo de FireRed/LeafGreen. Están en `Docs/Maque
 | 4 | Encuentros, plazoleta y menús | ✅ **Cerrada** (encuentros, menú de pausa, Equipo, Resumen y Mochila con arte; probada en Play el 25 oct) |
 | 5 | Flujo de inicio y tutorial | ✅ **Cerrada** (título → Intro → Atrio → Gabriel → inicial → captura → puerta → tutorial → piso 3; spawn de desmayo listo para la Etapa 7) |
 | 6 | Entrenadores y jefe | ✅ **Cerrada** (TrainerController, visión 3 casillas, Estudiante de Concretos, Monitora de Suelos, Cantera nv 6/8, pantalla de nota, racha de derrotas con Gabriel, guardado v6; probada en Play y mergeada a main) |
-| 7 | Servicios y menú de pausa | 🟡 **85 %** (código completo y compilado: Don Chucho, desmayo, ascensores, Pokédex, Mapa, Carné, Guardar, Opciones y guardado v7; faltan builders, arte de Don Chucho y prueba en Play) |
-| 8 | Contenido del piso 3 | 🟡 **85 %** (encuentros por laboratorio, 12 objetos, Apuntes y Cafeína, pistas, placas, E1 cerrada y 5 estudiantes; faltan iconos, regenerar el piso y prueba en Play) |
-| 9 | Pulido y cierre | 🟡 **50 %** (audio ✅ cerrado: 7 temas de ElevenLabs y 30 efectos, precios del Doc y Arepa, marco y fondos opcionales, atlas de UI, validación de textos y fuente, capturas F12, build de Windows y botón Reconstruir todo; faltan arte final, balance probado, revisión de pantallas y partida completa) |
+| 7 | Servicios y menú de pausa | ✅ **Cerrada** (Don Chucho, desmayo, ascensores, menú de pausa completo y guardado v7; probada en Play el 18 nov) |
+| 8 | Contenido del piso 3 | ✅ **Cerrada** (encuentros por laboratorio, objetos, Apuntes, Cafeína, pistas, placas y NPC con sprite propio; probada en Play el 18 nov) |
+| 9 | Pulido y cierre | ✅ **Cerrada** (audio, arte final de menús, tilesets y NPC, precios del Doc y Arepa, balance aprobado en Play; la build de Windows no se hace por decisión del equipo, el menú existe si se necesita) |
 | 10 | Futuro | — |
 
 ---
 
 ## Registro de avance
+
+- **18 nov 2026 — Etapa 9 cerrada y prototipo completo:** la revisión visual y la partida en Play salieron bien y el balance quedó aprobado. Por decisión del equipo no se hace la build de Windows (**Torre Ingeniería > Build de Windows** queda disponible si se necesita). Pendiente fuera de etapas: el commit del equipo y documentar los sistemas nuevos en `AGENTS.md` si se vuelve a usar ese archivo.
+
+- **18 nov 2026 — Balance decidido:** tras jugar el piso 3, la dificultad se queda como está: Ing. Cantera con Geodude nv 6 y Onix nv 8 (el Doc dice 8/10), estudiantes del pasillo y precios del Doc §10. Es una decisión consciente para el prototipo; se revisará al diseñar los pisos siguientes (Etapa 10).
+
+- **18 nov 2026 — Etapas 7 y 8 cerradas:** Reconstruir todo sin errores, con las 9 hojas cortadas, los tilesets definitivos y los tres validadores en verde. Prueba en Play: todo se ve y funciona bien. La Etapa 9 sigue abierta por el balance (Ing. Cantera), la partida completa y la build de Windows.
+
+- **18 nov 2026 — Sprites de entrenadores estudiantes y monitores:** se agregaron 4 hojas de caminata siguiendo el Doc §3 (Figuras 18 y 19, hombre y mujer): `EstudianteHombre`, `EstudianteMujer`, `MonitorHombre` y `MonitorMujer`. Miden 80×128, tienen 14 colores cada una, ninguna semitransparencia y los pies en la última fila. Reemplazan a la hoja de Pedro teñida en los 2 entrenadores del piso 3, el del kiosco y los 7 NPC del piso 3 (`ProvisionalMap.Character`). El técnico y el auxiliar pasan a ser monitores, porque el Doc solo define esas dos clases. La variante de color por piso queda para la Etapa 10. **Pendiente:** Reconstruir todo.
+
+- **17 nov 2026 — Tilesets definitivos (fase A) y arte de menús:** Antigravity redibujó las cuatro hojas (`Laboratorio`, `Atrio`, `Ascensores` y `Escalera`) con el mismo tamaño e índices y sobrescribió los PNG, así que se conservan los `.meta` y los builders no cambian. Tienen de 10 a 31 colores y ninguna semitransparencia. Se rellenaron cuatro tiles con huecos transparentes: la puerta del laboratorio (5) y el torniquete del lobby (15), que son suelo, la pizarra (14) y el fondo del rack (18). Respaldos: los provisionales en `Docs/Respaldo/Tilesets/` y los originales de Antigravity en `Docs/Respaldo/Tilesets/Antigravity/`. Los objetos del suelo ahora usan la Pokébola del laboratorio (índice 15) en vez de la silla amarilla del atrio. También llegaron los iconos de Apuntes, Cafeína y Arepa, los 13 sellos, `Panel.png` y los 5 fondos. **Pendiente:** **Reconstruir todo** y revisión en Play. **Opcional (fase B):** esquinas de muro, césped en las jardineras y el mostrador de Don Chucho.
 
 - **17 nov 2026 — Audio cerrado:** probado en Play y aprobado. Música de ElevenLabs y efectos provisionales de `generar_audio.py` quedan como definitivos para el prototipo.
 

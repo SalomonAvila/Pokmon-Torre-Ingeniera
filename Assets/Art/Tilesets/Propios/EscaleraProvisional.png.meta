@@ -262,28 +262,6 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: EscaleraProvisional_5
-      rect:
-        serializedVersion: 2
-        x: 16
-        y: 0
-        width: 16
-        height: 16
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: e96cbee219f8d8d5ab83955e125277dd
-      internalID: 255927292
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
       name: EscaleraProvisional_6
       rect:
         serializedVersion: 2
@@ -324,7 +302,6 @@ TextureImporter:
       EscaleraProvisional_2: 1719294253
       EscaleraProvisional_3: -1262661977
       EscaleraProvisional_4: -509906592
-      EscaleraProvisional_5: 255927292
       EscaleraProvisional_6: 1086309548
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0

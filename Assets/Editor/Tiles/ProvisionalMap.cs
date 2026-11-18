@@ -176,11 +176,17 @@ namespace TorreIngenieria.EditorTools
             }
         }
 
-        const string PickupTilePath = "Assets/Tiles/AtrioProvisional/AtrioProvisional_8.asset";
+        // Objetos del suelo: la Pokébola del tileset de laboratorio (índice 15), como en FireRed.
+        const string PickupTilePath = "Assets/Tiles/LaboratorioProvisional/LaboratorioProvisional_15.asset";
         const string IndicatorPath = "Assets/Art/UI/IndicadorInteraccion.png";
 
         /// <summary>Personajes con hoja de caminata propia (ver <see cref="CharacterSpriteSlicer"/>).</summary>
-        public enum Character { Pedro, Gabriel, Vigilante, Cantera, DonChucho }
+        public enum Character
+        {
+            Pedro, Gabriel, Vigilante, Cantera, DonChucho,
+            // Entrenadores estudiantes y monitores del Doc §3 (Figuras 18 y 19), hombre y mujer.
+            EstudianteHombre, EstudianteMujer, MonitorHombre, MonitorMujer,
+        }
 
         /// <summary>
         /// NPC centrado en la casilla; habla con el jugador (Interactable). Con <paramref name="character"/>
@@ -330,6 +336,10 @@ namespace TorreIngenieria.EditorTools
                 Character.Vigilante => CharacterSpriteSlicer.GuardSheet,
                 Character.Cantera => CharacterSpriteSlicer.CanteraSheet,
                 Character.DonChucho => CharacterSpriteSlicer.DonChuchoSheet,
+                Character.EstudianteHombre => CharacterSpriteSlicer.StudentManSheet,
+                Character.EstudianteMujer => CharacterSpriteSlicer.StudentWomanSheet,
+                Character.MonitorHombre => CharacterSpriteSlicer.MonitorManSheet,
+                Character.MonitorMujer => CharacterSpriteSlicer.MonitorWomanSheet,
                 _ => PedroSheetPath,
             };
 

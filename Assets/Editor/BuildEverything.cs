@@ -18,7 +18,7 @@ namespace TorreIngenieria.EditorTools
         [MenuItem("Torre Ingeniería/Construir todo %#b", priority = -100)]
         public static void Build()
         {
-            AssetDatabase.Refresh(); // importa el arte recién copiado antes de enlazarlo
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport); // importa el arte recién copiado antes de enlazarlo
 
             Debug.Log("--- Construir todo: hojas de caminata ---");
             CharacterSpriteSlicer.SliceCharacters();

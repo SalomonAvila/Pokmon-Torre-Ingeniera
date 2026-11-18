@@ -153,7 +153,7 @@ namespace TorreIngenieria.EditorTools
                     "¡Alto! Soy el estudiante de Concretos.",
                     "Aquí se practica con rocas: veamos cómo aguanta tu equipo.",
                 },
-                PlayerController.Direction.Down);
+                PlayerController.Direction.Down, ProvisionalMap.Character.EstudianteHombre);
 
             ProvisionalMap.CreateTrainer("MonitoraSuelos", 15, 32, height, "monitora_suelos",
                 new[]
@@ -161,7 +161,7 @@ namespace TorreIngenieria.EditorTools
                     "Soy la monitora de Suelos.",
                     "La Ing. Cantera no deja subir a cualquiera. Demuéstrame que puedes.",
                 },
-                PlayerController.Direction.Up);
+                PlayerController.Direction.Up, ProvisionalMap.Character.MonitorMujer);
 
             // La jefa del piso espera en su escalera (Doc §8: «Todo gran edificio empieza por los cimientos»).
             ProvisionalMap.CreateTrainer("IngCantera", 8, 8, height, "cantera",
@@ -250,42 +250,42 @@ namespace TorreIngenieria.EditorTools
                 "La roca no aguanta el agua ni las plantas: con SQUIRTLE o BULBASAUR lo tienes más fácil.",
                 "Si tu compañero es CHARMANDER, busca los Apuntes de la bodega E2.",
                 "Enseñan un ataque de TIERRA, y la tierra también le gana a la roca.",
-            });
+            }, character: ProvisionalMap.Character.EstudianteMujer);
             ProvisionalMap.CreateNpc("MonitorEstructuras", 24, 30, height, new[]
             {
                 "Dato de monitoría: ONIX tiene muchísima DEFENSA...",
                 "...pero su DEFENSA ESPECIAL es baja. PISTOLA AGUA o BURBUJA le hacen mucho daño.",
                 "Y si te falta nivel, dicen que alguien escondió CAFEÍNA en el Laboratorio de Suelos.",
                 "Revisa las esquinas, detrás de los racks.",
-            });
+            }, character: ProvisionalMap.Character.MonitorHombre);
 
             // ---------- Estudiantes del piso (ambiente) ----------
             ProvisionalMap.CreateNpc("EstudianteEscalera", 13, 42, height, new[]
             {
                 "Subí por la escalera porque los ascensores no sirven sin carné.",
                 "Dicen que la Ing. Cantera tiene el CARNÉ DE ACCESO. Si la vences, te lo da.",
-            }, facing: PlayerController.Direction.Right);
+            }, character: ProvisionalMap.Character.EstudianteHombre, facing: PlayerController.Direction.Right);
             ProvisionalMap.CreateNpc("EstudianteE4", 23, 23, height, new[]
             {
                 "Shh... estoy repasando para el parcial.",
                 "Con la tormenta lo aplazaron, pero el profe dijo que «la naturaleza no da prórroga».",
                 "Si te hace falta, en esta sala dejaron un AGUA DE PANELA.",
-            });
+            }, character: ProvisionalMap.Character.EstudianteMujer);
             ProvisionalMap.CreateNpc("AuxiliarBodega", 21, 9, height, new[]
             {
-                "Soy el auxiliar de la bodega. Aquí guardamos todo lo que sobra de los laboratorios.",
+                "Soy el monitor de la bodega. Aquí guardamos todo lo que sobra de los laboratorios.",
                 "Esos apuntes de la esquina no son de nadie. Llévatelos, a alguien le servirán.",
-            });
+            }, character: ProvisionalMap.Character.MonitorHombre);
             ProvisionalMap.CreateNpc("TecnicoConcretos", 25, 39, height, new[]
             {
                 "¡Cuidado! Un RHYHORN se metió entre los cilindros de prueba.",
                 "Aquí también salen GEODUDE. Si quieres capturarlos, debilítalos primero.",
-            }, facing: PlayerController.Direction.Left);
+            }, character: ProvisionalMap.Character.MonitorHombre, facing: PlayerController.Direction.Left);
             ProvisionalMap.CreateNpc("EstudianteFosiles", 24, 18, height, new[]
             {
                 "¡Los fósiles del laboratorio cobraron vida! Vi un KABUTO y un OMANYTE.",
                 "Solo salen aquí, en Geología. No los vas a encontrar en otro lado del piso.",
-            }, facing: PlayerController.Direction.Down);
+            }, character: ProvisionalMap.Character.EstudianteHombre, facing: PlayerController.Direction.Down);
         }
 
         static void Pickup(string name, int col, int row, int height, string pickupId, string itemId,

@@ -30,7 +30,7 @@ namespace TorreIngenieria.EditorTools
             try
             {
                 Step("hojas de caminata", 0.05f);
-                AssetDatabase.Refresh();
+                AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport); // arte recién copiado
                 CharacterSpriteSlicer.SliceCharacters();
 
                 Step("datos del prototipo", 0.15f);

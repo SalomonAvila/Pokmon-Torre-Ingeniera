@@ -26,6 +26,21 @@ namespace TorreIngenieria.EditorTools
         public const string CanteraSheet = "Assets/Art/Characters/CanteraCaminata.png";
         public const string DonChuchoSheet = "Assets/Art/Characters/DonChuchoCaminata.png";
 
+        // Entrenadores estudiantes y monitores (Doc §3, Figuras 18 y 19: hombre y mujer). Se reutilizan
+        // entre todos los NPC de su clase; la variante de color por piso queda para la Etapa 10.
+        public const string StudentManSheet = "Assets/Art/Characters/EstudianteHombreCaminata.png";
+        public const string StudentWomanSheet = "Assets/Art/Characters/EstudianteMujerCaminata.png";
+        public const string MonitorManSheet = "Assets/Art/Characters/MonitorHombreCaminata.png";
+        public const string MonitorWomanSheet = "Assets/Art/Characters/MonitorMujerCaminata.png";
+
+        /// <summary>Hojas opcionales con el nombre de personaje que usan sus cuadros (Personaje_Direccion_Pose).</summary>
+        static readonly (string sheet, string name)[] OptionalSheets =
+        {
+            (GabrielSheet, "Gabriel"), (GuardSheet, "Vigilante"), (CanteraSheet, "Cantera"), (DonChuchoSheet, "DonChucho"),
+            (StudentManSheet, "EstudianteHombre"), (StudentWomanSheet, "EstudianteMujer"),
+            (MonitorManSheet, "MonitorHombre"), (MonitorWomanSheet, "MonitorMujer"),
+        };
+
         const int CellWidth = 16;
         const int CellHeight = 32;
         const int FootMargin = 0;
@@ -36,21 +51,27 @@ namespace TorreIngenieria.EditorTools
         public static readonly string[] Directions = { "Abajo", "Arriba", "Izquierda", "Derecha" };
         public static readonly string[] Poses = { "Quieto", "PasoA", "PasoA2", "PasoB", "PasoB2" };
 
-        [MenuItem("Torre Ingeniería/Cortar hojas de caminata (Pedro, Gabriel y Vigilante)")]
+        [MenuItem("Torre Ingeniería/Cortar hojas de caminata")]
         static void SliceAll() => SliceCharacters();
 
-        /// <summary>Corta las hojas de los personajes que existan (Pedro siempre; Gabriel y el Vigilante si ya están).</summary>
+        /// <summary>
+        /// Corta las hojas de los personajes que existan (Pedro siempre; las demás si ya están). Una hoja
+        /// recién copiada que Unity aún no importó se importa aquí mismo, para no saltarla en silencio.
+        /// </summary>
         public static void SliceCharacters()
         {
             SliceWalkSheet(PedroSheet, "Pedro");
-            if (AssetImporter.GetAtPath(GabrielSheet) != null)
-                SliceWalkSheet(GabrielSheet, "Gabriel");
-            if (AssetImporter.GetAtPath(GuardSheet) != null)
-                SliceWalkSheet(GuardSheet, "Vigilante");
-            if (AssetImporter.GetAtPath(CanteraSheet) != null)
-                SliceWalkSheet(CanteraSheet, "Cantera");
-            if (AssetImporter.GetAtPath(DonChuchoSheet) != null)
-                SliceWalkSheet(DonChuchoSheet, "DonChucho");
+            foreach ((string sheet, string name) in OptionalSheets)
+            {
+                if (!System.IO.File.Exists(sheet))
+                    continue;
+                if (AssetImporter.GetAtPath(sheet) == null)
+                {
+                    Debug.Log($"{sheet} todavía no estaba importada: se importa antes de cortarla.");
+                    AssetDatabase.ImportAsset(sheet, ImportAssetOptions.ForceSynchronousImport);
+                }
+                SliceWalkSheet(sheet, name);
+            }
         }
 
         public static void SliceWalkSheet(string path, string characterName)
